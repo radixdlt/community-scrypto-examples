@@ -9,7 +9,7 @@ blueprint! {
     struct Caller {
         // Address of the flashloan component
         loaner_component: Address,
-        // Used to hide loaned tokens in, to try to get free money
+        // Used to store payment for the opportunity
         hidden_vault: Vault,
         // Used to represent tokens that can be accessed if the user gets the loan
         opportunity: Vault
