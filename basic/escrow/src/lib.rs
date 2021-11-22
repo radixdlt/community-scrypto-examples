@@ -4,8 +4,6 @@ blueprint! {
     struct Escrow {
         token_a: Vault,
         token_b: Vault,
-        token_a_account: Address,
-        token_b_account: Address,
         account_a_badge: ResourceDef,
         account_b_badge: ResourceDef,
         account_a_accepted: bool,
@@ -14,7 +12,7 @@ blueprint! {
     }
 
     impl Escrow {
-        pub fn new(token_a_address: Address, token_b_address: Address, token_a_account_address: Address, token_b_account_address: Address) -> Component {
+        pub fn new(token_a_address: Address, token_b_address: Address) -> (Component, Bucket, Bucket) {
             // Create the badges that will allow the component to authenticate the users
             let account_a_badge = ResourceBuilder::new()
                 .metadata("symbol", "BADGE A")
@@ -27,28 +25,18 @@ blueprint! {
             let account_a_badge_resource = account_a_badge.resource_def();
             let account_b_badge_resource = account_b_badge.resource_def();
 
-            // Send the authentication badges to both users
-            Account::from(token_a_account_address).deposit(account_a_badge);
-            Account::from(token_b_account_address).deposit(account_b_badge);
-
-            Self {
-                token_a: Vault::new(ResourceDef::from(token_a_address)),
-                token_b: Vault::new(ResourceDef::from(token_b_address)),
-                token_a_account: token_a_account_address,
-                token_b_account: token_b_account_address,
+            let component = Self {
+                token_a: Vault::new(token_a_address),
+                token_b: Vault::new(token_b_address),
                 account_a_badge: account_a_badge_resource,
                 account_b_badge: account_b_badge_resource,
                 account_a_accepted: false,
                 account_b_accepted: false,
                 trade_canceled: false
             }
-            .instantiate()
-        }
+            .instantiate();
 
-        // Make sure the user_id matches either account_a or account_b badge
-        fn authorize(&self, user_id: Address) -> bool {
-            return user_id == self.account_a_badge.address()
-                || user_id == self.account_b_badge.address()
+            (component, account_a_badge, account_b_badge)
         }
 
         // Check if the user can add their tokens
@@ -58,44 +46,64 @@ blueprint! {
         }
 
         // Allow the users to put the tokens they want to trade inside the component's vault
-        pub fn put_tokens(&mut self, tokens: Bucket, badge: BucketRef) {
-            let user_id = Self::get_user_id(badge);
+        #[auth(account_a_badge, account_b_badge)]
+        pub fn put_tokens(&mut self, tokens: Bucket) {
+            let user_id = Self::get_user_id(&auth);
 
-            scrypto_assert!(self.authorize(user_id), "You are not authorized !");
-            scrypto_assert!(self.can_add_tokens(user_id), "You have already added you tokens to the escrow");
+            scrypto_assert!(!(self.account_a_accepted || self.account_b_accepted) , "Can't add more tokens when someone accepted");
             scrypto_assert!(!self.trade_canceled, "The trade was canceled");
 
             if user_id == self.account_a_badge.address() {
                 self.token_a.put(tokens);
-            } else if user_id == self.account_b_badge.address() {
-                self.token_b.put(tokens);
             } else {
-                scrypto_abort("Not authorized !");
+                self.token_b.put(tokens);
+            }
+        }
+
+        #[auth(account_a_badge)]
+        pub fn withdraw_all(&mut self) -> Bucket {
+            self.token_a.take_all()
+        }
+
+        // Allow the users to withdraw their tokens after both parties accepted or canceled
+        #[auth(account_a_badge, account_b_badge)]
+        pub fn withdraw(&mut self) -> Bucket {
+            let user_id = Self::get_user_id(&auth);
+            scrypto_assert!(self.trade_canceled || (self.account_a_accepted && self.account_b_accepted), "The trade must be accepted or canceled");
+
+            if user_id == self.account_a_badge.address() {
+                if self.trade_canceled {
+                    // Return added tokens
+                    self.token_a.take_all()
+                } else {
+                    // Trade was accepted from both parties, take the token B
+                    self.token_b.take_all()
+                }
+            } else {
+                if self.trade_canceled {
+                    // Return added tokens
+                    self.token_b.take_all()
+                } else {
+                    // Trade was accepted from both parties, take the token A
+                    self.token_a.take_all()
+                }
             }
         }
 
         // Allow the users to accept the trade, after both parties added their tokens to the vault
-        pub fn accept(&mut self, badge: BucketRef) {
-            let user_id = Self::get_user_id(badge);
+        #[auth(account_a_badge, account_b_badge)]
+        pub fn accept(&mut self) {
+            let user_id = Self::get_user_id(&auth);
 
-            scrypto_assert!(self.authorize(user_id), "You are not authorized !");
             scrypto_assert!(!self.can_add_tokens(user_id), "Both parties must add their tokens before you can accept");
             scrypto_assert!(!self.trade_canceled, "The trade was canceled");
 
             if user_id == self.account_a_badge.address() {
                 scrypto_assert!(!self.account_a_accepted, "You already accepted the offer !");
                 self.account_a_accepted = true;
-            } else if user_id == self.account_b_badge.address() {
+            } else {
                 scrypto_assert!(!self.account_b_accepted, "You already accepted the offer !");
                 self.account_b_accepted = true;
-            } else {
-                scrypto_abort("Not authorized !");
-            }
-
-            // Send the tokens if both parties accepted
-            if self.account_a_accepted && self.account_b_accepted {
-                Account::from(self.token_a_account).deposit(self.token_b.take_all());
-                Account::from(self.token_b_account).deposit(self.token_a.take_all());
             }
         }
 
@@ -106,17 +114,12 @@ blueprint! {
             scrypto_assert!(!self.trade_canceled, "The trade is already canceled");
 
             self.trade_canceled = true;
-
-            // Give back the stored tokens to their original owner
-            Account::from(self.token_a_account).deposit(self.token_a.take_all());
-            Account::from(self.token_b_account).deposit(self.token_b.take_all());
         }
 
         // Get user id from the provided badge
-        fn get_user_id(badge: BucketRef) -> Address {
+        fn get_user_id(badge: &BucketRef) -> Address {
             scrypto_assert!(badge.amount() > 0.into(), "Invalid user proof");
             let user_id = badge.resource_address();
-            badge.drop();
             user_id
         }
     }
