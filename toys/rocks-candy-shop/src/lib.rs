@@ -94,9 +94,9 @@ blueprint! {
         fn contains(&self, symbol: &str) -> bool {
             // return True if the symbol is found in the candy_vaults based on the token symbol
             let mut found: bool = false;
-            let symbol_String = symbol.to_string();
+            let symbol_string = symbol.to_string();
             for c in &self.candy_vaults[..] {
-                if c.0 == symbol_String {
+                if c.0 == symbol_string {
                     found = true;
                     break;
                 }
