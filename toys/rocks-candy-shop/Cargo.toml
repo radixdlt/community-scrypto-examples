@@ -4,11 +4,11 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-sbor = { path = "/mnt/manygb/rock/dev/Radix/Scrypto/radixdlt-scrypto/radixdlt-scrypto/sbor" }
-scrypto = { path = "/mnt/manygb/rock/dev/Radix/Scrypto/radixdlt-scrypto/radixdlt-scrypto/scrypto" }
+sbor = { path = "../../../sbor" }
+scrypto = { path = "../../../scrypto" }
 
 [dev-dependencies]
-radix-engine = { path = "/mnt/manygb/rock/dev/Radix/Scrypto/radixdlt-scrypto/radixdlt-scrypto/radix-engine" }
+radix-engine = { path = "../../../radix-engine" }
 
 [profile.release]
 opt-level = 's'     # Optimize for size.
