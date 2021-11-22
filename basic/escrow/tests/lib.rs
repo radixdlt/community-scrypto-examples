@@ -72,6 +72,20 @@ impl<'a, L: Ledger> TestUtils<'a, L> {
         return self;
     }
 
+    pub fn send_tokens(&mut self, account: Address, amount: i64, token_address: String) {
+        let user = self.get_user_or_fail();
+        self.executor
+                .run(
+                    TransactionBuilder::new(&self.executor)
+                        .call_method(user.address, "withdraw", vec![format!("{}", amount), token_address], None)
+                        .deposit_all_buckets(account)
+                        .build(vec![user.pub_key])
+                        .unwrap(),
+                    false,
+                )
+                .unwrap();
+    }
+
     pub fn create_token(&mut self, max_supply: Decimal) -> ResourceDef {
         let user = self.get_user_or_fail();
         let receipt = self.executor
@@ -146,14 +160,17 @@ fn test_simple_trade() {
     let badge2 = resources.get(1).unwrap();
     let component = components.get(0).unwrap();
 
+    // Send badge to account B
+    utils.act_as(account1).send_tokens(account2.address, 1, badge2.to_string());
+
     let receipt = utils.act_as(account1)
             .call_method(component, "put_tokens", vec![format!("500,{}", token1.address()), format!("1,{}", badge1)]);
     assert!(receipt.success);
 
-    // Second call should fail
+    // Second call should not fail
     let receipt = utils.act_as(account1)
             .call_method(component, "put_tokens", vec![format!("500,{}", token1.address()), format!("1,{}", badge1)]);
-    assert!(!receipt.success);
+    assert!(receipt.success);
 
     // Second user tries with wrong badge, should fail
     let receipt = utils.act_as(account2)
@@ -165,10 +182,10 @@ fn test_simple_trade() {
             .call_method(component, "put_tokens", vec![format!("500,{}", token2.address()), format!("1,{}", badge2)]);
     assert!(receipt.success);
 
-    // Second user tries to put tokens again, should fail
+    // Second user tries to put tokens again, should not fail
     let receipt = utils.act_as(account2)
             .call_method(component, "put_tokens", vec![format!("500,{}", token2.address()), format!("1,{}", badge2)]);
-    assert!(!receipt.success);
+    assert!(receipt.success);
 
     // First user accepts the trade
     let receipt = utils.act_as(account1)

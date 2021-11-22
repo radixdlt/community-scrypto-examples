@@ -39,12 +39,6 @@ blueprint! {
             (component, account_a_badge, account_b_badge)
         }
 
-        // Check if the user can add their tokens
-        fn can_add_tokens(&self, user_id: Address) -> bool {
-            (self.token_a.is_empty() && user_id == self.account_a_badge.address()) 
-            || (self.token_b.is_empty() && user_id == self.account_b_badge.address())
-        }
-
         // Allow the users to put the tokens they want to trade inside the component's vault
         #[auth(account_a_badge, account_b_badge)]
         pub fn put_tokens(&mut self, tokens: Bucket) {
@@ -95,7 +89,7 @@ blueprint! {
         pub fn accept(&mut self) {
             let user_id = Self::get_user_id(&auth);
 
-            scrypto_assert!(!self.can_add_tokens(user_id), "Both parties must add their tokens before you can accept");
+            scrypto_assert!(self.token_a.amount() > 0.into() && self.token_b.amount() > 0.into(), "Both parties must add their tokens before you can accept");
             scrypto_assert!(!self.trade_canceled, "The trade was canceled");
 
             if user_id == self.account_a_badge.address() {
