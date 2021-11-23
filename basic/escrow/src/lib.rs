@@ -54,11 +54,6 @@ blueprint! {
             }
         }
 
-        #[auth(account_a_badge)]
-        pub fn withdraw_all(&mut self) -> Bucket {
-            self.token_a.take_all()
-        }
-
         // Allow the users to withdraw their tokens after both parties accepted or canceled
         #[auth(account_a_badge, account_b_badge)]
         pub fn withdraw(&mut self) -> Bucket {
