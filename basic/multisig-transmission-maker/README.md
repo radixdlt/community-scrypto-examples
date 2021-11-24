@@ -14,3 +14,4 @@ In this example, we want $acc1 and $acc2 to approve a transaction of 1 000 000 X
 1. Approve the transaction as $acc1: `resim call-method $component approve 1,$badge`
 1. Switch to acc2: `resim set-default-account $acc2 $pub2`
 1. Approve the transaction as $acc2: `resim call-method $component approve 1,$badge`
+1. Now account 3 should have received the tokens: `resim show $acc3`
