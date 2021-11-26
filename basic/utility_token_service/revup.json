@@ -1,0 +1,80 @@
+{
+  "commands": [
+    {
+      "cmd": "reset",
+      "args": [],
+      "envs": []
+    },
+    {
+      "cmd": "new-account",
+      "args": [],
+      "envs": [
+        "account",
+        "pubkey"
+      ]
+    },
+    {
+      "cmd": "new-account",
+      "args": [],
+      "envs": [
+        "account2",
+        "pubkey2"
+      ]
+    },
+    {
+      "cmd": "new-token-fixed",
+      "args": [
+        "10000",
+        "--name",
+        "emunie",
+        "--symbol",
+        "EMT"
+      ],
+      "envs": [
+        "tokenEMT"
+      ]
+    },
+    {
+      "cmd": "new-token-fixed",
+      "args": [
+        "10000",
+        "--name",
+        "gmunie",
+        "--symbol",
+        "GMT"
+      ],
+      "envs": [
+        "tokenGMT"
+      ]
+    },
+    {
+      "cmd": "publish",
+      "args": [
+        "."
+      ],
+      "envs": [
+        "package"
+      ]
+    },
+    {
+      "cmd": "call-function",
+      "args": [
+        "$package",
+        "UtilityTokenFactory",
+        "new",
+        "Rock",
+        "RadQuilders",
+        "RGT",
+        "token of merit for RadGuild Members",
+        "5",
+        "50",
+        "25"
+      ],
+      "envs": [
+        "badgeUTF",
+        "tokenRGT",
+        "utf_component"
+      ]
+    }
+  ]
+}
