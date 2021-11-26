@@ -14,3 +14,9 @@ Cheers, Miro
 
 # How to test 
 1. `export xrd=030000000000000000000000000000000000000000000000000004`
+2. `resim publish .`
+3. `resim call-function "your-package-address-from-2." SharedCompany new 2`
+4. `export component="your-component-address"`
+5. `resim call-method $component "method-name" methodArguments`
+6. `--> If you create a proposal remember that you have to call that components address to interact with the proposal!`
+7. `Testing can be  easier if the revup tool is used. Ask in the radix-discord for a link`
