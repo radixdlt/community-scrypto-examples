@@ -73,7 +73,7 @@ resim call-method $lib print_library
   - all books
   - borrowed books
 
-### Member methods
+### Library Member Methods
 
 All the below methods require the user to pass a member's badge.
 
@@ -112,3 +112,13 @@ resim call-method $lib withdraw_fees 1,$lb
 ```
 
 - withdraws all membership and late fees from the library
+
+## Tests
+
+To run the tests:
+
+```
+scrypto test
+```
+
+The tests only cover a few of the functions/methods for now.
