@@ -41,7 +41,7 @@ blueprint! {
         // the library requires:
         // - member_badge_count: number of members allowed to join at once
         // - membership_price: the cost in XRD to join the library
-        // - loan_epochs: the number of epochs books are borrowed for
+        // - borrow_epochs: the number of epochs books are borrowed for
         // the librarian badge is returned to the caller
         pub fn new(member_badge_count: u32, membership_price: Decimal, borrow_epochs: u64) -> (Component, Bucket) {
             let librarian_badge_bucket = ResourceBuilder::new()
@@ -185,7 +185,7 @@ blueprint! {
             return book_overdue
         }
 
-        // get user id from the provided badge
+        // get user ID from the provided badge
         fn get_user_id(badge: &BucketRef) -> Address {
             scrypto_assert!(badge.amount() > 0.into(), "Invalid badge provided");
             return badge.resource_address();

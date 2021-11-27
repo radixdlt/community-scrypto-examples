@@ -56,11 +56,11 @@ resim call-function $package Library new <member_badge_count> <membership_price>
   - `borrow_epochs`: number of epochs a user can borrow a book for
 
 ```
-resim call-method $lib register 1,$xrd
+resim call-method $lib register <membership_price>,$xrd
 ```
 
 - registers a new user to the library
-- requires payment in XRD to join
+  - `membership_price`: price in XRD to join the library
 - returns the badge in a bucket
 
 ```
