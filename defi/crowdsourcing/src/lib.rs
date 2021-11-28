@@ -89,7 +89,6 @@ blueprint! {
         Recall pledge as a patron. It is allowed as long as goal hasn't been reached and last_epoch hasn't been passed.
          */
         pub fn recall_pledge(&mut self, patron_badge: Bucket) -> Bucket {
-            info!("current epoch {}, goal epoch {}, current collected {}, goal collected {}", Context::current_epoch(), self.last_epoch, self.collected_xrd.amount(), self.goal);
             assert!(!(Context::current_epoch() > self.last_epoch && self.collected_xrd.amount() > self.goal), "campaign was successful and has ended.");
             
             let refund = Bucket::new(RADIX_TOKEN);
