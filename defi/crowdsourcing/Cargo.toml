@@ -6,7 +6,6 @@ edition = "2018"
 [dependencies]
 sbor = { path = "../../../sbor" }
 scrypto = { path = "../../../scrypto" }
-chrono = "0.4"
 
 [dev-dependencies]
 radix-engine = { path = "../../../radix-engine" }
