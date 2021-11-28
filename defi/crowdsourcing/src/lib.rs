@@ -68,8 +68,8 @@ blueprint! {
         Pledge XRD and become a patron.
         */
         pub fn pledge(&mut self, payment: Bucket) -> Bucket {
-            assert!(payment.amount() != Decimal::zero(), "you need to pay at least one XRD to become a patron.");
-            assert!(Context::current_epoch() < self.last_epoch, "campaign has already ended.");
+            scrypto_assert!(payment.amount() != Decimal::zero(), "you need to pay at least one XRD to become a patron.");
+            scrypto_assert!(Context::current_epoch() < self.last_epoch, "campaign has already ended.");
 
             // Create a burnable badge.
             let patron_badge_resource = ResourceBuilder::new().metadata("name", "patron_badge").new_badge_mutable(self.patron_mint_badge.resource_def());
@@ -89,7 +89,7 @@ blueprint! {
         Recall pledge as a patron. It is allowed as long as goal hasn't been reached and last_epoch hasn't been passed.
          */
         pub fn recall_pledge(&mut self, patron_badge: Bucket) -> Bucket {
-            assert!(!(Context::current_epoch() > self.last_epoch && self.collected_xrd.amount() > self.goal), "campaign was successful and has ended.");
+            scrypto_assert!(!(Context::current_epoch() > self.last_epoch && self.collected_xrd.amount() > self.goal), "campaign was successful and has ended.");
             
             let refund = Bucket::new(RADIX_TOKEN);
             match self.patron_entries.get(&patron_badge.resource_address()) {
@@ -112,7 +112,7 @@ blueprint! {
         */
         #[auth(fundraiser_badge_def)]
         pub fn withdraw(&self) -> Bucket {
-            assert!(Context::current_epoch() > self.last_epoch, "campaign has not ended yet.");
+            scrypto_assert!(Context::current_epoch() > self.last_epoch, "campaign has not ended yet.");
             scrypto_assert!(self.collected_xrd.amount() >= self.goal, "campaign did not reach it's goal.");
 
             self.collected_xrd.take_all()
