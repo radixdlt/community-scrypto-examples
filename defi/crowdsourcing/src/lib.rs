@@ -73,7 +73,7 @@ blueprint! {
 
             // Create a burnable badge.
             let patron_badge_resource = ResourceBuilder::new().metadata("name", "patron_badge").new_badge_mutable(self.patron_mint_badge.resource_def());
-            let patron_badge = self.patron_mint_badge.authorize(|badge| patron_badge_resource.mint(1, badge));
+            let patron_badge = self.patron_mint_badge.authorize(|mint_badge| patron_badge_resource.mint(1, mint_badge));
 
             // Add badge and value to patron entries for this pledge.
             self.patron_entries.insert(patron_badge.resource_address(), payment.amount());
