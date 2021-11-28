@@ -114,7 +114,7 @@ blueprint! {
         #[auth(fundraiser_badge_def)]
         pub fn withdraw(&self) -> Bucket {
             assert!(Context::current_epoch() > self.last_epoch, "campaign has not ended yet.");
-            scrypto_assert!(self.collected_xrd.amount() > self.goal, "campaign did not reach it's goal.");
+            assert!(self.collected_xrd.amount() > self.goal, "campaign did not reach it's goal.");
 
             self.collected_xrd.take_all()
         }
