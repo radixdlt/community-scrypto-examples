@@ -4,7 +4,7 @@ blueprint! {
     struct CrowdsourcingCampaign {
         // Collected XRD for the crowdsourcing campaign.
         collected_xrd: Vault,
-        // Definition of leaders badge.
+        // Definition of fudraisers badge.
         fundraiser_badge_def: ResourceDef,
         // Used to mint mutable badges.
         patron_mint_badge: Vault,
@@ -28,6 +28,7 @@ blueprint! {
             // Get the number of the last epoch.
             let last_epoch = Context::current_epoch() + campaign_duration_epochs;
 
+            // Patron badge is used to mint and burn patron badges.
             let patron_mint_badge = ResourceBuilder::new().metadata("name", "patron_mint_badge").new_badge_fixed(1);
 
             // Instantiate the CrowdsourcingCampaign component.
@@ -41,7 +42,7 @@ blueprint! {
             }
             .instantiate();
 
-            // Return leader_badge to initiator of the campaign.
+            // Return fundraiser_badge to initiator of the campaign.
             (component, fundraiser_badge)
         }
 
@@ -108,7 +109,7 @@ blueprint! {
         }
 
         /*
-        As leader, withdraw collected XRD if threshold has passed, and the last_epoch has passed.
+        As fundraiser, withdraw collected XRD if threshold has passed, and the last_epoch has passed.
         */
         #[auth(fundraiser_badge_def)]
         pub fn withdraw(&self) -> Bucket {
