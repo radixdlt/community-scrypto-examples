@@ -4,7 +4,7 @@ blueprint! {
     struct CrowdsourcingCampaign {
         // Collected XRD for the crowdsourcing campaign.
         collected_xrd: Vault,
-        // Definition of fudraisers badge.
+        // Definition of fundraisers badge.
         fundraiser_badge_def: ResourceDef,
         // Used to mint mutable badges.
         patron_mint_badge: Vault,
@@ -19,10 +19,10 @@ blueprint! {
     impl CrowdsourcingCampaign {
         /* 
         Setup the campaign contract, assign goal of XRD required and
-        epoch duration for the campaign to be finished,
+        epoch duration for the campaign to be finished.
         */
         pub fn new(goal: Decimal, campaign_duration_epochs: u64) -> (Component, Bucket) {
-            // Create a badge for the leader of the crowdsourcing campaign.
+            // Create a badge for the fundraiser of the crowdsourcing campaign.
             let fundraiser_badge = ResourceBuilder::new().metadata("name", "fundraiser_badge").new_badge_fixed(1);
 
             // Get the number of the last epoch.
@@ -86,7 +86,7 @@ blueprint! {
         }
 
         /*
-        Recall pledge as a patron. It is allowed as long as threshold hasn't been reached and last_epoch hasn't been passed.
+        Recall pledge as a patron. It is allowed as long as goal hasn't been reached and last_epoch hasn't been passed.
          */
         pub fn recall_pledge(&mut self, patron_badge: Bucket) -> Bucket {
             info!("current epoch {}, goal epoch {}, current collected {}, goal collected {}", Context::current_epoch(), self.last_epoch, self.collected_xrd.amount(), self.goal);
@@ -109,7 +109,7 @@ blueprint! {
         }
 
         /*
-        As fundraiser, withdraw collected XRD if threshold has passed, and the last_epoch has passed.
+        As fundraiser, withdraw collected XRD if goal has passed, and the last_epoch has passed.
         */
         #[auth(fundraiser_badge_def)]
         pub fn withdraw(&self) -> Bucket {
