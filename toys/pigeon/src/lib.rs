@@ -35,6 +35,8 @@ blueprint! {
             }
             .instantiate();
 
+            info!("Oh no! The pigeon got scattered all accross the shard space ! Help it !");
+
             (component, vec![head, body, wings, legs])
         }
 
@@ -60,7 +62,7 @@ blueprint! {
             assert!(self.leg_vault.amount() == 2.into(), "Missing legs !");
             assert!(self.wing_vault.amount() == 2.into(), "Missing wings !");
 
-            info!("The pigeon is flying sucessfuly !")
+            info!("The pigeon is flying successfully !")
         }
     }
 }
