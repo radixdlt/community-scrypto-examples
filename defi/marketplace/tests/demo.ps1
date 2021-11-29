@@ -40,13 +40,13 @@ $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 resim call-method $XRD_MARKET fill_orders
 
 Write-Output ''
-Write-Host -NoNewLine 'nPress any key to show order book ...';
+Write-Host -NoNewLine 'Press any key to show order book ...';
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 
 resim call-method $XRD_MARKET print_order_book
 
 Write-Output ''
-Write-Host -NoNewLine 'nPress any key to withdraw filled order ...';
+Write-Host -NoNewLine 'Press any key to withdraw filled order ...';
 $null = $Host.UI.RawUI.ReadKey('NoEcho,IncludeKeyDown');
 
 resim call-method $XRD_MARKET withdraw_purchase 1,$BO2
