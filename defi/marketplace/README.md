@@ -10,5 +10,8 @@ You can run the demo on Windows by opening PowerShell and running:
 . .\tests\demo.ps1
 ```
 
-I have yet to write a bash script for this as well.
-Until then on Linux you could just follow all the resim steps in that file.
+On Linux it is the following using bash:
+
+```
+source ./tests/demo.sh
+```
