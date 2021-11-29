@@ -12,7 +12,9 @@ pub struct BuyOrder {
   pub purchase: Vault,
   /// Vault from which the payment for any purchases will be withdrawn
   /// (must be in market's currency)
-  pub payment: Vault
+  pub payment: Vault,
+  /// The ticket resource address is used to confirm that a used ticket is valid
+  pub ticket_resource_address: Address
 }
 
 #[allow(dead_code)]
@@ -42,7 +44,9 @@ pub struct SellOrder {
   pub sale: Vault,
   /// Vault into which the payment for any sales will be deposited
   /// (must be in market's currency)
-  pub payment: Vault
+  pub payment: Vault,
+  /// The ticket resource address is used to confirm that a used ticket is valid
+  pub ticket_resource_address: Address
 }
 
 #[allow(dead_code)]

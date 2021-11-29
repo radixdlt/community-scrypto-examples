@@ -9,33 +9,40 @@ blueprint! {
         order_count: i64,
         currency: Address,
         buy_orders: Vec<BuyOrder>,
-        sell_orders: Vec<SellOrder>
+        sell_orders: Vec<SellOrder>,
+        ticket_minter_badge: Vault
     }
 
     impl Market {
         pub fn open(currency: Address) -> Component {
+            let ticket_minter_badge = ResourceBuilder::new()
+                .metadata("name", "Order Ticket Minter Badge")
+                .new_badge_fixed(1);
+
             Self {
                 order_count: 0,
                 currency: currency,
                 buy_orders: vec![],
-                sell_orders: vec![]
+                sell_orders: vec![],
+                ticket_minter_badge: Vault::with_bucket(ticket_minter_badge)
             }
                 .instantiate()
         }
 
         /// Yields a new token specifically for this order which can be used to withdraw
         /// from it once it's filled.
-        /// 
-        /// @TODO Do this properly. Right now anyone can pass any token with the right metadata
-        ///       to withdraw.
-        fn order_ticket(&self, order_number: i64) -> Bucket {
-            ResourceBuilder::new()
+        fn order_ticket(&self, order_number: i64, token_address: Address) -> (Bucket, Address) {
+            let ticket_resource_def = ResourceBuilder::new()
                 .metadata("name", format!("Order Ticket #{}", order_number))
                 .metadata("symbol", format!("OT-{}", order_number))
-                .metadata("url", format!("urn:market/order/{}", order_number))
                 .metadata("order_number", format!("{}", order_number))
+                .metadata("order_token_address", token_address.to_string())
                 .metadata("order_currency", self.base_currency())
-                .new_token_fixed(1)
+                .new_token_mutable(self.ticket_minter_badge.resource_def());
+            
+            self.ticket_minter_badge.authorize(|badge|{
+                (ticket_resource_def.mint(1, badge), ticket_resource_def.address())
+            })
         }
 
         fn next_order_number(&mut self) -> i64 {
@@ -48,17 +55,19 @@ blueprint! {
 
         pub fn sell(&mut self, tokens: Bucket, price: Decimal) -> Bucket {
             let order_number = self.next_order_number();
+            let (ticket, address) = self.order_ticket(order_number, tokens.resource_def().address());
             let order = SellOrder {
                 number: order_number,
                 token: tokens.resource_def(),
                 ask: price,
                 sale: Vault::with_bucket(tokens),
-                payment: Vault::new(self.currency)
+                payment: Vault::new(self.currency),
+                ticket_resource_address: address
             };
 
             self.sell_orders.push(order);
 
-            self.order_ticket(order_number)
+            ticket
         }
 
         pub fn buy(&mut self, token: Address, price: Decimal, payment: Bucket) -> Bucket {
@@ -68,17 +77,19 @@ blueprint! {
             );
 
             let order_number = self.next_order_number();
+            let (ticket, address) = self.order_ticket(order_number, token);
             let order = BuyOrder {
                 number: order_number,
                 token: ResourceDef::from(token),
                 bid: price,
                 purchase: Vault::new(token),
-                payment: Vault::with_bucket(payment)
+                payment: Vault::with_bucket(payment),
+                ticket_resource_address: address
             };
 
             self.buy_orders.push(order);
 
-            self.order_ticket(order_number)
+            ticket
         }
 
         pub fn fill_orders(&self) {
@@ -128,27 +139,66 @@ blueprint! {
             }
         }
 
-        pub fn withdraw_sale_payment(&self, ticket: Bucket) -> Bucket {
-            for order in &self.sell_orders {
-                let metadata = ticket.resource_def().metadata();
+        /// Given the right order ticket withdraws a sale (sell order) from the market.
+        pub fn withdraw_sale(&mut self, ticket: Bucket) -> (Bucket, Bucket, Bucket) {
+            assert!(ticket.amount() > 0.into(), "Ticket required");
 
-                if order.number.to_string() == metadata["order_number"] && order.currency() == metadata["order_currency"] {
-                    return order.payment.take_all();
-                }
+            let index = self.sell_orders
+                .iter()
+                .position(|order| order.number.to_string() == ticket.resource_def().metadata()["order_number"]);
+
+            if index.is_some() {
+                let order = self.sell_orders.remove(index.unwrap());
+
+                assert!(order.ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
+                    
+                self.ticket_minter_badge.authorize(|badge| {
+                    ticket.burn(badge);
+                });
+
+                (order.sale.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
+            } else {
+                warn!("No matching order found. Returning only ticket.");
+
+                let token_resource_address = Address::from_str(&ticket.resource_def().metadata()["order_token_address"]).unwrap();
+
+                (Bucket::new(token_resource_address), Bucket::new(self.currency), ticket)
             }
-
-            panic!("No matching order found");
         }
 
-        pub fn withdraw_purchase(&self, ticket: Bucket) -> (Bucket, Bucket) {
-            for order in &self.buy_orders {
-                if order.number.to_string() == ticket.resource_def().metadata()["order_number"] {
-                    info!("FOUND IT!");
-                    return (order.purchase.take_all(), order.payment.take_all());
-                }
-            }
+        /// Given the right order ticket withdraws a purchase (buy order) from the market.
+        /// 
+        /// Can be called even when the order hasn't been fully filled yet. In that case the remaining payment
+        /// tokens will be returned along with what ever tokens have been bought so far. The order will be removed
+        /// from the market in any case.
+        /// 
+        /// Always returns a 3-tuple of buckets `(purchased_tokens, payment_change, order_ticket)`.
+        /// If no order was found, the first two will be empty while the 3rd one contains the unused ticket.
+        /// If an order couldn't be found the 3rd bucket will be empty since the ticket will be burned.
+        pub fn withdraw_purchase(&mut self, ticket: Bucket) -> (Bucket, Bucket, Bucket) {
+            assert!(ticket.amount() > 0.into(), "Ticket required");
 
-            panic!("No matching order found");
+            let index = self.buy_orders
+                .iter()
+                .position(|order| order.number.to_string() == ticket.resource_def().metadata()["order_number"]);
+
+            if index.is_some() {
+                let order = self.buy_orders.remove(index.unwrap());
+
+                assert!(order.ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
+                    
+                self.ticket_minter_badge.authorize(|badge| {
+                    ticket.burn(badge);
+                });
+
+                (order.purchase.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
+            } else {
+                warn!("No matching order found. Returning only ticket.");
+
+                let token_resource_address = Address::from_str(&ticket.resource_def().metadata()["order_token_address"]).unwrap();
+
+                (Bucket::new(token_resource_address), Bucket::new(self.currency), ticket)
+            }
         }
 
         fn matching_sell_orders(&self, buy_order: &BuyOrder) -> Vec<&SellOrder> {
