@@ -36,13 +36,13 @@ blueprint! {
                 .metadata("name", "American Host Badge")
                 .metadata("symbol", "APB")
                 .metadata("description", "A badge that grants american host privileges")
-                .new_token_fixed(1);
+                .new_badge_fixed(1);
 
             let european_badge = ResourceBuilder::new()
                 .metadata("name", "European Host Badge")
                 .metadata("symbol", "EPB")
                 .metadata("description", "A badge that grants european host privileges")
-                .new_token_fixed(1);
+                .new_badge_fixed(1);
 
             let ticket_minter = ResourceBuilder::new()
                 .metadata("name", "Ticket Mint Auth")
