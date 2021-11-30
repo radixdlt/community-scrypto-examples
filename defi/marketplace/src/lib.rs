@@ -8,8 +8,8 @@ blueprint! {
     struct Market {
         order_count: i64,
         currency: Address,
-        buy_orders: Vec<BuyOrder>,
-        sell_orders: Vec<SellOrder>,
+        buy_orders: Vec<Order>,
+        sell_orders: Vec<Order>,
         ticket_minter_badge: Vault
     }
 
@@ -39,7 +39,7 @@ blueprint! {
                 .metadata("order_token_address", token_address.to_string())
                 .metadata("order_currency", self.base_currency())
                 .new_token_mutable(self.ticket_minter_badge.resource_def());
-            
+
             self.ticket_minter_badge.authorize(|badge|{
                 (ticket_resource_def.mint(1, badge), ticket_resource_def.address())
             })
@@ -56,11 +56,12 @@ blueprint! {
         pub fn sell(&mut self, tokens: Bucket, price: Decimal) -> Bucket {
             let order_number = self.next_order_number();
             let (ticket, address) = self.order_ticket(order_number, tokens.resource_def().address());
-            let order = SellOrder {
+            let order = Order {
                 number: order_number,
+                buy: false,
                 token: tokens.resource_def(),
-                ask: price,
-                sale: Vault::with_bucket(tokens),
+                price: price,
+                purse: Vault::with_bucket(tokens),
                 payment: Vault::new(self.currency),
                 ticket_resource_address: address
             };
@@ -78,11 +79,12 @@ blueprint! {
 
             let order_number = self.next_order_number();
             let (ticket, address) = self.order_ticket(order_number, token);
-            let order = BuyOrder {
+            let order = Order {
                 number: order_number,
+                buy: true,
                 token: ResourceDef::from(token),
-                bid: price,
-                purchase: Vault::new(token),
+                price: price,
+                purse: Vault::new(token),
                 payment: Vault::with_bucket(payment),
                 ticket_resource_address: address
             };
@@ -99,34 +101,34 @@ blueprint! {
             }
         }
 
-        fn fill_buy_order(&self, buy_order: &BuyOrder) {
+        fn fill_buy_order(&self, buy_order: &Order) {
             for sell_order in self.matching_sell_orders(buy_order) {
-                let full_payment_amount = sell_order.ask * sell_order.sale.amount();
+                let full_payment_amount = sell_order.price * sell_order.purse.amount();
 
                 if full_payment_amount <= buy_order.payment.amount() {
                     info!(
                         "SO#{} filled fully. Bought {} {} for BO#{} filling it with {} {}, leaving {} {} to spend.",
                         sell_order.number,
-                        sell_order.sale.amount(),
+                        sell_order.purse.amount(),
                         sell_order.token_symbol(),
                         buy_order.number,
-                        buy_order.purchase.amount() + sell_order.sale.amount(),
+                        buy_order.purse.amount() + sell_order.purse.amount(),
                         buy_order.token_symbol(),
                         buy_order.payment.amount() - full_payment_amount,
                         self.base_currency()
                     );
 
                     sell_order.payment.put(buy_order.payment.take(full_payment_amount));
-                    buy_order.purchase.put(sell_order.sale.take_all());
+                    buy_order.purse.put(sell_order.purse.take_all());
                 } else {
-                    let partial_token_amount = buy_order.payment.amount() / sell_order.ask;
+                    let partial_token_amount = buy_order.payment.amount() / sell_order.price;
                     let payment_amount = buy_order.payment.amount();
 
                     info!(
                         "SO#{} filled partially. Bought {} out of {} {} for {} {} to fully fill BO#{}.",
                         sell_order.number,
                         partial_token_amount,
-                        sell_order.sale.amount(),
+                        sell_order.purse.amount(),
                         sell_order.token_symbol(),
                         payment_amount,
                         self.base_currency(),
@@ -134,7 +136,7 @@ blueprint! {
                     );
 
                     sell_order.payment.put(buy_order.payment.take_all());
-                    buy_order.purchase.put(sell_order.sale.take(partial_token_amount));
+                    buy_order.purse.put(sell_order.purse.take(partial_token_amount));
                 }
             }
         }
@@ -153,12 +155,12 @@ blueprint! {
                 assert!(self.sell_orders[i].ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
 
                 let order = self.sell_orders.remove(i);
-                    
+
                 self.ticket_minter_badge.authorize(|badge| {
                     ticket.burn(badge);
                 });
 
-                (order.sale.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
+                (order.purse.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
             } else {
                 warn!("No matching order found. Returning only ticket.");
 
@@ -169,11 +171,11 @@ blueprint! {
         }
 
         /// Given the right order ticket withdraws a purchase (buy order) from the market.
-        /// 
+        ///
         /// Can be called even when the order hasn't been fully filled yet. In that case the remaining payment
         /// tokens will be returned along with what ever tokens have been bought so far. The order will be removed
         /// from the market in any case.
-        /// 
+        ///
         /// Always returns a 3-tuple of buckets `(purchased_tokens, payment_change, order_ticket)`.
         /// If no order was found, the first two will be empty while the 3rd one contains the unused ticket.
         /// If an order couldn't be found the 3rd bucket will be empty since the ticket will be burned.
@@ -190,12 +192,12 @@ blueprint! {
                 assert!(self.buy_orders[i].ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
 
                 let order = self.buy_orders.remove(i);
-                    
+
                 self.ticket_minter_badge.authorize(|badge| {
                     ticket.burn(badge);
                 });
 
-                (order.purchase.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
+                (order.purse.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
             } else {
                 warn!("No matching order found. Returning only ticket.");
 
@@ -205,15 +207,15 @@ blueprint! {
             }
         }
 
-        fn matching_sell_orders(&self, buy_order: &BuyOrder) -> Vec<&SellOrder> {
+        fn matching_sell_orders(&self, buy_order: &Order) -> Vec<&Order> {
             (&self.sell_orders)
                 .into_iter()
                 .filter(|so| self.is_matching_sell_order(buy_order, *so))
-                .collect::<Vec<&SellOrder>>()
+                .collect::<Vec<&Order>>()
         }
 
-        fn is_matching_sell_order(&self, buy_order: &BuyOrder, sell_order: &SellOrder) -> bool {
-            !sell_order.is_filled() && sell_order.token == buy_order.token && buy_order.bid >= sell_order.ask
+        fn is_matching_sell_order(&self, buy_order: &Order, sell_order: &Order) -> bool {
+            !sell_order.is_filled() && sell_order.token == buy_order.token && buy_order.price >= sell_order.price
         }
 
         fn base_currency(&self) -> String {
@@ -234,16 +236,16 @@ blueprint! {
 
             for order in &self.buy_orders {
                 let filled = if order.is_filled() { "yes" } else {
-                    if order.purchase.amount() == 0.into() { "no" } else { "part" }
+                    if order.purse.amount() == 0.into() { "no" } else { "part" }
                 };
 
                 info!(
                     " | {:>4} | {:>5} | {:>7} | {:>6} | {:>6} | {:>7} |",
                     order.number,
                     order.token_symbol(),
-                    order.bid.to_string(),
+                    order.price.to_string(),
                     filled,
-                    self.truncate(order.purchase.amount().to_string(), 6), // decimal fmt doesn't seem to work with info! macro so we do this
+                    self.truncate(order.purse.amount().to_string(), 6), // decimal fmt doesn't seem to work with info! macro so we do this
                     self.truncate(order.payment.amount().to_string(), 7)
                 );
             }
@@ -264,9 +266,9 @@ blueprint! {
                     " | {:>4} | {:>5} | {:>7} | {:>6} | {:>8} | {:>7} |",
                     order.number,
                     order.token_symbol(),
-                    order.ask.to_string(),
+                    order.price.to_string(),
                     filled,
-                    self.truncate(order.sale.amount().to_string(), 8),
+                    self.truncate(order.purse.amount().to_string(), 8),
                     self.truncate(order.payment.amount().to_string(), 7)
                 );
             }
