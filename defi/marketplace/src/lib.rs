@@ -148,9 +148,11 @@ blueprint! {
                 .position(|order| order.number.to_string() == ticket.resource_def().metadata()["order_number"]);
 
             if index.is_some() {
-                let order = self.sell_orders.remove(index.unwrap());
+                let i = index.unwrap();
 
-                assert!(order.ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
+                assert!(self.sell_orders[i].ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
+
+                let order = self.sell_orders.remove(i);
                     
                 self.ticket_minter_badge.authorize(|badge| {
                     ticket.burn(badge);
@@ -183,9 +185,11 @@ blueprint! {
                 .position(|order| order.number.to_string() == ticket.resource_def().metadata()["order_number"]);
 
             if index.is_some() {
-                let order = self.buy_orders.remove(index.unwrap());
+                let i = index.unwrap();
 
-                assert!(order.ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
+                assert!(self.buy_orders[i].ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
+
+                let order = self.buy_orders.remove(i);
                     
                 self.ticket_minter_badge.authorize(|badge| {
                     ticket.burn(badge);
