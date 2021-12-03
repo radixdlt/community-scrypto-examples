@@ -73,6 +73,7 @@ struct TestEnv<'a> {
     admin_key: Address,
     admin_account: Address,
     component: Address,
+    admin_badge: Address
 }
 
 impl<'a> TestEnv<'a> {
@@ -85,17 +86,22 @@ impl<'a> TestEnv<'a> {
 
         let tx = TransactionBuilder::new(&executor)
             .call_function(package, "Airdrop", "new", vec![], None)
+            .deposit_all_buckets(admin_account)
+            .drop_all_bucket_refs()
             .build(vec![admin_key])
             .unwrap();
         let receipt = executor.run(tx, false).unwrap();
         println!("{:?}\n", receipt);
         assert!(receipt.success);
 
+        let admin_badge = receipt.resource_def(0).unwrap();
+
         Self {
             executor,
             admin_key,
             admin_account,
             component: receipt.component(0).unwrap(),
+            admin_badge
         }
     }
 
@@ -109,9 +115,14 @@ impl<'a> TestEnv<'a> {
             .call_method(
                 self.component,
                 "add_recipient",
-                vec![format!("{}", recipient)],
-                None,
+                vec![
+                    format!("{}", recipient),
+                    format!("1,{}", self.admin_badge)
+                ],
+                Some(self.admin_account),
             )
+            .deposit_all_buckets(self.admin_account)
+            .drop_all_bucket_refs()
             .build(vec![self.admin_key])
             .unwrap();
         let receipt = self.executor.run(tx, false).unwrap();
@@ -124,9 +135,14 @@ impl<'a> TestEnv<'a> {
             .call_method(
                 self.component,
                 "perform_airdrop",
-                vec![format!("{},{}", amount, token)],
+                vec![
+                    format!("{},{}", amount, token),
+                    format!("1,{}", self.admin_badge)
+                ],
                 Some(self.admin_account),
             )
+            .deposit_all_buckets(self.admin_account)
+            .drop_all_bucket_refs()
             .build(vec![self.admin_key])
             .unwrap();
         let receipt = self.executor.run(tx, false).unwrap();

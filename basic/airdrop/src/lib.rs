@@ -2,21 +2,29 @@ use scrypto::prelude::*;
 
 blueprint! {
     struct Airdrop {
+        admin_badge: ResourceDef,
         recipients: Vec<Address>,
     }
 
     impl Airdrop {
-        pub fn new() -> Component {
-            Self {
-                recipients: Vec::new(),
+        pub fn new() -> (Component, Bucket) {
+            let admin_badge = ResourceBuilder::new().new_badge_fixed(1);
+
+            let component = Self {
+                admin_badge: admin_badge.resource_def(),
+                recipients: Vec::new()
             }
-            .instantiate()
+            .instantiate();
+
+            (component, admin_badge)
         }
 
+        #[auth(admin_badge)]
         pub fn add_recipient(&mut self, recipient: Address) {
             self.recipients.push(recipient);    
         }
 
+        #[auth(admin_badge)]
         pub fn perform_airdrop(&self, tokens: Bucket) {
             let num_recipients = self.recipients.len();
             assert!(num_recipients > 0, "You must register at least one recipient before performing an airdrop");
