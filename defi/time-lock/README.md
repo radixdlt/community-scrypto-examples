@@ -19,7 +19,10 @@ Create the time lock component with 0.5% fee
 ## Add more XRD to existing lock
 1. `resim call-method $component add 1,$user 100,$xrd` - add 100 XRD in addition to already locked amount 
 
+## Get locked XRD
+1. `resim call-method $component locked 1,$user` - returns locked amount value and the release epoch
+
 ## Release locked XRD
 1. `resim set-current-epoch 101` - increase current epoch to be able to release locked XRD
-1. `resim call-method $component release 1,$user 99.5` - we release available XRD from the lock
+1. `resim call-method $component release 1,$user 99.5` - we release available XRD from the lock, partial or the entire amount
 
