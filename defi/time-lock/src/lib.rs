@@ -6,7 +6,7 @@ blueprint! {
         /// Mint authorization to TL badges.
         tl_minter_vault: Vault,
         tl_minter_badge: ResourceDef,
-        // Minted tokens refs
+        // Minted badges
         minted: HashMap<Address, (Decimal, u64)>,
 
         // Collected fees in XRD.
@@ -21,11 +21,10 @@ blueprint! {
 
     impl TimeLock {
        
-        /// Setup the Lock contract, assign an amount of XRD and the end time.
         pub fn new(fee: Decimal) -> (Component, Bucket) {
 
             let tl_minter_bucket = ResourceBuilder::new()
-                .metadata("name", "TL Token Mint Auth")
+                .metadata("name", "TL Badge Mint Auth")
                 .new_badge_fixed(2);
 
             let tl_minter_resource_def = tl_minter_bucket.resource_def();
@@ -66,9 +65,8 @@ blueprint! {
             
             // Put fees in collected XRD.
             self.collected_fees.put(fee_tokens);
-            // put the rest amount of tokens to the locked vault
 
-            // Mint TL token with locked amount and end epoch as metadata
+            // Mint TL badge with locked amount and end epoch as metadata
             let tl_resource_def = ResourceBuilder::new()
                 .metadata("name", "Time lock badge")
                 .metadata("amount", available.to_string())
@@ -80,7 +78,10 @@ blueprint! {
                     .mint(1, badge)
             });
 
+            // store new badge address
             self.minted.insert(tl_resource_def.address(), (available, end_time));
+
+            // put the rest amount of tokens to the locked vault
             self.locked_xrd.put(lock_tokens);
             tl_badge
         }
@@ -95,7 +96,7 @@ blueprint! {
                 scrypto_assert!(Context::current_epoch() > value.1, "Release time not yet over, wait for a bit longer"); 
                 scrypto_assert!(value.0 > Decimal::zero(), "Release amount is zero");
 
-                // Burn the TL tokens received
+                // Burn the TL badge
                 self.tl_minter_vault.authorize(|badge| {
                     tl_badge.burn(badge);
                 });
