@@ -11,10 +11,9 @@ How to test:
 
 Create the time lock component with 0.5% fee
 1. `resim call-function $package TimeLock new 0.5` -> save component address into $component
-1. `resim call-method $component new_user` -> save user ref into $user
 
 ## lock XRD
-1. `resim call-method $component lock 1,$user 100,$xrd 100` - lock 100 XRD of user with duration added to the current epoch. Mints one TL badge with corresponding metadata -> save badge ref into $locked1
+1. `resim call-method $component lock 100,$xrd 100` - lock 100 XRD of user with duration added to the current epoch. Mints one TL badge with corresponding metadata -> save badge ref into $locked1
 
 ## Release locked XRD
 1. `resim set-current-epoch 101` - increase current epoch to be able to release locked XRD
