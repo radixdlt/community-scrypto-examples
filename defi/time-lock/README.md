@@ -19,4 +19,3 @@ Create the time lock component with 0.5% fee
 ## Release locked XRD
 1. `resim set-current-epoch 101` - increase current epoch to be able to release locked XRD
 1. `resim call-method $component release 1,$locked1` - release available XRD from the lock. the TL badge will be burned after 
-
