@@ -10,7 +10,8 @@ blueprint! {
         currency: Address,
         buy_orders: Vec<Order>,
         sell_orders: Vec<Order>,
-        ticket_minter_badge: Vault
+        ticket_minter_badge: Vault,
+        market_prices: MarketPrices
     }
 
     impl Market {
@@ -24,7 +25,8 @@ blueprint! {
                 currency: currency,
                 buy_orders: vec![],
                 sell_orders: vec![],
-                ticket_minter_badge: Vault::with_bucket(ticket_minter_badge)
+                ticket_minter_badge: Vault::with_bucket(ticket_minter_badge),
+                market_prices: MarketPrices::new()
             }
                 .instantiate()
         }
@@ -53,7 +55,15 @@ blueprint! {
             number
         }
 
-        pub fn sell(&mut self, tokens: Bucket, price: Decimal) -> Bucket {
+        pub fn market_buy(&mut self, token: Address, payment: Bucket) -> Bucket {
+            self.limit_buy(token, 0.into(), payment)
+        }
+
+        pub fn market_sell(&mut self, tokens: Bucket) -> Bucket {
+            self.limit_sell(tokens, 0.into())
+        }
+
+        pub fn limit_sell(&mut self, tokens: Bucket, price: Decimal) -> Bucket {
             let order_number = self.next_order_number();
             let (ticket, address) = self.order_ticket(order_number, tokens.resource_def().address());
             let order = Order {
@@ -66,12 +76,14 @@ blueprint! {
                 ticket_resource_address: address
             };
 
+            self.fill_sell_order(&order);
+
             self.sell_orders.push(order);
 
             ticket
         }
 
-        pub fn buy(&mut self, token: Address, price: Decimal, payment: Bucket) -> Bucket {
+        pub fn limit_buy(&mut self, token: Address, price: Decimal, payment: Bucket) -> Bucket {
             assert!(
                 payment.resource_def().address() == self.currency,
                 "Expecting payment in market currency!"
@@ -89,56 +101,97 @@ blueprint! {
                 ticket_resource_address: address
             };
 
+            self.fill_buy_order(&order);
+
             self.buy_orders.push(order);
 
             ticket
         }
 
-        pub fn fill_orders(&self) {
-            let buy_orders = &self.buy_orders;
-            for buy_order in buy_orders {
-                self.fill_buy_order(&buy_order);
+        fn fill_buy_order(&mut self, buy_order: &Order) {
+            let mut last_price: Option<Decimal> = None;
+
+            for sell_order in self.matching_sell_orders(buy_order) {
+                let price: Decimal = sell_order.price;
+
+                self.fill_order(sell_order, buy_order, price);
+
+                last_price = Some(price);
+
+                if buy_order.is_filled() {
+                    break;
+                }
+            }
+
+            for price in last_price {
+                self.market_prices.update(buy_order.token_symbol(), price);
             }
         }
 
-        fn fill_buy_order(&self, buy_order: &Order) {
-            for sell_order in self.matching_sell_orders(buy_order) {
-                let full_payment_amount = sell_order.price * sell_order.purse.amount();
+        fn fill_sell_order(&mut self, sell_order: &Order) {
+            let mut last_price: Option<Decimal> = None;
 
-                if full_payment_amount <= buy_order.payment.amount() {
-                    info!(
-                        "SO#{} filled fully. Bought {} {} for BO#{} filling it with {} {}, leaving {} {} to spend.",
-                        sell_order.number,
-                        sell_order.purse.amount(),
-                        sell_order.token_symbol(),
-                        buy_order.number,
-                        buy_order.purse.amount() + sell_order.purse.amount(),
-                        buy_order.token_symbol(),
-                        buy_order.payment.amount() - full_payment_amount,
-                        self.base_currency()
-                    );
+            for buy_order in self.matching_buy_orders(sell_order) {
+                let price: Decimal = buy_order.price;
 
-                    sell_order.payment.put(buy_order.payment.take(full_payment_amount));
-                    buy_order.purse.put(sell_order.purse.take_all());
-                } else {
-                    let partial_token_amount = buy_order.payment.amount() / sell_order.price;
-                    let payment_amount = buy_order.payment.amount();
+                self.fill_order(sell_order, buy_order, price);
 
-                    info!(
-                        "SO#{} filled partially. Bought {} out of {} {} for {} {} to fully fill BO#{}.",
-                        sell_order.number,
-                        partial_token_amount,
-                        sell_order.purse.amount(),
-                        sell_order.token_symbol(),
-                        payment_amount,
-                        self.base_currency(),
-                        buy_order.number
-                    );
+                last_price = Some(price);
 
-                    sell_order.payment.put(buy_order.payment.take_all());
-                    buy_order.purse.put(sell_order.purse.take(partial_token_amount));
+                if sell_order.is_filled() {
+                    break;
                 }
             }
+
+            for price in last_price {
+                self.market_prices.update(sell_order.token_symbol(), price);
+            }
+        }
+
+        fn fill_order(&self, sell_order: &Order, buy_order: &Order, price: Decimal) {
+            let full_payment_amount = price * sell_order.purse.amount();
+
+            if full_payment_amount <= buy_order.payment.amount() {
+                self.log_fully_filled_sell_order(full_payment_amount, sell_order, buy_order);
+
+                sell_order.payment.put(buy_order.payment.take(full_payment_amount));
+                buy_order.purse.put(sell_order.purse.take_all());
+            } else {
+                let partial_token_amount = buy_order.payment.amount() / price;
+                let payment_amount = buy_order.payment.amount();
+
+                self.log_partially_filled_sell_order(partial_token_amount, payment_amount, sell_order, buy_order);
+
+                sell_order.payment.put(buy_order.payment.take_all());
+                buy_order.purse.put(sell_order.purse.take(partial_token_amount));
+            }
+        }
+
+        fn log_fully_filled_sell_order(&self, payment_amount: Decimal, sell_order: &Order, buy_order: &Order) {
+            info!(
+                "SO#{} filled fully. Bought {} {} for BO#{} filling it with {} {}, leaving {} {} to spend.",
+                sell_order.number,
+                sell_order.purse.amount(),
+                sell_order.token_symbol(),
+                buy_order.number,
+                buy_order.purse.amount() + sell_order.purse.amount(),
+                buy_order.token_symbol(),
+                buy_order.payment.amount() - payment_amount,
+                self.base_currency()
+            );
+        }
+
+        fn log_partially_filled_sell_order(&self, token_amount: Decimal, payment_amount: Decimal, sell_order: &Order, buy_order: &Order) {
+            info!(
+                "SO#{} filled partially. Bought {} out of {} {} for {} {} to fully fill BO#{}.",
+                sell_order.number,
+                token_amount,
+                sell_order.purse.amount(),
+                sell_order.token_symbol(),
+                payment_amount,
+                self.base_currency(),
+                buy_order.number
+            );
         }
 
         /// Given the right order ticket withdraws a sale (sell order) from the market.
@@ -208,14 +261,39 @@ blueprint! {
         }
 
         fn matching_sell_orders(&self, buy_order: &Order) -> Vec<&Order> {
-            (&self.sell_orders)
+            let mut orders = (&self.sell_orders)
                 .into_iter()
                 .filter(|so| self.is_matching_sell_order(buy_order, *so))
-                .collect::<Vec<&Order>>()
+                .collect::<Vec<&Order>>();
+
+            orders.sort_by(|a, b| a.price.cmp(&b.price)); // sort by lowest price first
+
+            orders
         }
 
         fn is_matching_sell_order(&self, buy_order: &Order, sell_order: &Order) -> bool {
-            !sell_order.is_filled() && sell_order.token == buy_order.token && buy_order.price >= sell_order.price
+            if sell_order.is_filled() || sell_order.token != buy_order.token { return false }
+            if buy_order.is_market_order() { return true }
+
+            sell_order.price <= buy_order.price
+        }
+
+        fn matching_buy_orders(&self, sell_order: &Order) -> Vec<&Order> {
+            let mut orders = (&self.buy_orders)
+                .into_iter()
+                .filter(|bo| self.is_matching_buy_order(sell_order, *bo))
+                .collect::<Vec<&Order>>();
+
+            orders.sort_by(|a, b| b.price.cmp(&a.price)); // sort by highest price first
+
+            orders
+        }
+
+        fn is_matching_buy_order(&self, sell_order: &Order, buy_order: &Order) -> bool {
+            if buy_order.is_filled() || buy_order.token != sell_order.token { return false }
+            if sell_order.is_market_order() { return true }
+
+            buy_order.price >= sell_order.price
         }
 
         fn base_currency(&self) -> String {
@@ -243,7 +321,7 @@ blueprint! {
                     " | {:>4} | {:>5} | {:>7} | {:>6} | {:>6} | {:>7} |",
                     order.number,
                     order.token_symbol(),
-                    order.price.to_string(),
+                    if order.is_market_order() { String::from("market") } else { order.price.to_string() },
                     filled,
                     self.truncate(order.purse.amount().to_string(), 6), // decimal fmt doesn't seem to work with info! macro so we do this
                     self.truncate(order.payment.amount().to_string(), 7)
@@ -266,7 +344,7 @@ blueprint! {
                     " | {:>4} | {:>5} | {:>7} | {:>6} | {:>8} | {:>7} |",
                     order.number,
                     order.token_symbol(),
-                    order.price.to_string(),
+                    if order.is_market_order() { String::from("market") } else { order.price.to_string() },
                     filled,
                     self.truncate(order.purse.amount().to_string(), 8),
                     self.truncate(order.payment.amount().to_string(), 7)
@@ -274,6 +352,22 @@ blueprint! {
             }
 
             info!(" \\------------------------------------------------------/");
+        }
+
+        pub fn print_market_prices(&self) {
+            info!(" /' MARKET PRICES '\\");
+            info!(" +-----------------+");
+            info!(" | Asset |  Price  |");
+            info!(" +-----------------+");
+
+            for asset in self.market_prices.assets() {
+                let name = asset.clone();
+                let price = self.market_prices.get(asset).unwrap();
+
+                info!(" | {:>5} | {:>7} |", name, self.truncate(price.to_string(), 7));
+            }
+
+            info!(" \\-----------------/");
         }
     }
 }
