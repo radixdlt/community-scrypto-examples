@@ -64,8 +64,7 @@ blueprint! {
 
             // we use special target possibility. Bigger depth increases fish size but reduces target (chances to capture)
             let portion = Decimal::from(100) / depth;
-            let fraction = portion - portion * Decimal::one()/Decimal::from(100);
-            let target = (fraction / 100) * 10000 * Decimal::from(99)/Decimal::from(100);
+            let target = (portion / 100) * 10000 * Decimal::from(99)/Decimal::from(100);
             info!("Target: {}", target);
 
             // take hash
