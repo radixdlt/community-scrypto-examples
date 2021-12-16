@@ -1,0 +1,12 @@
+[package]
+name = "bonding_macros"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+proc-macro2 = "1.0.33"
+quote = "1.0.10"
+syn = { version = "1.0.82", features = ["full", "fold"] }
+
+[lib]
+proc_macro = true
