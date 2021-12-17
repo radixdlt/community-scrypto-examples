@@ -91,12 +91,16 @@ blueprint! {
             let initial_supply = curve.get_initial_supply(initial_reserve.amount());
 
             // setup auth/badges
-            let continuous_auth: BucketOf<AUTH> = ResourceBuilder::new().new_badge_fixed(1).into(); // only this Component can mint/burn CONTINUOUS.  No failsafe for better or worse
+            let continuous_auth: BucketOf<AUTH> = ResourceBuilder::new_fungible(DIVISIBILITY_NONE).initial_supply_fungible(1).into(); // only this Component can mint/burn CONTINUOUS.  No failsafe for better or worse
+
             // setup continuous resource
-            let continuous_def = ResourceBuilder::new()
+            let continuous_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", continuous_name)
                 .metadata("symbol", continuous_symbol)
-                .new_token_mutable(continuous_auth.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(continuous_auth.resource_address(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
+
             // mint the initial supply
             let continuous: BucketOf<CONTINUOUS> = continuous_auth.authorize(|minter|
                 continuous_def.mint(initial_supply, minter).into()
@@ -182,7 +186,7 @@ blueprint! {
 
             // burn the CONTINUOUS
             self.continuous_auth.authorize(|burner|
-                continuous.burn(burner)
+                continuous.burn_with_auth(burner)
             );
 
             // return from reserve vault, and empty CONTINUOUS bucket
@@ -193,7 +197,7 @@ blueprint! {
         pub fn get_price(&self) -> Decimal {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
-            curve.get_price(self.reserve.amount(), self.continuous.resource_def().supply())
+            curve.get_price(self.reserve.amount(), self.continuous.resource_def().total_supply())
         }
 
         pub fn get_sell_quote(&self, continuous_amount: Decimal) -> BucketRef {
@@ -203,17 +207,17 @@ blueprint! {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
             // calculate the amount that would be returned
-            let return_amount = curve.get_return_amount(continuous_amount, self.reserve.amount(), self.continuous.resource_def().supply());
+            let return_amount = curve.get_return_amount(continuous_amount, self.reserve.amount(), self.continuous.resource_def().total_supply());
             // return a placeholder for the amount as proof we have it in reserve
             let bucket = self.reserve.take(return_amount);
-            bucket.borrow() // return proof of amount, but don't give it away
+            bucket.present() // return proof of amount, but don't give it away
         }
 
         pub fn get_buy_quote_amount(&self, collateral_amount: Decimal) -> Decimal {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
             // calculate amount that would be minted
-            curve.get_mint_amount(collateral_amount, self.reserve.amount(), self.continuous.resource_def().supply())
+            curve.get_mint_amount(collateral_amount, self.reserve.amount(), self.continuous.resource_def().total_supply())
         }
 
         pub fn get_sell_quote_amount(&self, continuous_amount: Decimal) -> Decimal {
@@ -222,7 +226,7 @@ blueprint! {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
             // calculate the amount that would be returned
-            curve.get_return_amount(continuous_amount, self.reserve.amount(), self.continuous.resource_def().supply())
+            curve.get_return_amount(continuous_amount, self.reserve.amount(), self.continuous.resource_def().total_supply())
         }
 
     }
