@@ -6,6 +6,9 @@ static SLOT_ITEMS: [&str; 6] = ["CHERRY", "LEMON", "ORANGE", "PLUM", "BELL", "BA
 blueprint! {
     struct SlotMachine {
         casino_bank: Vault,
+        first_wheel_counter: usize,
+        second_wheel_counter: usize,
+        third_wheel_counter: usize,
     }
 
     impl SlotMachine {
@@ -19,16 +22,19 @@ blueprint! {
             // Instantiate a Hello component, populating its vault with our supply of 1000 HelloToken
             Self {
                 casino_bank: Vault::with_bucket(bank_bucket),
+                first_wheel_counter: 0,
+                second_wheel_counter: 0,
+                third_wheel_counter: 0,
             }
             .instantiate()
         }
 
         pub fn free_token(&mut self) -> Bucket {
             info!(
-                "My balance is: {} VegasToken. Now giving away a token!",
+                "My balance is: {} VegasToken. Now giving away 100 token!",
                 self.casino_bank.amount()
             );
-            self.casino_bank.take(1)
+            self.casino_bank.take(100)
         }
 
         pub fn play(&mut self, bet: Bucket) -> Bucket {
@@ -39,13 +45,19 @@ blueprint! {
 
             self.casino_bank.put(bet);
 
-            let first_wheel: String = Self::spin_wheel();
-            let second_wheel: String = Self::spin_wheel();
-            let third_wheel: String = Self::spin_wheel();
+
+            // Use counters to simulate randomness
+            let first_wheel: String = Self::spin_wheel(&self.first_wheel_counter);
+            let second_wheel: String = Self::spin_wheel(&self.second_wheel_counter);
+            let third_wheel: String = Self::spin_wheel(&self.third_wheel_counter);
+            self.first_wheel_counter  += 1;
+            self.second_wheel_counter += 2;
+            self.third_wheel_counter  += 3;
+
             let score = Self::get_score(&first_wheel, &second_wheel, &third_wheel);
 
             info!(
-                "You rolled {}, {}, {} and your score is {}",
+                "You rolled {}, {}, {} and your score is {}.",
                 first_wheel, second_wheel, third_wheel, score
             );
 
@@ -55,16 +67,17 @@ blueprint! {
                 return empty_bucket
             } else {
                 let win = bet_amount * score;
-                info!("You've won {} VegasToken! Congratulation!", win);
+                info!("You've won {} VegasToken! Congratulations!", win);
                 return self.casino_bank.take(win)
             }
         }
 
-        fn spin_wheel() -> String {
+        fn spin_wheel(counter: &usize) -> String {
             // rand does not work
             // let mut rng = rand::thread_rng();
             // let rand_num = rng.gen_range(0, 5);
-            SLOT_ITEMS[4].to_string()
+
+            SLOT_ITEMS[counter % SLOT_ITEMS.len()].to_string()
         }
 
         fn get_score(first_wheel: &String, second_wheel: &String, third_wheel: &String) -> i32 {

@@ -10,5 +10,7 @@ resim publish .
 resim call-function $package SlotMachine new 10000
 resim call-method $component free_token
 resim call-method $component play "1,$token"
+resim call-method $component play "1,$token"
+resim call-method $component play "1,$token"
 resim show $acc
 resim show $component
