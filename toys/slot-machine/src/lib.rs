@@ -1,11 +1,11 @@
 use scrypto::prelude::*;
-//use rand::Rng;
+// use rand::Rng;
 
 static SLOT_ITEMS: [&str; 6] = ["CHERRY", "LEMON", "ORANGE", "PLUM", "BELL", "BAR"];
 
 blueprint! {
     struct SlotMachine {
-        casino_bank: Vault
+        casino_bank: Vault,
     }
 
     impl SlotMachine {
@@ -18,36 +18,56 @@ blueprint! {
 
             // Instantiate a Hello component, populating its vault with our supply of 1000 HelloToken
             Self {
-                casino_bank: Vault::with_bucket(bank_bucket)
+                casino_bank: Vault::with_bucket(bank_bucket),
             }
             .instantiate()
+        }
+
+        pub fn free_token(&mut self) -> Bucket {
+            info!(
+                "My balance is: {} VegasToken. Now giving away a token!",
+                self.casino_bank.amount()
+            );
+            self.casino_bank.take(1)
         }
 
         pub fn play(&mut self, bet: Bucket) -> Bucket {
 
             let bet_amount = bet.amount();
+
+            info!("You are betting {} VegasToken.", bet_amount);
+
             self.casino_bank.put(bet);
 
             let first_wheel: String = Self::spin_wheel();
             let second_wheel: String = Self::spin_wheel();
             let third_wheel: String = Self::spin_wheel();
-            let score = Self::get_score(first_wheel, second_wheel, third_wheel);
+            let score = Self::get_score(&first_wheel, &second_wheel, &third_wheel);
+
+            info!(
+                "You rolled {}, {}, {} and your score is {}",
+                first_wheel, second_wheel, third_wheel, score
+            );
 
             if score == 0 {
+                info!("You've lost! Good luck next time.");
                 let empty_bucket: Bucket = Bucket::new(RADIX_TOKEN);
                 return empty_bucket
             } else {
                 let win = bet_amount * score;
+                info!("You've won {} VegasToken! Congratulation!", win);
                 return self.casino_bank.take(win)
             }
         }
 
         fn spin_wheel() -> String {
-            //random_number = rand::thread_rng(0..5);
-            SLOT_ITEMS[5].to_string()
+            // rand does not work
+            // let mut rng = rand::thread_rng();
+            // let rand_num = rng.gen_range(0, 5);
+            SLOT_ITEMS[4].to_string()
         }
 
-        fn get_score(first_wheel: String, second_wheel: String, third_wheel: String) -> i32 {
+        fn get_score(first_wheel: &String, second_wheel: &String, third_wheel: &String) -> i32 {
 
             let score: i32;
 
