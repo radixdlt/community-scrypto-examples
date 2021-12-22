@@ -16,9 +16,9 @@ blueprint! {
 
     impl Market {
         pub fn open(currency: Address) -> Component {
-            let ticket_minter_badge = ResourceBuilder::new()
+            let ticket_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Order Ticket Minter Badge")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
             Self {
                 order_count: 0,
@@ -34,13 +34,15 @@ blueprint! {
         /// Yields a new token specifically for this order which can be used to withdraw
         /// from it once it's filled.
         fn order_ticket(&self, order_number: i64, token_address: Address) -> (Bucket, Address) {
-            let ticket_resource_def = ResourceBuilder::new()
+            let ticket_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", format!("Order Ticket #{}", order_number))
                 .metadata("symbol", format!("OT-{}", order_number))
                 .metadata("order_number", format!("{}", order_number))
                 .metadata("order_token_address", token_address.to_string())
                 .metadata("order_currency", self.base_currency())
-                .new_token_mutable(self.ticket_minter_badge.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(self.ticket_minter_badge.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             self.ticket_minter_badge.authorize(|badge|{
                 (ticket_resource_def.mint(1, badge), ticket_resource_def.address())
@@ -210,7 +212,7 @@ blueprint! {
                 let order = self.sell_orders.remove(i);
 
                 self.ticket_minter_badge.authorize(|badge| {
-                    ticket.burn(badge);
+                    ticket.burn_with_auth(badge);
                 });
 
                 (order.purse.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
@@ -247,7 +249,7 @@ blueprint! {
                 let order = self.buy_orders.remove(i);
 
                 self.ticket_minter_badge.authorize(|badge| {
-                    ticket.burn(badge);
+                    ticket.burn_with_auth(badge);
                 });
 
                 (order.purse.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
