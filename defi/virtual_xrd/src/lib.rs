@@ -9,14 +9,16 @@ blueprint! {
 
     impl VirtualXrd {
         pub fn new() -> Component {
-            let minter_badge = ResourceBuilder::new()
+            let minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Minter Badge")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
-            let vxrd_resource_def = ResourceBuilder::new()
+            let vxrd_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "VXRD")
                 .metadata("symbol", "VXRD")
-                .new_token_mutable(minter_badge.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(minter_badge.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             Self {
                 vxrd_resource_def: vxrd_resource_def,
@@ -27,7 +29,7 @@ blueprint! {
         }
 
         pub fn swap_xrd_for_vxrd(&mut self, xrd: Bucket) -> Bucket {
-            scrypto_assert!(xrd.resource_address() == RADIX_TOKEN,
+            assert!(xrd.resource_address() == RADIX_TOKEN,
                 "The tokens for the opportunity must be XRD");
 
             let amount = xrd.amount();
@@ -40,13 +42,13 @@ blueprint! {
         }
 
         pub fn swap_vxrd_for_xrd(&mut self, vxrd: Bucket) -> Bucket {
-            scrypto_assert!(vxrd.resource_address() == self.vxrd_resource_def.address(),
+            assert!(vxrd.resource_address() == self.vxrd_resource_def.address(),
                 "The tokens for the opportunity must be VXRD");
 
             let amount = vxrd.amount();
             let xrd_tokens = self.xrd_vault.take(amount);
             self.minter_badge.authorize(|badge| {
-                vxrd.burn(badge);
+                vxrd.burn_with_auth(badge);
             });
 
             xrd_tokens
