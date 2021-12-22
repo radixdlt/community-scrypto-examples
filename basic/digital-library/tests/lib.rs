@@ -9,7 +9,7 @@ fn test_new() {
 
     let key = executor.new_public_key();
     let account = executor.new_account(key);
-    let package = executor.publish_package(include_code!());
+    let package = executor.publish_package(include_code!("library"));
 
     let args = vec!["10".to_string(), "1".to_string(), "3".to_string()];
     let receipt = executor
@@ -48,7 +48,7 @@ fn test_print_library() {
 
     let key = executor.new_public_key();
     let account = executor.new_account(key);
-    let package = executor.publish_package(include_code!());
+    let package = executor.publish_package(include_code!("library"));
     let args = vec!["10".to_string(), "1".to_string(), "3".to_string()];
     let receipt = executor
         .run(
@@ -78,7 +78,7 @@ fn test_register() {
 
     let key = executor.new_public_key();
     let account = executor.new_account(key);
-    let package = executor.publish_package(include_code!());
+    let package = executor.publish_package(include_code!("library"));
     let args = vec!["10".to_string(), "1".to_string(), "3".to_string()];
     let receipt = executor
         .run(
