@@ -9,7 +9,7 @@ fn test_donations() {
     let mut executor = TransactionExecutor::new(&mut ledger, 0, 0);
     let key = executor.new_public_key();
     let account = executor.new_account(key);
-    let package = executor.publish_package(include_code!());
+    let package = executor.publish_package(include_code!("donations"));
     let xrd = "030000000000000000000000000000000000000000000000000004";
 
     // Test the `new` function.
