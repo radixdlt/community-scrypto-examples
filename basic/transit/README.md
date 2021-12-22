@@ -21,8 +21,8 @@ export acct2=
 ```
 ## Transfer funds from account 1 to account 2
 ```
-resim transfer 500 $usd $acct2
-resim transfer 500 $eur $acct2
+resim transfer 500,$usd $acct2
+resim transfer 500,$eur $acct2
 ```
 - At this point both accounts should have $500 and €500 you can verify with: `resim show $acct1`
 ## Publish package
@@ -52,7 +52,7 @@ resim call-method $component buy_ticket 10,$eur
 ## Transfer the european badge to account 2
 - Each region has 1 host badge for controlling rides and withdrawing payments
 ```
-resim transfer 1 $european_badge $acct2
+resim transfer 1,$european_badge $acct2
 ```
 ## Switch to account 2
 - account 2 should now have the european badge, $500 and €500: `resim show $acct2`
