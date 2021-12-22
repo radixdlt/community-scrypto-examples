@@ -35,19 +35,21 @@ See the next section below for a typical test scenario.
 
 ```rust
 pub fn new(tokens_for_sale: Bucket, payment_token: Address, price_per_token: Decimal,
-           max_personal_allocation: Decimal) -> (Component, Bucket) {
-    let admin_badge = ResourceBuilder::new()
+                   max_personal_allocation: Decimal) -> (Component, Bucket) {
+    let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
         .metadata("name", "admin_badge")
-        .new_badge_fixed(1);
+        .initial_supply_fungible(1);
 
-    let sale_ticket_minter = ResourceBuilder::new()
+    let sale_ticket_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
         .metadata("name", "sale_ticket_minter")
-        .new_badge_fixed(1);
+        .initial_supply_fungible(1);
 
-    let sale_tickets = ResourceBuilder::new()
+    let sale_tickets = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
         .metadata("name", "Sale Ticket Token")
         .metadata("symbol", "STT")
-        .new_token_mutable(sale_ticket_minter.resource_def());
+        .flags(MINTABLE | BURNABLE)
+        .badge(sale_ticket_minter.resource_def(), MAY_MINT | MAY_BURN)
+        .no_initial_supply();
 
     let component = Self {
         admin_badge: admin_badge.resource_def(),
@@ -209,7 +211,7 @@ resim call-method $component create_tickets 10 1,$admin_badge
 resim show $admin_account
 
 # Next, let's transfer a ticket to a whitelisted user:
-resim transfer 1 $ticket $customer_account
+resim transfer 1,$ticket $customer_account
 
 # Finally, let's start the sale. Remember that we need to flash our admin_badge.
 resim call-method $component start_sale 1,$admin_badge
