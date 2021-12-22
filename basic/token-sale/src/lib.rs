@@ -17,18 +17,20 @@ blueprint! {
     impl TokenSale {
         pub fn new(tokens_for_sale: Bucket, payment_token: Address, price_per_token: Decimal,
                    max_personal_allocation: Decimal) -> (Component, Bucket) {
-            let admin_badge = ResourceBuilder::new()
+            let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "admin_badge")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
-            let sale_ticket_minter = ResourceBuilder::new()
+            let sale_ticket_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "sale_ticket_minter")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
-            let sale_tickets = ResourceBuilder::new()
+            let sale_tickets = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Sale Ticket Token")
                 .metadata("symbol", "STT")
-                .new_token_mutable(sale_ticket_minter.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(sale_ticket_minter.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             let component = Self {
                 admin_badge: admin_badge.resource_def(),
@@ -71,7 +73,7 @@ blueprint! {
             // Check the user's ticket and burn it
             assert!(ticket.amount() == Decimal::from(1),
                     "You need to send exactly one ticket in order to participate in the sale");
-            self.sale_ticket_minter.authorize(|minter| ticket.burn(minter));
+            self.sale_ticket_minter.authorize(|minter| ticket.burn_with_auth(minter));
 
             // Calculate the actual amount of tokens that the user can buy
             let payment_amount = min(payment.amount(), self.max_personal_allocation);
