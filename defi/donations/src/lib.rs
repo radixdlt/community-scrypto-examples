@@ -12,9 +12,9 @@ blueprint! {
     impl Donations {
         
         pub fn new(fee_percent: Decimal) -> (Component, Bucket) {
-            let admin_bucket = ResourceBuilder::new()
+            let admin_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Donations Badge Mint Auth")
-                .new_badge_fixed(2);
+                .initial_supply_fungible(2);
 
             let admin_resource_def = admin_bucket.resource_def();
             let admin_return_bucket: Bucket = admin_bucket.take(1); // Return this badge to the caller
@@ -33,20 +33,22 @@ blueprint! {
 
         // make a new badge with specific meta 
         pub fn make_badge(&mut self, owner: Address, identifier: String, title: String, description: String, url: String, price: Decimal, supply: Decimal) {
-            scrypto_assert!(supply > Decimal::zero(), "Supply cannot be zero");
-            scrypto_assert!(price > Decimal::zero(), "Price cannot be zero");
+            assert!(supply > Decimal::zero(), "Supply cannot be zero");
+            assert!(price > Decimal::zero(), "Price cannot be zero");
 
             // get existing badges for owner
             let badges = self.badges.entry(owner).or_insert(Vec::new());
 
-            let badge_resource_def = ResourceBuilder::new()
+            let badge_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Donations Badge")
                 .metadata("identifier", identifier)
                 .metadata("title", title)
                 .metadata("description", description)
                 .metadata("url", url)
                 .metadata("price", price.to_string())
-                .new_badge_mutable(self.admin_vault.resource_def());
+                .flags(MINTABLE)
+                .badge(self.admin_vault.resource_def(), MAY_MINT)
+                .no_initial_supply();
 
             let badge = self.admin_vault.authorize(|badge| {
                 badge_resource_def
@@ -58,7 +60,7 @@ blueprint! {
 
         // get available badges of an owner
         pub fn get_badges(&mut self, owner: Address) -> Vec<Address> {
-            scrypto_assert!(self.badges.contains_key(&owner), "No badges found for this owner");
+            assert!(self.badges.contains_key(&owner), "No badges found for this owner");
 
             let badges = self.badges.get(&owner).unwrap();
 
@@ -72,8 +74,8 @@ blueprint! {
         }
 
         pub fn donate(&mut self, owner: Address, badge_address: Address, payment: Bucket) -> (Bucket, Bucket){
-            scrypto_assert!(self.badges.contains_key(&owner), "No badges found for this owner");
-            scrypto_assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
+            assert!(self.badges.contains_key(&owner), "No badges found for this owner");
+            assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
 
             let badges = self.badges.get(&owner).unwrap();
 
@@ -81,15 +83,18 @@ blueprint! {
 
             let badge = match iter.find(|&b| b.resource_address() == badge_address) {
                 Some(value) => value,
-                None => scrypto_abort("No such badge found")
+                None => {
+                    info!("No such badge found");
+                    std::process::abort();
+                }
             };
 
-            scrypto_assert!(!badge.is_empty(), "No badge available");
+            assert!(!badge.is_empty(), "No badge available");
 
             let metadata = badge.resource_def().metadata();
             let price:Decimal = metadata["price"].parse().unwrap();
 
-            scrypto_assert!(payment.amount() >= price, "Not enough amount");
+            assert!(payment.amount() >= price, "Not enough amount");
 
             // Take fee
             let price_bucket = payment.take(price);
@@ -102,7 +107,7 @@ blueprint! {
         
         // #[auth(admin_badge)]
         pub fn withdraw(&mut self, amount: Decimal) -> Bucket {
-            scrypto_assert!(self.collected_fees.amount() >= amount, "Withdraw amount is bigger than available assets");
+            assert!(self.collected_fees.amount() >= amount, "Withdraw amount is bigger than available assets");
 
             self.collected_fees.take(amount)
         }
