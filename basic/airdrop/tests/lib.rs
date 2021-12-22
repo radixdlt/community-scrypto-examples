@@ -80,7 +80,7 @@ impl<'a> TestEnv<'a> {
     pub fn new(ledger: &'a mut InMemoryLedger) -> Self {
         let mut executor = TransactionExecutor::new(ledger, 0, 0);
 
-        let package = executor.publish_package(include_code!());
+        let package = executor.publish_package(include_code!("airdrop"));
         let admin_key = executor.new_public_key();
         let admin_account = executor.new_account(admin_key);
 
@@ -156,7 +156,7 @@ impl<'a> TestEnv<'a> {
         let mut vaults = vec![];
         let _res = radix_engine::utils::format_data_with_ledger(
             account_component
-                .state(radix_engine::model::Auth::NoAuth)
+                .state(radix_engine::model::Actor::SuperUser)
                 .unwrap(),
             ledger,
             &mut vaults,
@@ -164,9 +164,9 @@ impl<'a> TestEnv<'a> {
 
         for vid in vaults {
             let vault = self.executor.ledger().get_vault(vid).unwrap();
-            let amount = vault.amount(radix_engine::model::Auth::NoAuth).unwrap();
+            let amount = vault.amount(radix_engine::model::Actor::SuperUser).unwrap();
             let resource_def_address = vault
-                .resource_def(radix_engine::model::Auth::NoAuth)
+                .resource_address(radix_engine::model::Actor::SuperUser)
                 .unwrap();
             if token == resource_def_address {
                 return Ok(amount);
