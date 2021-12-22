@@ -20,9 +20,9 @@ blueprint! {
     impl Fisherman {
         
         pub fn new(fee_percent: Decimal) -> (Component, Bucket) {
-            let admin_bucket = ResourceBuilder::new()
-                .metadata("name", "Donations Badge Mint Auth")
-                .new_badge_fixed(1);
+            let admin_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                 .metadata("name", "Fisherman Badge Mint Auth")
+                 .initial_supply_fungible(1);
 
             let admin_resource_def = admin_bucket.resource_def();
 
@@ -44,8 +44,8 @@ blueprint! {
 
         #[auth(admin_badge)]
         pub fn new_game(&mut self, price: Decimal) {
-            scrypto_assert!(price > Decimal::zero(), "Price per game cannot be zero");
-            scrypto_assert!(!self.is_ready, "Current game is ready. Please finish it before making a new one");
+            assert!(price > Decimal::zero(), "Price per game cannot be zero");
+            assert!(!self.is_ready, "Current game is ready. Please finish it before making a new one");
 
             // make a new game
             // increment an id
@@ -55,12 +55,12 @@ blueprint! {
         }
 
         pub fn capture(&mut self, player: Address, depth: Decimal, payment: Bucket) -> Bucket {
-            scrypto_assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
-            scrypto_assert!(self.is_ready, "Current game is not ready yet");
-            scrypto_assert!(!self.players.contains_key(&player.to_string()), "You are already in the game");
-            scrypto_assert!(depth > Decimal::zero(), "Depth cannot be zero");
-            scrypto_assert!(depth <= 10.into(), "Depth more than 10 is not allowed");
-            scrypto_assert!(payment.amount() >= self.price, "Not enough amount to play");
+            assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
+            assert!(self.is_ready, "Current game is not ready yet");
+            assert!(!self.players.contains_key(&player.to_string()), "You are already in the game");
+            assert!(depth > Decimal::zero(), "Depth cannot be zero");
+            assert!(depth <= 10.into(), "Depth more than 10 is not allowed");
+            assert!(payment.amount() >= self.price, "Not enough amount to play");
 
             // we use special target possibility. Bigger depth increases fish size but reduces target (chances to capture)
             let portion = Decimal::from(100) / depth;
@@ -106,7 +106,7 @@ blueprint! {
 
         #[auth(admin_badge)]
         pub fn finish(&mut self) {
-            scrypto_assert!(self.is_ready, "Current game is not ready");
+            assert!(self.is_ready, "Current game is not ready");
 
             // find player with heavier fish
             let mut weight = Decimal::zero();
@@ -141,14 +141,14 @@ blueprint! {
             self.is_ready = false;
 
             // save history
-            let bucket = ResourceBuilder::new()
+            let bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
             .metadata("name", "Fisherman Game Badge")
             .metadata("symbol", "FGB")
             .metadata("epoch", Context::current_epoch().to_string())
             .metadata("winner", winner)
             .metadata("winner_num", num.to_string())
             .metadata("fish_weight", weight.to_string())
-            .new_badge_fixed(1);
+            .initial_supply_fungible(1);
 
             let vault = Vault::with_bucket(bucket);
             self.history.insert(self.game_id.to_string(), vault);
@@ -159,7 +159,7 @@ blueprint! {
 
         #[auth(admin_badge)]
         pub fn withdraw(&mut self, amount: Decimal) -> Bucket {
-            scrypto_assert!(self.collected_fees.amount() >= amount, "Withdraw amount is bigger than available assets");
+            assert!(self.collected_fees.amount() >= amount, "Withdraw amount is bigger than available assets");
 
             self.collected_fees.take(amount)
         }
