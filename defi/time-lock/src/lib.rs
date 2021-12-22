@@ -23,9 +23,9 @@ blueprint! {
        
         pub fn new(fee: Decimal) -> (Component, Bucket) {
 
-            let tl_minter_bucket = ResourceBuilder::new()
+            let tl_minter_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "TL Badge Mint Auth")
-                .new_badge_fixed(2);
+                .initial_supply_fungible(2);
 
             let tl_minter_resource_def = tl_minter_bucket.resource_def();
             let tl_minter_return_bucket: Bucket = tl_minter_bucket.take(1); // Return this badge to the caller
@@ -49,8 +49,8 @@ blueprint! {
 
             let amount = lock_tokens.amount();
 
-            scrypto_assert!(amount != Decimal::zero(), "You cannot lock zero amount");
-            scrypto_assert!(duration != 0, "You cannot lock with a zero duration");
+            assert!(amount != Decimal::zero(), "You cannot lock zero amount");
+            assert!(duration != 0, "You cannot lock with a zero duration");
 
             
             // Setup the end time.
@@ -67,11 +67,13 @@ blueprint! {
             self.collected_fees.put(fee_tokens);
 
             // Mint TL badge with locked amount and end epoch as metadata
-            let tl_resource_def = ResourceBuilder::new()
+            let tl_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "Time lock badge")
                 .metadata("amount", available.to_string())
                 .metadata("ends", end_time.to_string())
-                .new_badge_mutable(self.tl_minter_vault.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(self.tl_minter_vault.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             let tl_badge = self.tl_minter_vault.authorize(|badge| {
                 tl_resource_def
@@ -93,19 +95,22 @@ blueprint! {
             match self.minted.get(&resource_def.address()) {
                 Some(&value) => {
                 info!("current epoch {}", Context::current_epoch());
-                scrypto_assert!(Context::current_epoch() > value.1, "Release time not yet over, wait for a bit longer"); 
-                scrypto_assert!(value.0 > Decimal::zero(), "Release amount is zero");
+                assert!(Context::current_epoch() > value.1, "Release time not yet over, wait for a bit longer"); 
+                assert!(value.0 > Decimal::zero(), "Release amount is zero");
 
                 // Burn the TL badge
                 self.tl_minter_vault.authorize(|badge| {
-                    tl_badge.burn(badge);
+                    tl_badge.burn_with_auth(badge);
                 });
                 // update mapping
                 self.minted.remove(&resource_def.address());
 
                 returns.put(self.locked_xrd.take(value.0));
                 },
-                _ => scrypto_abort("no mints found with provided badge")
+                _ => {
+                    info!("no mints found with provided badge");
+                    std::process::abort();
+                }
             }
             
             // Return the withdrawn tokens
