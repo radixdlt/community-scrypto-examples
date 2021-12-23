@@ -14,9 +14,7 @@ pub struct Order {
     pub purse: Vault,
     /// Vault from which the payment for any purchases or sales will be withdrawn
     /// (must be in market's currency)
-    pub payment: Vault,
-    /// The ticket resource address is used to confirm that a used ticket is valid
-    pub ticket_resource_address: Address
+    pub payment: Vault
 }
 
 #[allow(dead_code)]
@@ -40,6 +38,13 @@ impl Order {
     pub fn is_market_order(&self) -> bool {
         self.price == 0.into()
     }
+}
+
+#[derive(NftData)]
+pub struct OrderTicket {
+  pub order_number: i64,
+  pub order_token_address: String,
+  pub order_currency: String
 }
 
 #[derive(Debug, sbor::Decode, sbor::Encode, sbor::Describe, sbor::TypeId)]

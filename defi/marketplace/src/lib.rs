@@ -11,14 +11,24 @@ blueprint! {
         buy_orders: Vec<Order>,
         sell_orders: Vec<Order>,
         ticket_minter_badge: Vault,
+        ticket_nft_def: ResourceDef,
         market_prices: MarketPrices
     }
 
     impl Market {
         pub fn open(currency: Address) -> Component {
-            let ticket_minter_badge = ResourceBuilder::new()
+            let ticket_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Order Ticket Minter Badge")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
+
+            let ticket_nft_def = ResourceBuilder::new_non_fungible()
+                .metadata("name", "Order Ticket")
+                .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
+                .badge(
+                    ticket_minter_badge.resource_def(),
+                    MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA
+                )
+                .no_initial_supply();
 
             Self {
                 order_count: 0,
@@ -26,24 +36,23 @@ blueprint! {
                 buy_orders: vec![],
                 sell_orders: vec![],
                 ticket_minter_badge: Vault::with_bucket(ticket_minter_badge),
+                ticket_nft_def: ticket_nft_def,
                 market_prices: MarketPrices::new()
             }
                 .instantiate()
         }
 
-        /// Yields a new token specifically for this order which can be used to withdraw
+        /// Yields a ticket (NFT) specifically for this order which can be used to withdraw
         /// from it once it's filled.
-        fn order_ticket(&self, order_number: i64, token_address: Address) -> (Bucket, Address) {
-            let ticket_resource_def = ResourceBuilder::new()
-                .metadata("name", format!("Order Ticket #{}", order_number))
-                .metadata("symbol", format!("OT-{}", order_number))
-                .metadata("order_number", format!("{}", order_number))
-                .metadata("order_token_address", token_address.to_string())
-                .metadata("order_currency", self.base_currency())
-                .new_token_mutable(self.ticket_minter_badge.resource_def());
+        fn order_ticket(&self, order_number: i64, token_address: Address) -> Bucket {
+            let ticket = OrderTicket {
+                order_number: order_number,
+                order_token_address: token_address.to_string(),
+                order_currency: self.base_currency()
+            };
 
             self.ticket_minter_badge.authorize(|badge|{
-                (ticket_resource_def.mint(1, badge), ticket_resource_def.address())
+                self.ticket_nft_def.mint_nft(order_number as u128, ticket, badge)
             })
         }
 
@@ -65,15 +74,14 @@ blueprint! {
 
         pub fn limit_sell(&mut self, tokens: Bucket, price: Decimal) -> Bucket {
             let order_number = self.next_order_number();
-            let (ticket, address) = self.order_ticket(order_number, tokens.resource_def().address());
+            let ticket = self.order_ticket(order_number, tokens.resource_def().address());
             let order = Order {
                 number: order_number,
                 buy: false,
                 token: tokens.resource_def(),
                 price: price,
                 purse: Vault::with_bucket(tokens),
-                payment: Vault::new(self.currency),
-                ticket_resource_address: address
+                payment: Vault::new(self.currency)
             };
 
             self.fill_sell_order(&order);
@@ -90,15 +98,14 @@ blueprint! {
             );
 
             let order_number = self.next_order_number();
-            let (ticket, address) = self.order_ticket(order_number, token);
+            let ticket = self.order_ticket(order_number, token);
             let order = Order {
                 number: order_number,
                 buy: true,
                 token: ResourceDef::from(token),
                 price: price,
                 purse: Vault::new(token),
-                payment: Vault::with_bucket(payment),
-                ticket_resource_address: address
+                payment: Vault::with_bucket(payment)
             };
 
             self.fill_buy_order(&order);
@@ -195,31 +202,32 @@ blueprint! {
         }
 
         /// Given the right order ticket withdraws a sale (sell order) from the market.
-        pub fn withdraw_sale(&mut self, ticket: Bucket) -> (Bucket, Bucket, Bucket) {
-            assert!(ticket.amount() > 0.into(), "Ticket required");
+        pub fn withdraw_sale(&mut self, ticket_bucket: Bucket) -> (Bucket, Bucket, Bucket) {
+            let tickets = ticket_bucket.get_nfts::<OrderTicket>();
+
+            assert!(tickets.len() == 1, "Ticket required");
+
+            let ticket = tickets.first().unwrap().data();
 
             let index = self.sell_orders
                 .iter()
-                .position(|order| order.number.to_string() == ticket.resource_def().metadata()["order_number"]);
+                .position(|order| order.number == ticket.order_number);
 
             if index.is_some() {
                 let i = index.unwrap();
-
-                assert!(self.sell_orders[i].ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
-
                 let order = self.sell_orders.remove(i);
 
                 self.ticket_minter_badge.authorize(|badge| {
-                    ticket.burn(badge);
+                    ticket_bucket.burn_with_auth(badge);
                 });
 
-                (order.purse.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
+                (order.purse.take_all(), order.payment.take_all(), Bucket::new(self.ticket_nft_address()))
             } else {
                 warn!("No matching order found. Returning only ticket.");
 
-                let token_resource_address = Address::from_str(&ticket.resource_def().metadata()["order_token_address"]).unwrap();
+                let token_resource_address = Address::from_str(&ticket.order_token_address).unwrap();
 
-                (Bucket::new(token_resource_address), Bucket::new(self.currency), ticket)
+                (Bucket::new(token_resource_address), Bucket::new(self.currency), ticket_bucket)
             }
         }
 
@@ -232,31 +240,32 @@ blueprint! {
         /// Always returns a 3-tuple of buckets `(purchased_tokens, payment_change, order_ticket)`.
         /// If no order was found, the first two will be empty while the 3rd one contains the unused ticket.
         /// If an order couldn't be found the 3rd bucket will be empty since the ticket will be burned.
-        pub fn withdraw_purchase(&mut self, ticket: Bucket) -> (Bucket, Bucket, Bucket) {
-            assert!(ticket.amount() > 0.into(), "Ticket required");
+        pub fn withdraw_purchase(&mut self, ticket_bucket: Bucket) -> (Bucket, Bucket, Bucket) {
+            let tickets = ticket_bucket.get_nfts::<OrderTicket>();
+
+            assert!(tickets.len() == 1, "Ticket required");
+
+            let ticket = tickets.first().unwrap().data();
 
             let index = self.buy_orders
                 .iter()
-                .position(|order| order.number.to_string() == ticket.resource_def().metadata()["order_number"]);
+                .position(|order| order.number == ticket.order_number);
 
             if index.is_some() {
                 let i = index.unwrap();
-
-                assert!(self.buy_orders[i].ticket_resource_address == ticket.resource_def().address(), "Invalid ticket!");
-
                 let order = self.buy_orders.remove(i);
 
                 self.ticket_minter_badge.authorize(|badge| {
-                    ticket.burn(badge);
+                    ticket_bucket.burn_with_auth(badge);
                 });
 
-                (order.purse.take_all(), order.payment.take_all(), Bucket::new(order.ticket_resource_address))
+                (order.purse.take_all(), order.payment.take_all(), Bucket::new(self.ticket_nft_address()))
             } else {
                 warn!("No matching order found. Returning only ticket.");
 
-                let token_resource_address = Address::from_str(&ticket.resource_def().metadata()["order_token_address"]).unwrap();
+                let token_resource_address = Address::from_str(&ticket.order_token_address).unwrap();
 
-                (Bucket::new(token_resource_address), Bucket::new(self.currency), ticket)
+                (Bucket::new(token_resource_address), Bucket::new(self.currency), ticket_bucket)
             }
         }
 
@@ -298,6 +307,10 @@ blueprint! {
 
         fn base_currency(&self) -> String {
             ResourceDef::from(self.currency).metadata()["symbol"].clone()
+        }
+
+        fn ticket_nft_address(&self) -> Address {
+            self.ticket_nft_def.address()
         }
 
         fn truncate(&self, str: String, length: usize) -> String {
