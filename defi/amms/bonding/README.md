@@ -42,9 +42,5 @@ Code
 * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/7b7ff729b82ea73ea168e495d9c94cb901ae95ce/contracts/math/Power.sol
 * https://github.com/bancorprotocol/contracts-solidity/blob/c9adc95e82fdfb3a0ada102514beb8ae00147f5d/solidity/contracts/converter/BancorFormula.sol
 
-## Notes:
-
-The initial release is pre-Alexandria with expected (minimal) API incompatabilities
-
 
 License: MIT OR Apache-2.0
