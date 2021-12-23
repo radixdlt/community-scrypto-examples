@@ -2,19 +2,26 @@ use scrypto::prelude::*;
 
 blueprint! {
     struct Staking {
+        // staking and rewards pools
         staking_pool: Vault,
         rewards_pool: Vault,
+        // reward value by staking pool amount
         reward_value: Decimal,
+        // last update epoch
         last_update: u64,
+        // reward rate per staking
         rate: Decimal,
+        // collects rewards per account
         rewards: HashMap<Address, Decimal>,
+        // collects balance per account
         balances: HashMap<Address, Decimal>,
+        // collects paid reward per account
         paid: HashMap<Address, Decimal>
     }
 
     impl Staking {
         
-        
+        // initiate component with some rewards pool
         pub fn new(rewards: Bucket) -> Component {
             
             let rewards_ref = rewards.resource_def();
@@ -39,6 +46,7 @@ blueprint! {
                 return Decimal::zero();
             }
 
+            // calculate per token reward depending on the time passed since last epoch
             let time = Context::current_epoch()-self.last_update;
             let exp = 1e18 as i64;
             let exp_rate = Decimal::from(exp) / self.staking_pool.amount();
@@ -48,11 +56,13 @@ blueprint! {
             result
         }
 
+        // calculate earning 
         fn earned(&self, account: Address) -> Decimal {
 
             let exp = 1e18 as i64;
             let reward_value = self.get_reward_value();
 
+            // get account data
             let balance = match self.balances.get(&account) {
                 Some(value) => *value,
                 None => Decimal::zero()
@@ -72,6 +82,7 @@ blueprint! {
                 None => Decimal::zero()
             };
 
+            // calculate reward per account by balance current reward and collected paid reward
             let calculation = (balance * (reward_value - paid)) / Decimal::from(exp);
 
             debug!("Earned calculation: {}", calculation);
@@ -83,13 +94,18 @@ blueprint! {
             result 
         }
      
+        // private method that is used to update rewards during the epoch
+        // will be called on each public request
         fn update_reward(&mut self, account: Address) {
-
+            // update per token reward
             self.reward_value = self.get_reward_value();
+            // update epoch
             self.last_update = Context::current_epoch();
-
+            // calculate earnings
             let earned = self.earned(account);
+            // store earnings for the account
             self.rewards.insert(account, earned);
+            // set updated per token reward value to the account
             self.paid.insert(account, self.reward_value);
         }
 
@@ -124,6 +140,7 @@ blueprint! {
             bucket
         }
 
+        // returns rewards value per account
         pub fn account_reward(&mut self, account: Address) -> Decimal {
             assert!(self.rewards.contains_key(&account), "No rewards found");            
 
@@ -132,14 +149,16 @@ blueprint! {
             *self.rewards.get(&account).unwrap()
         }
     
+        // send rewards to account
         pub fn request_reward(&mut self, account: Address) -> Bucket{
-            
+            // get the reward value
             let reward = self.account_reward(account);
             debug!("Account reward to send: {}", reward);
-
+            // take reward from the rewards pool
             let bucket = self.rewards_pool.take(reward);
-            
+            // reset rewards for this account
             self.rewards.insert(account, Decimal::zero());
+            // send rewards bucket
             bucket
         }
     }
