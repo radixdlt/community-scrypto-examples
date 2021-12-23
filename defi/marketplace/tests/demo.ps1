@@ -10,10 +10,8 @@ $SELLER_OUT = resim new-account
 $SELLER_ACC = $SELLER_OUT | Select-String 'Account address: (\w+)' | %{ $_.Matches.Groups[1].Value }
 $SELLER_PUB = $SELLER_OUT | Select-String 'Public key: (\w+)' | %{ $_.Matches.Groups[1].Value }
 
-resim new-token-fixed --name Tether --symbol USDT 1000
-
 $XRD = resim show $BUYER_ACC | Select-String 'resource_def: (\w+), name: "Radix"' | %{ $_.Matches.Groups[1].Value }
-$USDT = resim show $BUYER_ACC | Select-String 'resource_def: (\w+), name: "Tether"' | %{ $_.Matches.Groups[1].Value }
+$USDT = resim new-token-fixed --name Tether --symbol USDT 1000 | Select-String 'ResourceDef: (\w+)' | %{ $_.Matches.Groups[1].Value }
 
 resim transfer 1000 $USDT $SELLER_ACC
 
