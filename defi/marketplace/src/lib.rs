@@ -23,10 +23,10 @@ blueprint! {
 
             let ticket_nft_def = ResourceBuilder::new_non_fungible()
                 .metadata("name", "Order Ticket")
-                .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
+                .flags(MINTABLE | BURNABLE)
                 .badge(
                     ticket_minter_badge.resource_def(),
-                    MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA
+                    MAY_MINT | MAY_BURN
                 )
                 .no_initial_supply();
 
