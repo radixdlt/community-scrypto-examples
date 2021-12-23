@@ -27,7 +27,7 @@ fn setup_fixture<'a, L: Ledger>(env: &mut TestEnv<'a, L>) -> (User, User, Resour
 
     const PACKAGE: &str = "bonding";
 
-    env.publish_package(PACKAGE, include_code!("out"));
+    env.publish_package(PACKAGE, include_code!("scrypto_bonding"));
     env.using_package(PACKAGE);
 
     (owner, investor, reserve_def)
