@@ -124,16 +124,15 @@ blueprint! {
             bucket
         }
     
-        pub fn withdraw(&mut self, account: Address, amount: Decimal) -> Bucket {
+        pub fn withdraw(&mut self, account: Address) -> Bucket {
             assert!(self.balances.contains_key(&account), "No staking amount found");            
             self.update_reward(account);
 
             let balance = self.balances.get_mut(&account).unwrap();
-            assert!(*balance >= amount, "Not enough assets in staking");            
+            assert!(*balance > Decimal::zero(), "Balance is empty");            
 
-            let bucket = self.staking_pool.take(amount);
-            
-            *balance -= amount;
+            let bucket = self.staking_pool.take(*balance);
+            *balance = Decimal::zero();
 
             debug!("Account withdraw balance: {}", balance);
 
