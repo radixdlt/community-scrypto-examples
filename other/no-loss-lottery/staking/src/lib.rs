@@ -123,17 +123,21 @@ blueprint! {
 
             bucket
         }
-    
-        pub fn request_reward(&mut self, account: Address) -> Bucket{
+
+        pub fn account_reward(&mut self, account: Address) -> Decimal {
             assert!(self.rewards.contains_key(&account), "No rewards found");            
 
             self.update_reward(account);
 
-            let reward = self.rewards.get(&account).unwrap();
-
+            *self.rewards.get(&account).unwrap()
+        }
+    
+        pub fn request_reward(&mut self, account: Address) -> Bucket{
+            
+            let reward = self.account_reward(account);
             debug!("Account reward to send: {}", reward);
 
-            let bucket = self.rewards_pool.take(*reward);
+            let bucket = self.rewards_pool.take(reward);
             
             self.rewards.insert(account, Decimal::zero());
             bucket
