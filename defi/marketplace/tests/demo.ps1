@@ -13,7 +13,7 @@ $SELLER_PUB = $SELLER_OUT | Select-String 'Public key: (\w+)' | %{ $_.Matches.Gr
 $XRD = resim show $BUYER_ACC | Select-String 'resource_def: (\w+), name: "Radix"' | %{ $_.Matches.Groups[1].Value }
 $USDT = resim new-token-fixed --name Tether --symbol USDT 1000 | Select-String 'ResourceDef: (\w+)' | %{ $_.Matches.Groups[1].Value }
 
-resim transfer 1000 $USDT $SELLER_ACC
+resim transfer 1000,$USDT $SELLER_ACC
 
 $PACKAGE = "01eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62"
 
