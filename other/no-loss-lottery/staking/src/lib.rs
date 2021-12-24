@@ -109,8 +109,8 @@ blueprint! {
             self.paid.insert(account, self.reward_value);
         }
 
-
-        pub fn stake(&mut self, account: Address, bucket: Bucket) -> Bucket {
+        // staking for specific account
+        pub fn stake(&mut self, account: Address, bucket: Bucket) {
             self.update_reward(account);
             let amount = bucket.amount();
 
@@ -119,27 +119,10 @@ blueprint! {
 
             debug!("Account staking balance: {}", balance);
 
-            self.staking_pool.put(bucket.take(amount));
-
-            bucket
+            self.staking_pool.put(bucket);
         }
     
-        pub fn withdraw(&mut self, account: Address) -> Bucket {
-            assert!(self.balances.contains_key(&account), "No staking amount found");            
-            self.update_reward(account);
-
-            let balance = self.balances.get_mut(&account).unwrap();
-            assert!(*balance > Decimal::zero(), "Balance is empty");            
-
-            let bucket = self.staking_pool.take(*balance);
-            *balance = Decimal::zero();
-
-            debug!("Account withdraw balance: {}", balance);
-
-            bucket
-        }
-
-        // returns rewards value per account
+         // returns rewards value per account
         pub fn account_reward(&mut self, account: Address) -> Decimal {
             assert!(self.rewards.contains_key(&account), "No rewards found");            
 
@@ -147,18 +130,35 @@ blueprint! {
 
             *self.rewards.get(&account).unwrap()
         }
-    
-        // send rewards to account
-        pub fn request_reward(&mut self, account: Address) -> Bucket{
+
+        // withdraw for specific account
+        pub fn withdraw(&mut self, account: Address) {
+            assert!(self.balances.contains_key(&account), "No staking amount found");            
+            self.update_reward(account);
+
+            // read balance
+            let balance = self.balances.get_mut(&account).unwrap();
+            assert!(*balance > Decimal::zero(), "Balance is empty");            
+            debug!("Account withdraw balance: {}", balance);
+
+            // take balance bucket from the pool
+            let staking = self.staking_pool.take(*balance);
+
+            // clear balance
+            *balance = Decimal::zero();
+
             // get the reward value
             let reward = self.account_reward(account);
             debug!("Account reward to send: {}", reward);
             // take reward from the rewards pool
             let bucket = self.rewards_pool.take(reward);
+            // put this bucket into the staking 
+            staking.put(bucket);
             // reset rewards for this account
             self.rewards.insert(account, Decimal::zero());
-            // send rewards bucket
-            bucket
+
+            // send staking and reward in one bucket to the account
+            Account::from(account).deposit(staking);
         }
     }
 }
