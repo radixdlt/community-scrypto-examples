@@ -109,56 +109,80 @@ blueprint! {
             self.paid.insert(account, self.reward_value);
         }
 
+        /// Registers a new user
+        pub fn new_user(&self) -> Bucket {
+            ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                .metadata("name", "Staking User Badge")
+                .initial_supply_fungible(1)
+        }
+
         // staking for specific account
-        pub fn stake(&mut self, account: Address, bucket: Bucket) {
-            self.update_reward(account);
+        pub fn stake(&mut self, user_auth: BucketRef, bucket: Bucket) -> Bucket{
+            let user_id = Self::get_user_id(user_auth);
+
+            self.update_reward(user_id);
             let amount = bucket.amount();
 
-            let balance = self.balances.entry(account).or_insert(Decimal::zero());
+            let balance = self.balances.entry(user_id).or_insert(Decimal::zero());
             *balance += amount;
 
             debug!("Account staking balance: {}", balance);
 
-            self.staking_pool.put(bucket);
+            self.staking_pool.put(bucket.take(amount));
+
+            bucket
         }
     
          // returns rewards value per account
-        pub fn account_reward(&mut self, account: Address) -> Decimal {
-            assert!(self.rewards.contains_key(&account), "No rewards found");            
+        pub fn account_reward(&mut self, user_auth: BucketRef) -> Decimal {
+            let user_id = Self::get_user_id(user_auth);
 
-            self.update_reward(account);
+            assert!(self.rewards.contains_key(&user_id), "No rewards found");            
 
-            *self.rewards.get(&account).unwrap()
+            self.update_reward(user_id);
+
+            *self.rewards.get(&user_id).unwrap()
         }
 
         // withdraw for specific account
-        pub fn withdraw(&mut self, account: Address) {
-            assert!(self.balances.contains_key(&account), "No staking amount found");            
-            self.update_reward(account);
+        pub fn withdraw(&mut self, user_auth: BucketRef) -> Bucket {
+            let user_id = Self::get_user_id(user_auth);
 
-            // read balance
-            let balance = self.balances.get_mut(&account).unwrap();
-            assert!(*balance > Decimal::zero(), "Balance is empty");            
+            assert!(self.balances.contains_key(&user_id), "No staking amount found");            
+            self.update_reward(user_id);
+
+            let balance = self.balances.get_mut(&user_id).unwrap();
             debug!("Account withdraw balance: {}", balance);
 
-            // take balance bucket from the pool
-            let staking = self.staking_pool.take(*balance);
-
-            // clear balance
+            let bucket = self.staking_pool.take(*balance);            
             *balance = Decimal::zero();
+            bucket
 
-            // get the reward value
-            let reward = self.account_reward(account);
+        }
+
+        pub fn get_reward(&mut self, user_auth: BucketRef) -> Bucket{
+            let user_id = Self::get_user_id(user_auth);
+
+            assert!(self.rewards.contains_key(&user_id), "No rewards found");            
+
+            self.update_reward(user_id);
+
+            let reward = self.rewards.get(&user_id).unwrap();
             debug!("Account reward to send: {}", reward);
-            // take reward from the rewards pool
-            let bucket = self.rewards_pool.take(reward);
-            // put this bucket into the staking 
-            staking.put(bucket);
-            // reset rewards for this account
-            self.rewards.insert(account, Decimal::zero());
 
-            // send staking and reward in one bucket to the account
-            Account::from(account).deposit(staking);
+            let bucket = self.rewards_pool.take(*reward);
+            
+            self.rewards.insert(user_id, Decimal::zero());
+            bucket
+        }
+
+
+        /// Parse user id from a bucket ref.
+        fn get_user_id(user_auth: BucketRef) -> Address {
+            assert!(user_auth.amount() > 0.into(), "Invalid user proof");
+            let user_id = user_auth.resource_address();
+            user_auth.drop();
+            user_id
         }
     }
 }
