@@ -62,7 +62,7 @@ Write-Output ""
 Write-Output "Buyer bought around $BOUGHT_USDT USDT, via limit order"
 Write-Output ""
 
-Exit-Unless-Equal $BOUGHT_USDT "62" "Failure... (wrong limit buy amount) :("
+Exit-Unless-Equal $BOUGHT_USDT "61" "Failure... (wrong limit buy amount) :("
 
 resim set-default-account $BUYER_ACC $BUYER_PUB
 
