@@ -32,9 +32,9 @@ blueprint! {
 
     impl Auction {
         pub fn new(offering: Bucket, duration: u64, payment_resource: Address, reserve_price: Decimal, bid_bond: Decimal) -> (Component, Bucket) {
-            scrypto_assert!(offering.amount() > Decimal::zero(), "Incorrect offering");
+            assert!(offering.amount() > Decimal::zero(), "Incorrect offering");
             
-            scrypto_assert!(bid_bond <= reserve_price, "Bid bond higher than the reserve price");
+            assert!(bid_bond <= reserve_price, "Bid bond higher than the reserve price");
 
             // instantiate an auction component
             let auction = Self {
@@ -63,10 +63,10 @@ blueprint! {
             auction_state.component_address = auction.address();
 
             // mint the auctioneer badge
-            let auctioneer_badge = ResourceBuilder::new()
+            let auctioneer_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Acutioneer badge")
                 .metadata("auction", auction_state.component_address.to_string())
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
             // save the auctioner badge resource definition
             auction_state.auctioneer_badge = auctioneer_badge.resource_def();
@@ -77,20 +77,20 @@ blueprint! {
 
         pub fn register(&mut self, bid_bond: Bucket) -> Bucket {
             // check if the auction is open
-            scrypto_assert!(Context::current_epoch() <= self.start + self.duration, "Auction closed");
+            assert!(Context::current_epoch() <= self.start + self.duration, "Auction closed");
 
             // check the bid bond
-            scrypto_assert!(bid_bond.resource_def() == self.payment_resource, "Incorrect payment token");
-            scrypto_assert!(bid_bond.amount() == self.bid_bond, "Incorrect bid bond");
+            assert!(bid_bond.resource_def() == self.payment_resource, "Incorrect payment token");
+            assert!(bid_bond.amount() == self.bid_bond, "Incorrect bid bond");
 
             // take the bid bond
             self.bid_bonds.put(bid_bond);
 
             // mint a bidder badge
-            let bidder_badge = ResourceBuilder::new()
+            let bidder_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Bidder badge")
                 .metadata("auction", self.component_address.to_string())
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
             // save the bidder using the bidder badge resource definition
             self.bidders.insert(bidder_badge.resource_def(), Bidder { bid: Decimal::zero(), bid_bond_reclaimed: false });
@@ -100,15 +100,15 @@ blueprint! {
 
         pub fn bid(&mut self, bid: Decimal, bidder_badge: BucketRef) {
             // check if the auction is open
-            scrypto_assert!(Context::current_epoch() <= self.start + self.duration, "Auction closed");
+            assert!(Context::current_epoch() <= self.start + self.duration, "Auction closed");
 
             // check the bidder badge and get the bidder
             let bidder_id = bidder_badge.resource_def();
             let mut bidder = self.get_bidder(bidder_badge);
 
             // check the bid
-            scrypto_assert!(bid >= self.reserve_price, "Bid lower than the reserve price");
-            scrypto_assert!(bid > self.highest_bid, "Bid not higer than the current highest bid");
+            assert!(bid >= self.reserve_price, "Bid lower than the reserve price");
+            assert!(bid > self.highest_bid, "Bid not higer than the current highest bid");
 
             // save the bid
             bidder.bid = bid;
@@ -118,23 +118,23 @@ blueprint! {
 
         pub fn claim_offering(&mut self, payment: Bucket, bidder_badge: BucketRef) -> Bucket {
             // check if the auction is closed
-            scrypto_assert!(Context::current_epoch() > self.start + self.duration, "Auction open");
+            assert!(Context::current_epoch() > self.start + self.duration, "Auction open");
 
             // check if the payment deadline has not passed yet
-            scrypto_assert!(Context::current_epoch() <= self.start + self.duration + PAYMENT_DEADLINE, "Payment deadline passed");
+            assert!(Context::current_epoch() <= self.start + self.duration + PAYMENT_DEADLINE, "Payment deadline passed");
 
             // check the bidder badge and get the bidder
             let bidder = self.get_bidder(bidder_badge);
 
             // check if it is the winning bidder
-            scrypto_assert!(bidder.bid > Decimal::zero() && bidder.bid == self.highest_bid, "Not the winning bidder");
+            assert!(bidder.bid > Decimal::zero() && bidder.bid == self.highest_bid, "Not the winning bidder");
 
             // check if the offering hasn't yet been claimed
-            scrypto_assert!(!self.offering.is_empty(), "Offering already claimed");
+            assert!(!self.offering.is_empty(), "Offering already claimed");
 
             // check the payment
-            scrypto_assert!(payment.resource_def() == self.payment_resource, "Incorrect payment token");
-            scrypto_assert!(payment.amount() == self.highest_bid - self.bid_bond, "Incorrect payment amount");
+            assert!(payment.resource_def() == self.payment_resource, "Incorrect payment token");
+            assert!(payment.amount() == self.highest_bid - self.bid_bond, "Incorrect payment amount");
 
             // take the payment and return the offering
             self.payment.put(payment);
@@ -144,17 +144,17 @@ blueprint! {
 
         pub fn reclaim_bid_bond(&mut self, bidder_badge: BucketRef) -> Bucket {
             // check if auction is closed
-            scrypto_assert!(Context::current_epoch() > self.start + self.duration, "Acution open");
+            assert!(Context::current_epoch() > self.start + self.duration, "Acution open");
 
             // check bidder badge and get the bidder
             let bidder_id = bidder_badge.resource_def();
             let mut bidder = self.get_bidder(bidder_badge);
 
             // check if it is not the winning bid
-            scrypto_assert!(bidder.bid == Decimal::zero() || bidder.bid != self.highest_bid, "Winning bidder cannot reclaim the bid bond");
+            assert!(bidder.bid == Decimal::zero() || bidder.bid != self.highest_bid, "Winning bidder cannot reclaim the bid bond");
 
             // check if the bidder has not yet reclaimed the bid bond
-            scrypto_assert!(!bidder.bid_bond_reclaimed, "Bid bond already reclaimed");
+            assert!(!bidder.bid_bond_reclaimed, "Bid bond already reclaimed");
 
             // save that the bidder reclaimed the bid bond
             bidder.bid_bond_reclaimed = true;
@@ -166,13 +166,13 @@ blueprint! {
         #[auth(auctioneer_badge)]
         pub fn claim_payment(&mut self) -> (Bucket, Bucket) {
             // check if auction is closed
-            scrypto_assert!(Context::current_epoch() > self.start + self.duration, "Auction open");
+            assert!(Context::current_epoch() > self.start + self.duration, "Auction open");
 
             // check if the payment has not been yet claimed
-            scrypto_assert!(!self.payment_claimed, "Payment already claimed");
+            assert!(!self.payment_claimed, "Payment already claimed");
 
             // check if there were no bids or the payment has been received or the payment deadline has passed
-            scrypto_assert!(
+            assert!(
                 self.highest_bid == Decimal::zero() ||
                 !self.payment.is_empty() || 
                 Context::current_epoch() > self.start + self.duration + PAYMENT_DEADLINE,
@@ -191,9 +191,9 @@ blueprint! {
         }
 
         fn get_bidder(&self, bidder_badge: BucketRef) -> Bidder {
-            scrypto_assert!(bidder_badge.amount() > Decimal::zero(), "No bidder badge presented");
+            assert!(bidder_badge.amount() > Decimal::zero(), "No bidder badge presented");
             let bidder = self.bidders.get(&bidder_badge.resource_def());
-            scrypto_assert!(bidder.is_some(), "Incorrect bidder badge");
+            assert!(bidder.is_some(), "Incorrect bidder badge");
             bidder_badge.drop();
 
             bidder.unwrap()
