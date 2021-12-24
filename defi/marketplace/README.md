@@ -1,6 +1,6 @@
 # Marketplace
 
-My go at a simple marketplace where people can create buy and sell orders (no AMMs).
+A simple marketplace where people can create buy and sell orders (no AMMs).
 A user gets an order ticket for each created (buy or sell) order which they can use
 to withdraw the bought tokens (and change) or the payment for sold tokens.
 

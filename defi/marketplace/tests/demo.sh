@@ -69,3 +69,6 @@ cat ./tests/steps.ps1 | sed -e 's/^\$/export /g' -e 's/ = /=`/g' -e '/=`/s/.$/`/
 set -e
 
 source $BASH_STEPS_FILE
+
+# @TODO Figure out a way to do this WITHOUT exiting the bash shell if the steps fail.
+# Although this is really only a problem if the demo fails which it shouldn't!
