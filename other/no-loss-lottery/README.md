@@ -4,8 +4,8 @@ How to test:
 
 ## Prepare
 ### Basics
-resim reset
-export xrd=030000000000000000000000000000000000000000000000000004
+1. `resim reset`
+1. `export xrd=030000000000000000000000000000000000000000000000000004`
 
 ### Main account
 1. `resim new-account` -> save address and key into $admin and $admin_pub 
@@ -21,7 +21,7 @@ Use specific package
 1. `export staking_pkg=01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c`
 1. `cd staking`
 1. `resim publish . --address $staking_pkg`
-1. `resim call-function $staking_pkg Staking new 1000,$xrd` -> save into $lottery
+1. `resim call-function $staking_pkg Staking new 1000,$xrd` -> save into $staking
 
 
 ## Build Lottery component
@@ -34,14 +34,14 @@ Specify lottery name and ending epoch
 1. `resim call-method $lottery start_lottery "Lottery#1" 100 1,$admin_badge`
 
 ## Buy tickets for each user
-1. `resim set-default-account $player1 $pub1`
-1. `resim call-method $lottery buy_ticket $player1 100,$xrd` 
+`resim set-default-account $player1 $pub1`
+`resim call-method $lottery buy_ticket $player1 100,$xrd` 
 
-1. `resim set-default-account $player2 $pub2`
-1. `resim call-method $lottery buy_ticket $player2 100,$xrd  ` 
+`resim set-default-account $player2 $pub2`
+`resim call-method $lottery buy_ticket $player2 100,$xrd  ` 
 
-1. `resim set-default-account $player3 $pub3`
-1. `resim call-method $lottery buy_ticket $player3 100,$xrd  `
+`resim set-default-account $player3 $pub3`
+`resim call-method $lottery buy_ticket $player3 100,$xrd  `
 
 
 ## End current lottery
@@ -50,14 +50,15 @@ Specify lottery name and ending epoch
 1. `resim call-method $lottery end_lottery 1,$admin_badge`
 
 ## Withdraw staking and check rewards
-1. `resim set-default-account $player1 $pub1`
-1. `resim call-method $lottery withdraw "Lottery#1" $player1`
-1. `resim call-method $lottery request_reward "Lottery#1" $player1 1,$lottery_token`
+`resim set-default-account $player1 $pub1`
+`resim call-method $lottery withdraw "Lottery#1" $player1`
+`resim call-method $lottery request_reward "Lottery#1" $player1 1,$lottery_token`
 
-1. `resim set-default-account $player2 $pub2`
-1. `resim call-method $lottery withdraw "Lottery#1" $player2`
-1. `resim call-method $lottery request_reward "Lottery#1" $player2 1,$lottery_token`
+`resim set-default-account $player2 $pub2`
+`resim call-method $lottery withdraw "Lottery#1" $player2`
+`resim call-method $lottery request_reward "Lottery#1" $player2 1,$lottery_token`
 
-1. `resim set-default-account $player3 $pub3`
-1. `resim call-method $lottery withdraw "Lottery#1" $player3`
-1. `resim call-method $lottery request_reward "Lottery#1" $player3 1,$lottery_token`
+`resim set-default-account $player3 $pub3`
+`resim call-method $lottery withdraw "Lottery#1" $player3`
+`resim call-method $lottery request_reward "Lottery#1" $player3 1,$lottery_token`
+
