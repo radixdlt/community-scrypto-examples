@@ -117,7 +117,7 @@ blueprint! {
         }
 
         // staking for specific account
-        pub fn stake(&mut self, user_auth: BucketRef, bucket: Bucket) -> Bucket{
+        pub fn stake(&mut self, user_auth: BucketRef, bucket: Bucket){
             let user_id = Self::get_user_id(user_auth);
 
             self.update_reward(user_id);
@@ -128,9 +128,7 @@ blueprint! {
 
             debug!("Account staking balance: {}", balance);
 
-            self.staking_pool.put(bucket.take(amount));
-
-            bucket
+            self.staking_pool.put(bucket);
         }
     
          // returns rewards value per account
@@ -157,7 +155,6 @@ blueprint! {
             let bucket = self.staking_pool.take(*balance);            
             *balance = Decimal::zero();
             bucket
-
         }
 
         pub fn get_reward(&mut self, user_auth: BucketRef) -> Bucket{
