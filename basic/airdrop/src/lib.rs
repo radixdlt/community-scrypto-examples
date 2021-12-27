@@ -8,7 +8,8 @@ blueprint! {
 
     impl Airdrop {
         pub fn new() -> (Component, Bucket) {
-            let admin_badge = ResourceBuilder::new().new_badge_fixed(1);
+            let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                                .initial_supply_fungible(1);
 
             let component = Self {
                 admin_badge: admin_badge.resource_def(),
