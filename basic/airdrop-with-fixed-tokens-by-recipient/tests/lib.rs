@@ -37,7 +37,7 @@ fn try_perform_airdrop_with_insufficient_tokens_must_panicked() {
     let receipt = test_env.perform_airdrop(airdrop_tokens, RADIX_TOKEN);
     assert!(!receipt.success);
     let log_message = &receipt.logs.get(0).unwrap().1;
-    assert!(log_message.starts_with("Panicked at 'The tokens quantity is not sufficiant'"));
+    assert!(log_message.starts_with("Panicked at 'The tokens quantity is not sufficient'"));
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
 
 }
@@ -90,7 +90,7 @@ struct TestEnv<'a> {
     admin_key: Address,
     admin_account: Address,
     component: Address,
-    // admin_badge: Address 
+    admin_badge: Address 
 }
 
 impl<'a> TestEnv<'a> {
@@ -114,14 +114,14 @@ impl<'a> TestEnv<'a> {
         println!("{:?}\n", receipt);
         assert!(receipt.success);
 
-        // let admin_badge = receipt.resource_def(0).unwrap();
+        let admin_badge = receipt.resource_def(0).unwrap();
 
         Self {
             executor,
             admin_key,
             admin_account,
-            component: receipt.component(0).unwrap()
-            // admin_badge
+            component: receipt.component(0).unwrap(),
+            admin_badge
         }
     }
 
@@ -137,7 +137,7 @@ impl<'a> TestEnv<'a> {
                 "add_recipient",
                 vec![
                     format!("{}", recipient),
-                   // format!("1,{}", self.admin_badge)
+                   format!("1,{}", self.admin_badge)
                 ],
                 Some(self.admin_account),
             )
@@ -157,7 +157,7 @@ impl<'a> TestEnv<'a> {
                 "perform_airdrop",
                 vec![
                     format!("{},{}", amount, token),
-                    // format!("1,{}", self.admin_badge)
+                    format!("1,{}", self.admin_badge)
                 ],
                 Some(self.admin_account),
             )
