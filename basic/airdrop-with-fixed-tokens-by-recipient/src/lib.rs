@@ -48,6 +48,9 @@ blueprint! {
             if !tokens.is_empty() {
                 let additionnal_tokens_by_recipient = tokens.amount()/recipients_count;
                 for i in 0..recipients_count {
+                    //Is there a minimum token quantity to make a deposit ??
+                    // if so this part of code will have to be adapted additionnal_tokens_by_recipient must be less
+                    // than the minimum token quantity
                     let address = self.recipients.get(i).unwrap();
                     Account::from(*address).deposit(tokens.take(additionnal_tokens_by_recipient));
                 }
