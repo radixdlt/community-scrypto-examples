@@ -24,6 +24,11 @@ blueprint! {
             return (component, admin_badge)
         }
 
+        pub fn get_minimal_required_tokens(&self) -> Decimal {
+            let recipients_count = self.recipients.len();
+            return Decimal::from(recipients_count) * self.tokens_by_recipient; 
+        }
+
         #[auth(admin_badge)]
         pub fn add_recipient(&mut self, recipient: Address) {
                 self.recipients.push(recipient);    
@@ -33,11 +38,12 @@ blueprint! {
         pub fn perform_airdrop(&mut self, tokens : Bucket) -> Bucket  {
             
             let recipients_count = self.recipients.len();
-            println!("perform_airdrop : recipients_count {0}", recipients_count);
             assert!(recipients_count > 0, "You must register at least one recipient before performing an airdrop");
 
-            let required_tokens = self.tokens_by_recipient * Decimal::from(recipients_count);
+            let required_tokens = self.get_minimal_required_tokens();
             assert!(tokens.amount() >=required_tokens, "The tokens quantity is not sufficient"); 
+
+            info!("perform_airdrop with recipients_count {} required_tokens {}", recipients_count,  required_tokens);
 
             for i in 0..recipients_count {
                 let address = self.recipients.get(i).unwrap();

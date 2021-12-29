@@ -52,8 +52,10 @@ fn try_perform_airdrop_with_sufficient_tokens_must_be_succeeded() {
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
 
     let recipient_count  = 10; 
+    let mut accounts : Vec<Address> =  Vec::new();
     for _ in 0..recipient_count {
         let (_, recipient_account)  = test_env.new_account();
+        accounts.push(recipient_account); 
         test_env.add_recipient(recipient_account); 
     }
 
@@ -61,6 +63,9 @@ fn try_perform_airdrop_with_sufficient_tokens_must_be_succeeded() {
     let receipt = test_env.perform_airdrop(airdrop_tokens, RADIX_TOKEN);
     assert!(receipt.success);
     assert!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap() == (Decimal::from_str("1000000").unwrap() - airdrop_tokens));
+    for account in accounts {
+        assert!(test_env.get_balance(account, RADIX_TOKEN).unwrap() == (Decimal::from_str("1000000").unwrap() + token_by_recipient));
+    }
 }
 
 
@@ -72,10 +77,11 @@ fn try_perform_airdrop_with_additionnal_tokens_must_be_succeeded() {
     let token_by_recipient : Decimal =  Decimal::from(100); 
     let mut test_env = TestEnv::new(&mut ledger, token_by_recipient);
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
-
+    let mut accounts : Vec<Address> =  Vec::new();
     let recipient_count  = 10; 
     for _ in 0..recipient_count {
         let (_, recipient_account)  = test_env.new_account();
+        accounts.push(recipient_account); 
         test_env.add_recipient(recipient_account); 
     }
 
@@ -84,6 +90,9 @@ fn try_perform_airdrop_with_additionnal_tokens_must_be_succeeded() {
     let receipt = test_env.perform_airdrop(airdrop_tokens, RADIX_TOKEN);
     assert!(receipt.success);
     assert!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap() == (Decimal::from_str("1000000").unwrap() - airdrop_tokens));
+    for account in accounts {
+        assert!(test_env.get_balance(account, RADIX_TOKEN).unwrap() > (Decimal::from_str("1000000").unwrap() + token_by_recipient));
+    }
 }
 struct TestEnv<'a> {
     executor: TransactionExecutor<'a, InMemoryLedger>,
@@ -129,6 +138,8 @@ impl<'a> TestEnv<'a> {
         let key = self.executor.new_public_key();
         return (key, self.executor.new_account(key))
     }
+
+    
 
     pub fn add_recipient(&mut self, recipient: Address) {
         let tx = TransactionBuilder::new(&self.executor)
