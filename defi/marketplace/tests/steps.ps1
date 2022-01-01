@@ -50,11 +50,11 @@ Wait-For-User 'Press any key to withdraw filled order ...'
 resim set-default-account $BUYER_ACC $BUYER_PUB
 
 # "#2,$ADDR" takes the NFT with the ID 2 of the NFT with the given address from the current account's vault
-resim call-method $XRD_MARKET withdraw_purchase "#2,$ORDER_TICKET"
+resim call-method $XRD_MARKET withdraw_order "#2,$ORDER_TICKET"
 
 resim set-default-account $SELLER_ACC $SELLER_PUB
 
-resim call-method $XRD_MARKET withdraw_sale "#3,$ORDER_TICKET"
+resim call-method $XRD_MARKET withdraw_order "#3,$ORDER_TICKET"
 
 $BOUGHT_USDT = resim show $BUYER_ACC | Get-Resource-Amount "Tether"
 
@@ -66,7 +66,7 @@ Exit-Unless-Equal $BOUGHT_USDT "61" "Failure... (wrong limit buy amount) :("
 
 resim set-default-account $BUYER_ACC $BUYER_PUB
 
-resim call-method $XRD_MARKET withdraw_purchase "#6,$ORDER_TICKET"
+resim call-method $XRD_MARKET withdraw_order "#6,$ORDER_TICKET"
 
 $BOUGHT_USDT = resim show $BUYER_ACC | Get-Resource-Amount "Tether"
 

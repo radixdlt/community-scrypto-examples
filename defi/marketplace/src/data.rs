@@ -38,6 +38,14 @@ impl Order {
     pub fn is_market_order(&self) -> bool {
         self.price == 0.into()
     }
+
+    pub fn is_buy_order(&self) -> bool {
+        self.buy
+    }
+
+    pub fn is_sell_order(&self) -> bool {
+        !self.is_buy_order()
+    }
 }
 
 #[derive(NftData)]
