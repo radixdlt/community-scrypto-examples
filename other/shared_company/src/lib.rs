@@ -27,14 +27,14 @@ impl SharedCompany {
 
 
         // shares are equity in the company. They can be bought for a fixed rate or returned for a part of the company vault
-        let shared_company_share_resource_def = ResourceBuilder::new()
+        let shared_company_share_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
         .metadata("name", "SharedCompany share").metadata("symbol", "SC")
-        .new_token_fixed(1_000_000);
+        .initial_supply_fungible(1_000_000);
 
         // voting tokens are used to vote on proposals
-        let shared_company_voting_token_resource_def = ResourceBuilder::new()
+        let shared_company_voting_token_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
         .metadata("name", "SharedCompany voting token").metadata("symbol", "SCVT")
-        .new_token_fixed(1_000_000);
+        .initial_supply_fungible(1_000_000);
 
         // stores the addresses of proposal-components
         let proposal_address_list: Vec<Address>= Vec::new();

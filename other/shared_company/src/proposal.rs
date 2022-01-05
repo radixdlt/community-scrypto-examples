@@ -30,14 +30,14 @@ struct Proposal{
                     needed_votes: Decimal, company_voting_token_resource_def: ResourceDef)-> Component {
 
                     // The token that the user gets in exchange for their "yes" voting.
-                    let replacement_token_yes_resource_def = ResourceBuilder::new()
-                       .metadata("name", "Replacement token yes").metadata("symbol", "RTY")
-                    .new_token_fixed(1_000_000);
+                    let replacement_token_yes_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+                        .metadata("name", "Replacement token yes").metadata("symbol", "RTY")
+                        .initial_supply_fungible(1_000_000);
 
-                     // The token that the user gets in exchange for their "no" voting.
-                     let replacement_token_no_resource_def = ResourceBuilder::new()
-                     .metadata("name", "Replacement token no").metadata("symbol", "RTN")
-                  .new_token_fixed(1_000_000);
+                    // The token that the user gets in exchange for their "no" voting.
+                    let replacement_token_no_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+                        .metadata("name", "Replacement token no").metadata("symbol", "RTN")
+                        .initial_supply_fungible(1_000_000);
 
                     // the vault that holds the costs that are associated with the proposal
                     let cost_vault = Vault::new(cost.resource_def());
