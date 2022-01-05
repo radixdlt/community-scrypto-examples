@@ -1,17 +1,17 @@
 # Marketplace
 
-My go at a simple marketplace where people can create buy and sell orders (no AMMs).
+A simple marketplace where people can create buy and sell orders (no AMMs).
 A user gets an order ticket for each created (buy or sell) order which they can use
 to withdraw the bought tokens (and change) or the payment for sold tokens.
 
 You can run the demo on Windows by opening PowerShell and running:
 
 ```
-. .\tests\demo.ps1
+powershell .\tests\demo.ps1
 ```
 
 On Linux it is the following using bash:
 
 ```
-source ./tests/demo.sh
+bash ./tests/demo.sh
 ```
