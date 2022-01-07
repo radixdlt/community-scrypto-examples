@@ -8,7 +8,7 @@ fn register_by_admin() {
     let mut test_env = TestEnv::new(&mut ledger);
 
     let receipt = test_env.register(test_env.admin_account, test_env.admin_account, test_env.admin_key);
-    assert!(receipt.success);
+    assert!(receipt.success, "Failed to register an account.");
 }
 
 #[test]
@@ -17,18 +17,19 @@ fn register_by_person() {
     let mut test_env = TestEnv::new(&mut ledger);
 
     let receipt = test_env.register(test_env.person_account, test_env.person_account, test_env.person_key);
-    assert!(!receipt.success);
+    assert!(!receipt.success, "Only admins can register an account.");
 }
 
 #[test]
-fn register_twice_by_admin() {
+fn update_expiration() {
     let mut ledger = InMemoryLedger::with_bootstrap();
     let mut test_env = TestEnv::new(&mut ledger);
 
-    test_env.register(test_env.admin_account, test_env.admin_account, test_env.admin_key);
+    let mut receipt = test_env.register(test_env.admin_account, test_env.admin_account, test_env.admin_key);
+    let nft_id = test_env.get_nft_id(receipt);
     test_env.advance_epoch(5);
-    let receipt = test_env.register(test_env.admin_account, test_env.admin_account, test_env.admin_key);
-    assert!(receipt.success);
+    receipt = test_env.update_expiration(nft_id, test_env.admin_account, test_env.admin_key);
+    assert!(receipt.success, "Failed to update registration.");
 }
 
 #[test]
@@ -37,8 +38,8 @@ fn available_tokens_person() {
     let mut test_env = TestEnv::new(&mut ledger);
 
     test_env.advance_epoch(5);
-    let receipt = test_env.available_tokens(test_env.person_account, test_env.person_key);
-    assert!(receipt.success);
+    let receipt = test_env.available_tokens(test_env.person_account, test_env.person_key, test_env.person_badge_nft_id);
+    assert!(receipt.success, "Failed to read available tokens.");
     assert_eq!("available_tokens: 5", receipt.logs.get(0).unwrap().1);
 }
 
@@ -48,8 +49,9 @@ fn available_tokens_bot() {
     let mut test_env = TestEnv::new(&mut ledger);
 
     test_env.advance_epoch(5);
-    let receipt = test_env.available_tokens(test_env.bot_account, test_env.bot_key);
-    assert!(!receipt.success);
+    let receipt = test_env.available_tokens(test_env.bot_account, test_env.bot_key, test_env.person_badge_nft_id);
+    assert!(receipt.success, "Bot can check the balance of someone else.");
+    assert_eq!("available_tokens: 5", receipt.logs.get(0).unwrap().1);
 }
 
 #[test]
@@ -59,7 +61,7 @@ fn collect_ubi_person() {
 
     test_env.advance_epoch(33);
     let receipt = test_env.collect_ubi(test_env.person_account, test_env.person_key);
-    assert!(receipt.success);
+    assert!(receipt.success, "Failed to collect UBI.");
     assert_eq!(test_env.get_balance(test_env.person_account, test_env.ubi_token).unwrap(),  Decimal::from_str("33").unwrap());
 }
 
@@ -70,7 +72,7 @@ fn collect_ubi_bot() {
 
     test_env.advance_epoch(5);
     let receipt = test_env.collect_ubi(test_env.bot_account, test_env.bot_key);
-    assert!(!receipt.success);
+    assert!(!receipt.success, "Bot can't collect UBI.");
 }
 
 #[test]
@@ -81,7 +83,7 @@ fn send_tokens_to_bot() {
     test_env.advance_epoch(20);
     test_env.collect_ubi(test_env.person_account, test_env.person_key);
     let receipt = test_env.send_tokens(test_env.person_account, test_env.person_key, test_env.bot_account, 10);
-    assert!(receipt.success);
+    assert!(receipt.success, "Failed to send tokens.");
     assert_eq!(test_env.get_balance(test_env.person_account, test_env.ubi_token).unwrap(),  Decimal::from_str("10").unwrap());
     assert_eq!(test_env.get_balance(test_env.bot_account, test_env.ubi_token).unwrap(),  Decimal::from_str("8").unwrap());
 }
@@ -97,7 +99,8 @@ struct TestEnv<'a> {
     bot_account: Address,
     component: Address,
     admin_badge: Address,
-    person_badge: Address
+    person_badge: Address,
+    person_badge_nft_id: u128
 }
 
 impl<'a> TestEnv<'a> {
@@ -114,9 +117,9 @@ impl<'a> TestEnv<'a> {
             .deposit_all_buckets(admin_account)
             .build(vec![admin_key])
             .unwrap();
-        let receipt = executor.run(tx, false).unwrap();
+        let mut receipt = executor.run(tx, false).unwrap();
         println!("{:?}\n", receipt);
-        assert!(receipt.success);
+        assert!(receipt.success, "Failed to create the UBI component.");
 
         let admin_badge = receipt.resource_def(1).unwrap();
         let person_badge = receipt.resource_def(2).unwrap();
@@ -137,9 +140,11 @@ impl<'a> TestEnv<'a> {
             bot_account,
             component: receipt.component(0).unwrap(),
             admin_badge,
-            person_badge
+            person_badge,
+            person_badge_nft_id: 0u128
         };
-        test_env.register(person_account, admin_account, admin_key);
+        receipt = test_env.register(person_account, admin_account, admin_key);
+        test_env.person_badge_nft_id = test_env.get_nft_id(receipt);
         test_env
     }
 
@@ -159,9 +164,21 @@ impl<'a> TestEnv<'a> {
         receipt
     }
 
-    pub fn available_tokens(&mut self, address: Address, key: Address) -> Receipt {
+    pub fn update_expiration(&mut self, nft_id: u128, admin_address: Address, admin_key: Address) -> Receipt {
         let tx = TransactionBuilder::new(&self.executor)
-            .call_method(self.component, "available_tokens", vec![format!("1,{}", self.person_badge)], Some(address))
+            .call_method(self.component, "update_expiration", vec![nft_id.to_string(), format!("1,{}", self.admin_badge)], Some(admin_address))
+            .drop_all_bucket_refs()
+            .deposit_all_buckets(admin_address)
+            .build(vec![admin_key])
+            .unwrap();
+        let receipt = self.executor.run(tx, false).unwrap();
+        println!("{:?}\n", receipt);
+        receipt
+    }
+
+    pub fn available_tokens(&mut self, address: Address, key: Address, nft_id: u128) -> Receipt {
+        let tx = TransactionBuilder::new(&self.executor)
+            .call_method(self.component, "available_tokens", vec![nft_id.to_string()], Some(address))
             .drop_all_bucket_refs()
             .deposit_all_buckets(address)
             .build(vec![key])
@@ -221,6 +238,13 @@ impl<'a> TestEnv<'a> {
             "No vault found for token {} in account {}",
             token, account
         ));
+    }
+
+    fn get_nft_id(&self, receipt: Receipt) -> u128 {
+        let result_log = &receipt.logs.get(0).unwrap().1;
+        let nft_id_as_string = result_log.split_at("register: created badge for 02b8dd9f4232ce3c00dcb3496956fb57096d5d50763b989ca56f3b, nft id: ".len()).1;
+        let nft_id : u128 = nft_id_as_string.parse().unwrap();
+        nft_id
     }
 
 }

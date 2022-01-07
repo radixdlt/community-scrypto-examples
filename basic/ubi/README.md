@@ -45,6 +45,8 @@ resim new-account
 
 ```
 resim call-method <ubi_component> send_tokens <account_address> 10,<ubi_token_address>
+resim show <account_address>
+resim show <admin_account_address>
 ```
 
 7. Freely register other accounts and collect UBI with them!
