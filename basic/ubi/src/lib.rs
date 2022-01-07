@@ -41,8 +41,6 @@ blueprint! {
             let person_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", "Person NFT")
                 .metadata("description", "NFT granted to every verified account.")
-                // TODO: this should be RESTRICTED_TRANSFER but setting that flag makes it so the badge can't
-                // be presented for authorization.
                 .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
                 .badge(super_badge.resource_address(), MAY_MINT | MAY_TRANSFER | MAY_CHANGE_INDIVIDUAL_METADATA)
                 .no_initial_supply();
