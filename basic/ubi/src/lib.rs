@@ -71,8 +71,6 @@ blueprint! {
         #[auth(admin_badge)]
         pub fn register(&mut self, person: Address) {
 
-            // TODO: Check if the address already has a badge once Account.contains is implemented.
-
             // Create a badge for the person that will start minting this epoch.
             let new_expiration_epoch = Context::current_epoch() + self.epochs_until_expiration;
             let nft_id = Uuid::generate();
