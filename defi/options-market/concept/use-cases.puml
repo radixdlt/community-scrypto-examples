@@ -1,0 +1,25 @@
+@startuml Use Cases
+
+actor User as U
+actor "Liquidity Provider" as LP
+
+actor "Auto Options Selling Protocol" as Prot
+actor "Degen" as D
+
+LP <|-- Prot
+LP <|-- D
+Prot <|-- D
+
+package "Options Market" {
+    usecase "Buy Option" as BO
+    usecase "Excercise Option" as EO
+    usecase "Provide Liquidity" as PL
+    usecase "Remove Liquidity" as RL
+}
+
+U --> BO
+U --> EO
+LP --> PL
+LP --> RL
+
+@enduml
