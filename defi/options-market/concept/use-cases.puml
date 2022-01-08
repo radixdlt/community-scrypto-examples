@@ -6,19 +6,24 @@ actor "Liquidity Provider" as LP
 actor "Auto Options Selling Protocol" as Prot
 actor "Degen" as D
 
-LP <|-- Prot
-LP <|-- D
+LP <|-up- Prot
+LP <|-up- D
 
 package "Options Market" {
     usecase "Buy Option" as BO
     usecase "Excercise Option" as EO
-    usecase "Provide Liquidity" as PL
-    usecase "Remove Liquidity" as RL
+    package "Liquidity Pool" as Pool {
+        usecase "Provide Liquidity" as PL
+        usecase "Remove Liquidity" as RL
+    }
+
+    BO .up.> Pool
+    EO .up.> Pool
 }
 
-U --> BO
-U --> EO
-LP --> PL
-LP --> RL
+U -up-> BO
+U -up-> EO
+LP -down-> PL
+LP -down-> RL
 
 @enduml
