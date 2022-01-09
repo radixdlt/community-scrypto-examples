@@ -1,0 +1,63 @@
+' @startuml Provide Liquidity
+' TODO
+' @enduml
+
+' @startuml Remove Liquidity
+' TODO
+' @enduml
+
+@startuml Buy Option
+actor User
+participant OM
+participant AMM
+User -> OM : Request Option Buy
+OM -> AMM : Request Premium Price
+AMM -> AMM : Calculate Premum Price
+AMM --> OM : Return Premium Price
+OM --> User : Show Premium Price
+
+alt #LightGreen premium price ok
+    User -> OM : Buy Option
+    OM -> AMM : Check Liquidity
+    alt #LightGreen enough liquidity
+        AMM --> OM: Liqudity Ok
+        OM -> OM : Collect Premium
+        OM -> AMM : Request Option Token
+        AMM -> AMM : Lock Underlying Asset
+        AMM -> AMM : Mint Option Token
+        AMM --> OM : Return Option Token
+        OM --> User : Send Option Token
+
+    else #Pink no liquidity
+        AMM --> OM : Liquidity To Low
+        OM --> User : Send Error Message
+    end
+
+else #Pink premium price too high
+
+    User ->x OM: Abort
+
+end
+
+@enduml
+
+@startuml Excercise Option
+
+actor User
+participant OM
+participant AMM
+
+User -> OM : Exercise Option
+
+alt #LightGreen eligible
+    OM -> AMM : Request Payout
+    AMM -> AMM : Unlock Underlying Asset
+    AMM -> AMM : Calculate Payout
+    AMM --> OM : Return Funds
+    OM --> User : Pay User
+
+else #Pink not eligible
+    OM --> User : Send Error Message
+end
+
+@enduml
