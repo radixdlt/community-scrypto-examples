@@ -7,7 +7,7 @@ fn try_add_recipient_already_exist_must_be_failed() {
 
     let mut ledger = InMemoryLedger::with_bootstrap();
     // Set up environment.
-    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN);
+    let mut test_env = TestEnv::new(&mut ledger);
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
     
     let token_by_recipient =  Decimal::from(10); 
@@ -30,7 +30,7 @@ fn try_withdraw_without_added_recipients_must_be_failed() {
     // Set up environment.
 
     let mut ledger = InMemoryLedger::with_bootstrap();
-    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN);
+    let mut test_env = TestEnv::new(&mut ledger);
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
 
     // withdraw_token    
@@ -47,7 +47,7 @@ fn try_withdraw_after_added_recipients_must_be_succeeded() {
 
     let mut ledger = InMemoryLedger::with_bootstrap();
     let token_by_recipient : Decimal =  Decimal::from(100); 
-    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN);
+    let mut test_env = TestEnv::new(&mut ledger);
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
 
     // AddRecipients
@@ -81,7 +81,7 @@ struct TestEnv<'a> {
 }
 
 impl<'a> TestEnv<'a> {
-    pub fn new(ledger: &'a mut InMemoryLedger, token : Address) -> Self {
+    pub fn new(ledger: &'a mut InMemoryLedger) -> Self {
         let mut executor = TransactionExecutor::new(ledger, 0, 0);
 
         let package = executor.publish_package(include_code!("airdrop_with_withdraw"));
@@ -91,8 +91,7 @@ impl<'a> TestEnv<'a> {
         let tx = TransactionBuilder::new(&executor)
             .call_function(package, "AirdropWithWithdraw", "new", vec!
             [
-             format!("{}",token)
-            ], None)
+            ], Some(admin_account))
             .deposit_all_buckets(admin_account)
             .drop_all_bucket_refs()
             .build(vec![admin_key])
@@ -158,7 +157,8 @@ impl<'a> TestEnv<'a> {
             .unwrap();
         let receipt = self.executor.run(tx, false).unwrap();
         println!("{:?}\n", receipt);
-         receipt
+        return receipt; 
+        
     }
 
     fn get_balance(&self, account: Address, token: Address) -> Result<Decimal, String> {
