@@ -6,7 +6,7 @@ blueprint! {
     struct AirdropWithWithdraw {
         admin_badge: Address,
         recipients: HashMap<Address, Vault>,
-        user_badge_def : ResourceDef,
+        recipient_badge_def : ResourceDef,
         minter_badge_vault : Vault
     }
 
@@ -21,7 +21,7 @@ blueprint! {
                                                .metadata("name", "minter badge")
                                                .initial_supply_fungible(1); 
 
-            let user_badge_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let recipient_badge_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                                 .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
                                 .badge(minter_badge.resource_address(), MAY_MINT | MAY_TRANSFER | MAY_CHANGE_INDIVIDUAL_METADATA)
                                 .no_initial_supply(); 
@@ -29,7 +29,7 @@ blueprint! {
             let component = Self {
                 admin_badge : admin_badge.resource_address(),
                 recipients :  HashMap::new(),
-                user_badge_def ,
+                recipient_badge_def ,
                 minter_badge_vault : Vault::with_bucket(minter_badge)
             }
             .instantiate();
@@ -44,16 +44,15 @@ blueprint! {
             assert!(!self.recipients.contains_key(&recipient) , "Recipient already exist");
             self.recipients.insert(recipient, Vault::with_bucket(tokens));
             let user_badge = self.minter_badge_vault.authorize(|auth|
-                return self.user_badge_def.mint(1, auth) 
+                return self.recipient_badge_def.mint(1, auth) 
             );
             Account::from(recipient).deposit(user_badge);
         }
         
 
-        #[auth(user_badge_def)]
+        #[auth(recipient_badge_def)]
         pub fn withdraw_token(&mut self) -> Bucket
-        {   
-            info!("test");
+        {  
             let recipient_address  = auth.resource_address(); 
             assert!(self.recipients.contains_key(&recipient_address), "Recipient not found");
             let recipient_tokens  = &self.recipients[&recipient_address]; 
