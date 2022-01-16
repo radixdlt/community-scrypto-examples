@@ -55,6 +55,8 @@ blueprint! {
         pub fn add_recipient(&mut self, recipient: Address, tokens : Bucket)  {
 
             assert!(tokens.amount() > Decimal::zero(), "tokens quantity cannot be 0"); 
+            assert_eq!(tokens.resource_address(), self.tokens.resource_address(), "token address must match"); 
+
             let recipient_badge_id = Uuid::generate();
             let recipient_badge = self.minter_badge_vault.authorize(|auth|
                 return self.recipient_badge_def.mint_nft(recipient_badge_id , 
@@ -65,9 +67,10 @@ blueprint! {
                                                                                 }, 
                                                          auth)
             );
-         self.recipient_address_by_badge_id.insert(recipient_badge_id, recipient);
-           self.tokens.put(tokens);
-           Account::from(recipient).deposit(recipient_badge);
+            self.recipient_address_by_badge_id.insert(recipient_badge_id, recipient);
+            self.tokens.put(tokens);
+            Account::from(recipient).deposit(recipient_badge);
+
         }
         
 
