@@ -8,7 +8,7 @@ fn try_withdraw_without_added_recipients_must_be_failed() {
     // Set up environment.
 
     let mut ledger = InMemoryLedger::with_bootstrap();
-    let mut test_env = TestEnv::new(&mut ledger);
+    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN);
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from(1000000));
 
     // withdraw_token    
@@ -25,7 +25,7 @@ fn try_withdraw_after_added_recipients_must_be_succeeded() {
 
     let mut ledger = InMemoryLedger::with_bootstrap();
     let token_by_recipient : Decimal =  Decimal::from(100); 
-    let mut test_env = TestEnv::new(&mut ledger);
+    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN);
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(),Decimal::from(1000000));
 
     // AddRecipients
@@ -60,7 +60,7 @@ struct TestEnv<'a> {
 }
 
 impl<'a> TestEnv<'a> {
-    pub fn new(ledger: &'a mut InMemoryLedger) -> Self {
+    pub fn new(ledger: &'a mut InMemoryLedger, token_type : Address) -> Self {
         let mut executor = TransactionExecutor::new(ledger, 0, 0);
 
         let package = executor.publish_package(include_code!("airdrop_with_withdraw"));
@@ -70,6 +70,7 @@ impl<'a> TestEnv<'a> {
         let tx = TransactionBuilder::new(&executor)
             .call_function(package, "AirdropWithWithdraw", "new", vec!
             [
+                token_type.to_string()
             ], Some(admin_account))
             .deposit_all_buckets(admin_account)
             .drop_all_bucket_refs()

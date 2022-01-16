@@ -21,7 +21,7 @@ blueprint! {
 
     impl AirdropWithWithdraw {
         
-        pub fn new() -> (Component, Bucket) {
+        pub fn new(token_type : Address) -> (Component, Bucket) {
 
             let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                                 .initial_supply_fungible(1);
@@ -40,7 +40,7 @@ blueprint! {
             
             let component = Self {
                 admin_badge : admin_badge.resource_address(),
-                tokens : Vault::new(RADIX_TOKEN),
+                tokens : Vault::new(token_type),
                 recipient_address_by_badge_id :  HashMap::new(),
                 recipient_badge_def ,
                 minter_badge_vault : Vault::with_bucket(minter_badge)
