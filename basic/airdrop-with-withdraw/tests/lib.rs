@@ -2,28 +2,6 @@ use radix_engine::ledger::*;
 use radix_engine::transaction::*;
 use scrypto::prelude::*;
 
-#[test]
-fn try_add_recipient_already_exist_must_be_failed() {
-
-    let mut ledger = InMemoryLedger::with_bootstrap();
-    // Set up environment.
-    let mut test_env = TestEnv::new(&mut ledger);
-    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
-    
-    let token_by_recipient =  Decimal::from(10); 
-    let (_, recipient_account)  = test_env.new_account();
-    
-    let first_add_receipt = test_env.add_recipient(recipient_account, RADIX_TOKEN, token_by_recipient); 
-    assert!(first_add_receipt.success);
-
-    let second_add_receipt = test_env.add_recipient(recipient_account, RADIX_TOKEN ,token_by_recipient); 
-
-    let log_message = &second_add_receipt.logs.get(0).unwrap().1;
-    assert!(!second_add_receipt.success);
-    assert!(log_message.starts_with("Panicked at 'Recipient already exist'"));
-}
-
-
 
 #[test]
 fn try_withdraw_without_added_recipients_must_be_failed() {
@@ -31,7 +9,7 @@ fn try_withdraw_without_added_recipients_must_be_failed() {
 
     let mut ledger = InMemoryLedger::with_bootstrap();
     let mut test_env = TestEnv::new(&mut ledger);
-    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
+    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from(1000000));
 
     // withdraw_token    
     let  (not_recipient_key, not_recipient_address)  = test_env.new_account();
@@ -48,10 +26,10 @@ fn try_withdraw_after_added_recipients_must_be_succeeded() {
     let mut ledger = InMemoryLedger::with_bootstrap();
     let token_by_recipient : Decimal =  Decimal::from(100); 
     let mut test_env = TestEnv::new(&mut ledger);
-    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap());
+    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(),Decimal::from(1000000));
 
     // AddRecipients
-    let recipient_count  = 1; 
+    let recipient_count  = 2; 
     let mut recipients_accounts : Vec<(Address,Address)> =  Vec::new();
 
     for _ in 0..recipient_count {
@@ -61,13 +39,14 @@ fn try_withdraw_after_added_recipients_must_be_succeeded() {
         recipients_accounts.push((recipient_key, recipient_address));  
     }
 
-    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap() , Decimal::from_str("1000000").unwrap() - token_by_recipient * recipient_count);
+    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap() , Decimal::from(1000000) - token_by_recipient * recipient_count);
 
     // withdraw_token
     for (recipient_key, recipient_address)  in recipients_accounts {
             let withdraw_receipt =  test_env.withdraw_token(recipient_key, recipient_address);
+            assert!(withdraw_receipt.success); 
             assert_eq!(format!("withdraw_token : {}", token_by_recipient), withdraw_receipt.logs.get(0).unwrap().1);
-            assert_eq!(test_env.get_balance(recipient_address, RADIX_TOKEN).unwrap(), Decimal::from_str("1000000").unwrap() + token_by_recipient);
+            assert_eq!(test_env.get_balance(recipient_address, RADIX_TOKEN).unwrap(), Decimal::from(1000000) + token_by_recipient);
     }
 }
 
@@ -77,7 +56,7 @@ struct TestEnv<'a> {
     admin_account: Address,
     component: Address,
     admin_badge: Address,
-    user_badge : Address
+    recipient_badge : Address
 }
 
 impl<'a> TestEnv<'a> {
@@ -101,7 +80,7 @@ impl<'a> TestEnv<'a> {
         assert!(receipt.success);
 
         let admin_badge = receipt.resource_def(0).unwrap();
-        let user_badge = receipt.resource_def(1).unwrap(); 
+        let recipient_badge = receipt.resource_def(1).unwrap(); 
 
         Self {
             executor,
@@ -109,7 +88,7 @@ impl<'a> TestEnv<'a> {
             admin_account,
             component: receipt.component(0).unwrap(),
             admin_badge,
-            user_badge
+            recipient_badge
         }
     }
 
@@ -126,7 +105,7 @@ impl<'a> TestEnv<'a> {
                 self.component,
                 "add_recipient",
                 vec![
-                    format!("{}", recipient),
+                    recipient.to_string(),
                     format!("{},{}", tokens, token_address),
                     format!("1,{}", self.admin_badge)
                 ],
@@ -147,7 +126,7 @@ impl<'a> TestEnv<'a> {
                 self.component,
                 "withdraw_token",
                 vec![
-                    format!("1,{}", self.user_badge)
+                    format!("1,{}", self.recipient_badge)
                 ],
                 Some(recipient_address),
             )
