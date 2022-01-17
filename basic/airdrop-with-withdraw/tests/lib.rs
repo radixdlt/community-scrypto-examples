@@ -20,6 +20,29 @@ fn try_withdraw_without_added_recipients_must_be_failed() {
 }
 
 #[test]
+fn try_withdraw_already_done_must_be_failed() {
+    // Set up environment.
+
+    let mut ledger = InMemoryLedger::with_bootstrap();
+    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN);
+    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from(1000000));
+    let  (not_recipient_key, not_recipient_address)  = test_env.new_account();
+    let token_by_recipient : Decimal =  Decimal::from(100); 
+    // addRecipient
+    test_env.add_recipient(not_recipient_address, RADIX_TOKEN ,token_by_recipient );
+
+    // withdraw_token    
+    let withdraw_receipt =  test_env.withdraw_token(not_recipient_key, not_recipient_address);
+    assert!(withdraw_receipt.success);
+
+    let already_withdraw_receipt =  test_env.withdraw_token(not_recipient_key, not_recipient_address);
+    assert!(!already_withdraw_receipt.success);
+    
+    let log_message = &already_withdraw_receipt.logs.get(0).unwrap().1;
+    assert!(log_message.starts_with("Panicked at 'withdraw already done'"));
+}
+
+#[test]
 fn try_withdraw_after_added_recipients_must_be_succeeded() {
     // Set up environment.
 
@@ -41,8 +64,14 @@ fn try_withdraw_after_added_recipients_must_be_succeeded() {
 
     assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap() , Decimal::from(1000000) - token_by_recipient * recipient_count);
 
-    // withdraw_token
+    
     for (recipient_key, recipient_address)  in recipients_accounts {
+           // available token
+            let available_token_receipt = test_env.available_token(recipient_key, recipient_address); 
+            assert!(available_token_receipt.success); 
+            assert_eq!(format!("available : {}", token_by_recipient), available_token_receipt.logs.get(0).unwrap().1);
+            
+            // withdraw_token
             let withdraw_receipt =  test_env.withdraw_token(recipient_key, recipient_address);
             assert!(withdraw_receipt.success); 
             assert_eq!(format!("withdraw_token : {}", token_by_recipient), withdraw_receipt.logs.get(0).unwrap().1);
@@ -81,7 +110,7 @@ impl<'a> TestEnv<'a> {
         assert!(receipt.success);
 
         let admin_badge = receipt.resource_def(0).unwrap();
-        let recipient_badge = receipt.resource_def(1).unwrap(); 
+        let recipient_badge = receipt.resource_def(2).unwrap(); 
 
         Self {
             executor,
@@ -126,6 +155,26 @@ impl<'a> TestEnv<'a> {
             .call_method(
                 self.component,
                 "withdraw_token",
+                vec![
+                    format!("1,{}", self.recipient_badge)
+                ],
+                Some(recipient_address),
+            )
+            .drop_all_bucket_refs()
+            .deposit_all_buckets(recipient_address)
+            .build(vec![recipient_key])
+            .unwrap();
+        let receipt = self.executor.run(tx, false).unwrap();
+        println!("{:?}\n", receipt);
+        return receipt; 
+        
+    }
+
+    fn available_token(&mut self,recipient_key : Address, recipient_address : Address) -> Receipt {
+        let tx = TransactionBuilder::new(&self.executor)
+            .call_method(
+                self.component,
+                "available_token",
                 vec![
                     format!("1,{}", self.recipient_badge)
                 ],

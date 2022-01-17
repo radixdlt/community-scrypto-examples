@@ -14,7 +14,6 @@ blueprint! {
     struct AirdropWithWithdraw {
         admin_badge: Address,
         tokens : Vault,
-        recipient_address_by_badge_id : HashMap<u128, Address>,
         recipient_badge_def : ResourceDef,
         minter_badge_vault : Vault
     }
@@ -41,7 +40,6 @@ blueprint! {
             let component = Self {
                 admin_badge : admin_badge.resource_address(),
                 tokens : Vault::new(token_type),
-                recipient_address_by_badge_id :  HashMap::new(),
                 recipient_badge_def ,
                 minter_badge_vault : Vault::with_bucket(minter_badge)
             }
@@ -67,7 +65,6 @@ blueprint! {
                                                                                 }, 
                                                          auth)
             );
-            self.recipient_address_by_badge_id.insert(recipient_badge_id, recipient);
             self.tokens.put(tokens);
             Account::from(recipient).deposit(recipient_badge);
 
@@ -75,16 +72,30 @@ blueprint! {
         
 
         #[auth(recipient_badge_def)]
+        pub fn available_token(& self) -> Decimal
+        {
+            let recipient_badge_id  = auth.get_nft_id();  
+            let  nft_data : AirdropWithWithdrawData = self.recipient_badge_def.get_nft_data(recipient_badge_id);
+            let mut result : Decimal = Decimal::zero();
+            if !nft_data.is_collected {
+                result = nft_data.amount; 
+            }
+            info!("available : {}", result);
+            return result; 
+        }
+
+        #[auth(recipient_badge_def)]
         pub fn withdraw_token(&mut self) -> Bucket
         {  
             let recipient_badge_id  = auth.get_nft_id();  
-            assert!(self.recipient_address_by_badge_id.contains_key(&recipient_badge_id), "Recipient not found");
             let mut nft_data : AirdropWithWithdrawData = self.recipient_badge_def.get_nft_data(recipient_badge_id);
+            assert!(!nft_data.is_collected, "withdraw already done"); 
             nft_data.is_collected = true; 
             let amount = nft_data.amount; 
             self.minter_badge_vault.authorize({
                 |auth| self.recipient_badge_def.update_nft_data(recipient_badge_id, nft_data, auth)
             });
+            info!("withdraw_token : {}", amount);
             return self.tokens.take(amount);
         }
     }
