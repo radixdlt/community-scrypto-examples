@@ -23,13 +23,13 @@ blueprint! {
         */
         pub fn new(goal: Decimal, campaign_duration_epochs: u64) -> (Component, Bucket) {
             // Create a badge for the fundraiser of the crowdsourcing campaign.
-            let fundraiser_badge = ResourceBuilder::new().metadata("name", "fundraiser_badge").new_badge_fixed(1);
+            let fundraiser_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE).metadata("name", "fundraiser_badge").initial_supply_fungible(1);
 
             // Get the number of the last epoch.
             let last_epoch = Context::current_epoch() + campaign_duration_epochs;
 
             // Patron badge is used to mint and burn patron badges.
-            let patron_mint_badge = ResourceBuilder::new().metadata("name", "patron_mint_badge").new_badge_fixed(1);
+            let patron_mint_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE).metadata("name", "patron_mint_badge").initial_supply_fungible(1);
 
             // Instantiate the CrowdsourcingCampaign component.
             let component = Self {
@@ -68,11 +68,16 @@ blueprint! {
         Pledge XRD and become a patron.
         */
         pub fn pledge(&mut self, payment: Bucket) -> Bucket {
-            scrypto_assert!(payment.amount() != Decimal::zero(), "you need to pay at least one XRD to become a patron.");
-            scrypto_assert!(Context::current_epoch() < self.last_epoch, "campaign has already ended.");
+            assert!(payment.amount() != Decimal::zero(), "you need to pay at least one XRD to become a patron.");
+            assert!(Context::current_epoch() < self.last_epoch, "campaign has already ended.");
 
             // Create a burnable badge.
-            let patron_badge_resource = ResourceBuilder::new().metadata("name", "patron_badge").new_badge_mutable(self.patron_mint_badge.resource_def());
+            let patron_badge_resource = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                                            .metadata("name", "patron_badge")
+                                            .flags(MINTABLE | BURNABLE)
+                                            .badge(self.patron_mint_badge.resource_def(), MAY_MINT | MAY_BURN)
+                                            .no_initial_supply();
+
             let patron_badge = self.patron_mint_badge.authorize(|mint_badge| patron_badge_resource.mint(1, mint_badge));
 
             // Add badge and value to patron entries for this pledge.
@@ -89,7 +94,7 @@ blueprint! {
         Recall pledge as a patron. It is allowed as long as goal hasn't been reached and last_epoch hasn't been passed.
          */
         pub fn recall_pledge(&mut self, patron_badge: Bucket) -> Bucket {
-            scrypto_assert!(!(Context::current_epoch() > self.last_epoch && self.collected_xrd.amount() > self.goal), "campaign was successful and has ended.");
+            assert!(!(Context::current_epoch() > self.last_epoch && self.collected_xrd.amount() > self.goal), "campaign was successful and has ended.");
             
             let refund = Bucket::new(RADIX_TOKEN);
             match self.patron_entries.get(&patron_badge.resource_address()) {
@@ -99,9 +104,12 @@ blueprint! {
                     // Remove patron entry.
                     self.patron_entries.remove(&patron_badge.resource_address());
                     // Authorize to burn patron badge.
-                    self.patron_mint_badge.authorize(|mint_badge| patron_badge.burn(mint_badge));
+                    self.patron_mint_badge.authorize(|mint_badge| patron_badge.burn_with_auth(mint_badge));
                 }
-                _ => scrypto_abort("no pledge found with provided badge")
+                _ => {
+                    info!("no pledge found with provided badge");
+                    std::process::abort()
+                }
             }
 
             refund
@@ -112,8 +120,8 @@ blueprint! {
         */
         #[auth(fundraiser_badge_def)]
         pub fn withdraw(&self) -> Bucket {
-            scrypto_assert!(Context::current_epoch() > self.last_epoch, "campaign has not ended yet.");
-            scrypto_assert!(self.collected_xrd.amount() >= self.goal, "campaign did not reach it's goal.");
+            assert!(Context::current_epoch() > self.last_epoch, "campaign has not ended yet.");
+            assert!(self.collected_xrd.amount() >= self.goal, "campaign did not reach it's goal.");
 
             self.collected_xrd.take_all()
         }

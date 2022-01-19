@@ -15,7 +15,7 @@ fn test_multisig() {
     let key3 = executor.new_public_key();
     let account3 = executor.new_account(key3);
 
-    let package = executor.publish_package(include_code!());
+    let package = executor.publish_package(include_code!("multisig_transmission_maker"));
 
     // Test the `new` function.
     let transaction1 = TransactionBuilder::new(&executor)

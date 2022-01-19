@@ -1,49 +1,74 @@
-# Set up environment and publish app
+# Define helper functions
 
-resim reset
-
-export ACC=`resim new-account | grep 'address' | cut -d ":" -f2 | xargs`
-
-resim new-token-fixed --name Tether --symbol USDT 10000
-
-export XRD=`resim show $ACC | grep Radix | cut -d " " -f6 | tr ',' ' ' | xargs`
-export USDT=`resim show $ACC | grep Tether | cut -d " " -f6 | tr ',' ' ' | xargs`
-
-export PACKAGE="01eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62"
-
-resim publish --address $PACKAGE .
-
-function reload {
+function Reload {
   resim publish --address $PACKAGE .
 }
 
-# Create market
+function Write-Output {
+  echo "$1"
+}
 
-export XRD_MARKET=`resim call-function $PACKAGE Market open $XRD | grep 'Component' | cut -d ":" -f2 | xargs`
+function Get-Account-Address {
+  grep 'Account address' | cut -d ":" -f2 | xargs
+}
 
-# Create orders
+function Get-Public-Key {
+  grep 'Public key' | cut -d: -f 2 | xargs
+}
 
-resim call-method $XRD_MARKET buy $USDT 3.21 1000,$XRD
-resim call-method $XRD_MARKET buy $USDT 3.27 200,$XRD
-resim call-method $XRD_MARKET sell 90,$USDT 3.26
-resim call-method $XRD_MARKET sell 100,$USDT 3.29
-resim call-method $XRD_MARKET sell 400,$USDT 3.33
+function Get-Component {
+  grep 'Component' | cut -d: -f 2 | xargs
+}
 
-export BO2=`resim show $ACC | grep 'Order Ticket #2' | cut -d " " -f6 | tr ',' ' ' | xargs`
+function Get-Resource-Def {
+  grep "name: \"$1\"" | sed -r 's/.*resource_def: (\w+).*/\1/'
+}
 
-resim call-method $XRD_MARKET print_order_book
+function Get-Resource-Amount {
+  grep "name: \"$1\"" | sed -r 's/.*amount: ([0-9]+).*/\1/'
+}
 
-echo
-read -n 1 -s -r -p 'Press any key to fill orders ...';
+function Get-New-Def {
+  grep 'ResourceDef' | cut -d: -f 2 | xargs
+}
 
-resim call-method $XRD_MARKET fill_orders
+function Get-Market-Price {
+  grep "$1" | cut -d'|' -f3 | xargs
+}
 
-echo
-read -n 1 -s -r -p 'Press any key to show order book ...';
+function Wait-For-User {
+  echo
+  read -n 1 -s -r -p "$1"
+  echo
+}
 
-resim call-method $XRD_MARKET print_order_book
+function Exit-Unless-Equal {
+  if [ "$1" != "$2" ]; then
+    echo
+    echo "$3" 1>&2
+    return 1
+  fi
+}
 
-echo
-read -n 1 -s -r -p 'Press any key to withdraw filled order ...';
+# Lastly, convert variable assignments in ps1 script to bash.
+# e.g.
+#
+#   $FOO = echo hallo
+#
+# into
+#
+#   export FOO=`echo hallo`
+#
+# The rest is already valid bash due to the use of the helper functions above.
+#
+# We use export (and global variables in ps1) so users can inspect the saved values
+# after sourcing the demo script.
+BASH_STEPS_FILE=`tempfile`
+cat ./tests/steps.ps1 | sed -e 's/^\$/export /g' -e 's/ = /=`/g' -e '/=`/s/.$/`/g' | tr -d "\r" > $BASH_STEPS_FILE
 
-resim call-method $XRD_MARKET withdraw_purchase 1,$BO2
+set -e
+
+source $BASH_STEPS_FILE
+
+# @TODO Figure out a way to do this WITHOUT exiting the bash shell if the steps fail.
+# Although this is really only a problem if the demo fails which it shouldn't!

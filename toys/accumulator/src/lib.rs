@@ -12,9 +12,9 @@ blueprint! {
 
   impl AccumulatingVault {
     pub fn new(rate: Decimal) -> (Component, Bucket) {
-      let mint_badge = Vault::with_bucket(ResourceBuilder::new().new_badge_fixed(1));
-      let badge_def = ResourceBuilder::new().new_badge_mutable(mint_badge.resource_def());
-      let vault_def = ResourceBuilder::new().new_token_mutable(mint_badge.resource_def());
+      let mint_badge = Vault::with_bucket(ResourceBuilder::new_fungible(DIVISIBILITY_NONE).initial_supply_fungible(1));
+      let badge_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE).flags(MINTABLE).badge(mint_badge.resource_def(), MAY_MINT).no_initial_supply();
+      let vault_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM).flags(MINTABLE).badge(mint_badge.resource_def(), MAY_MINT).no_initial_supply();
       let user_badge = mint_badge.authorize(|b| badge_def.mint(1, b));
       let component = Self {
           badge_def: badge_def,

@@ -27,7 +27,7 @@ fn setup_fixture<'a, L: Ledger>(env: &mut TestEnv<'a, L>) -> (User, User, Resour
 
     const PACKAGE: &str = "bonding";
 
-    env.publish_package(PACKAGE, include_code!());
+    env.publish_package(PACKAGE, include_code!("scrypto_bonding"));
     env.using_package(PACKAGE);
 
     (owner, investor, reserve_def)
@@ -271,7 +271,7 @@ fn test_3_quotes() {
     ]);
     println!("buy_quote: receipt: {:?}", receipt);
     assert!(receipt.success);
-    let quote: Decimal = utils::return_of_call_method(&mut receipt, "get_buy_quote_amount");
+    let quote: Decimal = return_of_call_method(&mut receipt, "get_buy_quote_amount");
     assert_eq!(quote, 300.into());
 
     // now try to get a sell quote amount and see if it's right
@@ -280,7 +280,7 @@ fn test_3_quotes() {
     ]);
     println!("sell_quote_amount: receipt: {:?}", receipt);
     assert!(receipt.success);
-    let quote: Decimal = utils::return_of_call_method(&mut receipt, "get_sell_quote_amount");
+    let quote: Decimal = return_of_call_method(&mut receipt, "get_sell_quote_amount");
     assert_eq!(quote, 300.into());
 
     // now try to get a seel quote (BucketRef) ...but can't check it easily outside of wasm
@@ -296,16 +296,4 @@ fn test_3_quotes() {
     let expected_reserve_in_account: Decimal = 1_000_000.into();
     let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
     assert_eq!(reserve_in_account, expected_reserve_in_account);
-}
-
-mod utils {
-    // TODO remove after upstreamed into scrypto-unit
-    use scrypto::prelude::*;
-    use sbor::Decode;
-    use radix_engine::transaction::*;
-    pub fn return_of_call_method<T: Decode>(receipt: &mut Receipt, method_name: &str) -> T {
-        let instruction_index = receipt.transaction.instructions.iter().position(|i| match i { Instruction::CallMethod { ref method, .. } if method == method_name => true, _ => false }).unwrap();
-        let encoded = receipt.results.swap_remove(instruction_index).unwrap().unwrap().encoded;
-        scrypto_decode(&encoded).unwrap()
-    }
 }

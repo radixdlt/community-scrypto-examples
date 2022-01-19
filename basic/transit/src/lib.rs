@@ -30,28 +30,31 @@ blueprint! {
         ) -> (Component, Bucket, Bucket) {
 
             let valid_cli_arguments = price_per_ticket > 0.into() && price_per_ride > 0.into();
-            scrypto_assert!(valid_cli_arguments, "Invalid CLI arguments");
+            assert!(valid_cli_arguments, "Invalid CLI arguments");
 
-            let american_badge = ResourceBuilder::new()
+            let american_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "American Host Badge")
                 .metadata("symbol", "APB")
                 .metadata("description", "A badge that grants american host privileges")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
-            let european_badge = ResourceBuilder::new()
+            let european_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "European Host Badge")
                 .metadata("symbol", "EPB")
                 .metadata("description", "A badge that grants european host privileges")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
-            let ticket_minter = ResourceBuilder::new()
+            let ticket_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Ticket Mint Auth")
-                .new_token_fixed(1);
-            let ticket_resource_def = ResourceBuilder::new()
+                .initial_supply_fungible(1);
+
+            let ticket_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Ticket")
                 .metadata("symbol", "TK")
                 .metadata("description", "A ticket used for rides")
-                .new_token_mutable(ticket_minter.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(ticket_minter.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             let component = Self {
                 riders: LazyMap::new(),
@@ -94,8 +97,8 @@ blueprint! {
             let valid_ticket_price = payment.amount() >= self.ticket_price;
             let valid_currency = dollars || euros;
 
-            scrypto_assert!(valid_ticket_price, "Invalid ticket price");
-            scrypto_assert!(valid_currency, "Invalid currency");
+            assert!(valid_ticket_price, "Invalid ticket price");
+            assert!(valid_currency, "Invalid currency");
 
             // Mint ticket token
             let ticket = self.ticket_minter.authorize(|badge| {
@@ -120,13 +123,13 @@ blueprint! {
             let valid_currency = payment.resource_address() == self.ticket_resource_def.address();
             let valid_price_per_ride = payment.amount() == self.ride_price;
 
-            scrypto_assert!(valid_ride, "Invalid ride");
-            scrypto_assert!(valid_currency, "Invalid currency");
-            scrypto_assert!(valid_price_per_ride, "Invalid price per ride");
+            assert!(valid_ride, "Invalid ride");
+            assert!(valid_currency, "Invalid currency");
+            assert!(valid_price_per_ride, "Invalid price per ride");
 
             // Burn ticket token
             self.ticket_minter.authorize(|badge| {
-                payment.burn(badge);
+                payment.burn_with_auth(badge);
             });
 
             // Keep track of riders public key/epoch

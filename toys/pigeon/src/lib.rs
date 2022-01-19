@@ -11,21 +11,21 @@ blueprint! {
     impl Pigeon {
         // Create the different pigeon parts and the component
         pub fn new() -> (Component, Vec<Bucket>) {
-            let head: Bucket = ResourceBuilder::new()
+            let head: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Pigeon Head")
-                .new_token_fixed(1);
+                .initial_supply_fungible(1);
 
-            let body: Bucket = ResourceBuilder::new()
+            let body: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Pigeon Body")
-                .new_token_fixed(1);
+                .initial_supply_fungible(1);
                 
-            let wings: Bucket = ResourceBuilder::new()
+            let wings: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Pigeon Wing")
-                .new_token_fixed(2);
+                .initial_supply_fungible(2);
 
-            let legs: Bucket = ResourceBuilder::new()
+            let legs: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Pigeon Leg")
-                .new_token_fixed(2);
+                .initial_supply_fungible(2);
 
             let component = Self {
                 head_vault: Vault::new(head.resource_def()),

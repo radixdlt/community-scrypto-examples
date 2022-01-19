@@ -44,10 +44,10 @@ blueprint! {
         // - borrow_epochs: the number of epochs books are borrowed for
         // the librarian badge is returned to the caller
         pub fn new(member_badge_count: u32, membership_price: Decimal, borrow_epochs: u64) -> (Component, Bucket) {
-            let librarian_badge_bucket = ResourceBuilder::new()
+            let librarian_badge_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Librarian Badge")
                 .metadata("symbol", "LB")
-                .new_badge_fixed(1);
+                .initial_supply_fungible(1);
 
             let mut books = HashMap::new();
             let book_one = Book { author: String::from("James S. A. Corey"), title: String::from("Leviathan Wakes") };
@@ -57,10 +57,10 @@ blueprint! {
             books.insert(String::from("9780450011849"), book_two);
             books.insert(String::from("9781844162949"), book_three);
 
-            let member_badges_bucket = ResourceBuilder::new()
+            let member_badges_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Library Membership Badge")
                 .metadata("symbol", "LMB")
-                .new_badge_fixed(member_badge_count);
+                .initial_supply_fungible(member_badge_count);
             let member_badge_def = member_badges_bucket.resource_def();
 
             let component = Self {
@@ -95,9 +95,9 @@ blueprint! {
         // registers the account as a member of the library
         pub fn register(&mut self, payment: Bucket) -> Bucket {
             info!("Attempting to register user, membership badges remaining {}, payment amount {}", self.member_badges.amount(), payment.amount());
-            scrypto_assert!(!self.member_badges.is_empty(), "No memberships available");
-            scrypto_assert!(payment.amount() == self.membership_price, "Wrong amount sent");
-            scrypto_assert!(payment.resource_def() == RADIX_TOKEN.into(), "Can only pay with XRD");
+            assert!(!self.member_badges.is_empty(), "No memberships available");
+            assert!(payment.amount() == self.membership_price, "Wrong amount sent");
+            assert!(payment.resource_def() == RADIX_TOKEN.into(), "Can only pay with XRD");
 
             // take the payment
             self.fees.put(payment);
@@ -111,8 +111,8 @@ blueprint! {
         #[auth(member_badge_def)]
         pub fn borrow_book(&mut self, isbn: String) {
             info!("Attempting to borrow book with ISBN {}", isbn);
-            scrypto_assert!(self.books.contains_key(&isbn), "Book not in library");
-            scrypto_assert!(!self.borrowed_books.contains_key(&isbn), "Book already borrowed");
+            assert!(self.books.contains_key(&isbn), "Book not in library");
+            assert!(!self.borrowed_books.contains_key(&isbn), "Book already borrowed");
 
             let book = self.books.get(&isbn).unwrap();
             info!("Book found (ISBN: {}, Title: {}, Author: {})", isbn, book.title, book.author);
@@ -131,7 +131,7 @@ blueprint! {
 
             // check the book is not overdue
             let book_overdue = self.is_book_overdue(borrowed_book);
-            scrypto_assert!(!book_overdue, "Book is overdue");
+            assert!(!book_overdue, "Book is overdue");
 
             self.borrowed_books.remove(&isbn);
             info!("Book returned")
@@ -145,11 +145,11 @@ blueprint! {
 
             // check the book is overdue
             let book_overdue = self.is_book_overdue(borrowed_book);
-            scrypto_assert!(book_overdue, "Book is not overdue");
+            assert!(book_overdue, "Book is not overdue");
 
             // check the payment is correct
-            scrypto_assert!(payment.amount() == 1.into(), "Wrong amount sent");
-            scrypto_assert!(payment.resource_def() == RADIX_TOKEN.into(), "Can only pay with XRD");
+            assert!(payment.amount() == 1.into(), "Wrong amount sent");
+            assert!(payment.resource_def() == RADIX_TOKEN.into(), "Can only pay with XRD");
 
             // take the payment and remove the borrowed book record
             self.fees.put(payment);
@@ -167,10 +167,10 @@ blueprint! {
         // using an ISBN and user ID returns the borrowed book
         fn get_borrowed_book(&self, isbn: &String, badge: &BucketRef) -> &BorrowedBook {
             // check the book is borrowed and the borrower is the current user
-            scrypto_assert!(self.borrowed_books.contains_key(isbn), "Book not borrowed");
+            assert!(self.borrowed_books.contains_key(isbn), "Book not borrowed");
             let borrowed_book = self.borrowed_books.get(isbn).unwrap();
             let user_id = Self::get_user_id(&badge);
-            scrypto_assert!(borrowed_book.user_id == user_id, "Book not borrowed by this user");
+            assert!(borrowed_book.user_id == user_id, "Book not borrowed by this user");
 
             let book = self.books.get(isbn).unwrap();
             info!("Book found (ISBN: {}, Title: {}, Author: {})", isbn, book.title, book.author);
@@ -187,7 +187,7 @@ blueprint! {
 
         // get user ID from the provided badge
         fn get_user_id(badge: &BucketRef) -> Address {
-            scrypto_assert!(badge.amount() > 0.into(), "Invalid badge provided");
+            assert!(badge.amount() > 0.into(), "Invalid badge provided");
             return badge.resource_address();
         }
     }

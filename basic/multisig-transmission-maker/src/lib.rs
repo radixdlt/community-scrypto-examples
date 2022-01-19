@@ -21,21 +21,23 @@ blueprint! {
          * amount: Bucket containing the tokens for the transaction
          */
         pub fn new(nb_badges: usize, min_required_sig: usize, destination: Address, amount: Bucket) -> (Component, Bucket) {
-            scrypto_assert!(min_required_sig <= nb_badges, "Min required sig can't be greater than amount of badges");
+            assert!(min_required_sig <= nb_badges, "Min required sig can't be greater than amount of badges");
 
             // This badge is used to create the initial supply of signer badges
             // and burn them when people approve
-            let badge_minter_badge = ResourceBuilder::new()
-                .new_badge_fixed(1);
+            let badge_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                .initial_supply_fungible(1);
 
             // This badge is used to authenticate the users so that only
             // people with this badge can approve the transaction
-            let badge_resourcedef = ResourceBuilder::new()
+            let badge_resourcedef = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "MultiSig Signer Badge")
-                .new_badge_mutable(badge_minter_badge.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(badge_minter_badge.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             // Mint the badges
-            let badges = badge_resourcedef.mint(nb_badges as u64, badge_minter_badge.borrow());
+            let badges = badge_resourcedef.mint(nb_badges as u64, badge_minter_badge.present());
 
             let component = Self {
                 tokens: Vault::with_bucket(amount),
@@ -51,13 +53,13 @@ blueprint! {
         }
 
         pub fn approve(&mut self, auth_badge: Bucket) {
-            scrypto_assert!(auth_badge.amount() > Decimal::zero(), "Invalid auth");
-            scrypto_assert!(auth_badge.resource_def() == self.signer_badge, "Invalid badge");
-            scrypto_assert!(self.badges_approved < self.min_required_sig, "Transaction already approved by majority");
+            assert!(auth_badge.amount() > Decimal::zero(), "Invalid auth");
+            assert!(auth_badge.resource_def() == self.signer_badge, "Invalid badge");
+            assert!(self.badges_approved < self.min_required_sig, "Transaction already approved by majority");
             
             // Burn the badge to only allow one call to approve per badge
             self.badge_minter_badge.authorize(|badge| {
-                self.signer_badge.burn(auth_badge, badge);
+                self.signer_badge.burn_with_auth(auth_badge, badge);
             });
 
             self.badges_approved += 1;

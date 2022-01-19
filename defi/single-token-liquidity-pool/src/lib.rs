@@ -18,17 +18,19 @@ blueprint! {
             let funds_resource_def = initial_funds.resource_def();
 
             // Create badge that will be used to mint and burn LP tokens
-            let lp_minter: Bucket = ResourceBuilder::new()
-                .new_badge_fixed(1);
+            let lp_minter: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                .initial_supply_fungible(1);
 
             // Create the LP token definition
-            let lp_token = ResourceBuilder::new()
+            let lp_token = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "LP Token")
                 .metadata("symbol", "LP")
-                .new_token_mutable(lp_minter.resource_def());
+                .flags(MINTABLE | BURNABLE)
+                .badge(lp_minter.resource_def(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
 
             // Mint initial LP tokens
-            lp_token.mint(lp_initial_supply, lp_minter.borrow());
+            lp_token.mint(lp_initial_supply, lp_minter.present());
 
             Self {
                 pool: Vault::with_bucket(initial_funds),
@@ -53,19 +55,19 @@ blueprint! {
             // Return newly minted lp_tokens
             self.lp_minter_badge.authorize(|badge| {
                 self.lp_token
-                    .mint(self.lp_token.supply() * pool_share, badge)
+                    .mint(self.lp_token.total_supply() * pool_share, badge)
             })
         }
 
         // Give LP token back to get portion of the pool and fees
         pub fn remove_liquidity(&self, lp_tokens: Bucket) -> Bucket {
-            scrypto_assert!(lp_tokens.resource_def() == self.lp_token, "Wrong LP token !");
+            assert!(lp_tokens.resource_def() == self.lp_token, "Wrong LP token !");
 
-            let share = lp_tokens.amount() / self.lp_token.supply();
+            let share = lp_tokens.amount() / self.lp_token.total_supply();
             
             // Burn the provided LP token
             self.lp_minter_badge.authorize(|badge| {
-                lp_tokens.burn(badge);
+                lp_tokens.burn_with_auth(badge);
             });
 
             // Return the share of fees and pool
