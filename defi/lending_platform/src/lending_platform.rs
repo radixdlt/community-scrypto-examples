@@ -12,6 +12,17 @@ blueprint! {
 
     impl LendingPlatform {
         fn calculate_total_collateral(&self, user: &User) -> Decimal {
+            /*
+            calculate_total_collateral calculates the total value a user has of each deposited
+            asset type in terms of XRD, then applies an LTV modifier based on each asset type to
+            calculate the total collateral a user has.
+
+            Total Collateral =
+                quantity_asset_1 * xrd_price_asset_1 * ltv_asset_1 +
+                quantity_asset_2 * xrd_price_asset_2 * ltv_asset_2 +
+                ...
+                quantity_asset_n * xrd_price_asset_n * ltv_asset_n
+             */
             let user_address = user.user_address;
 
             info!("[LendingPlatform][USER:{}] Calculating Total Collateral.", user_address);
@@ -42,9 +53,7 @@ blueprint! {
                     ltv,
                     asset_collateral
                 );
-
             }
-
             user_collateral_sum.into()
         }
 
@@ -74,10 +83,7 @@ blueprint! {
                 );
 
                 total_loan_balance += loan_balance_in_terms_of_xrd;
-
-
             }
-
             total_loan_balance.into()
         }
 
@@ -153,7 +159,7 @@ blueprint! {
             };
         }
 
-        pub fn deposit_asset(&self, user_auth: BucketRef, asset: Bucket) -> BucketRef {
+        pub fn deposit_asset(&self, user_auth: BucketRef, asset: Bucket) {
             let asset_address = asset.resource_address();
             let amount = asset.amount();
 
@@ -183,7 +189,7 @@ blueprint! {
                 asset_address,
                 self.assets.get(&asset_address).unwrap().amount()
             );
-            user_auth
+            user_auth.drop();
         }
 
         pub fn withdrawal_asset(
@@ -191,7 +197,7 @@ blueprint! {
             user_auth: BucketRef,
             asset_address: Address,
             amount: Decimal
-        ) -> (BucketRef, Bucket) {
+        ) -> Bucket {
             let mut user = self.users.get(&user_auth.resource_address()).unwrap();
             let user_address = user.user_address;
 
@@ -230,8 +236,8 @@ blueprint! {
                 asset_address,
                 self.assets.get(&asset_address).unwrap().amount()
             );
-
-            (user_auth, removed_asset)
+            user_auth.drop();
+            removed_asset
         }
 
         pub fn borrow_asset(
@@ -239,7 +245,7 @@ blueprint! {
             user_auth: BucketRef,
             asset_address: Address,
             amount: Decimal
-        ) -> (BucketRef, Bucket) {
+        ) -> Bucket {
             let mut user = self.users.get(&user_auth.resource_address()).unwrap();
             let user_address = user.user_address;
 
@@ -267,8 +273,8 @@ blueprint! {
             let cost_of_asset_in_terms_of_xrd = Decimal::from(10000)/10000;
             let borrow_amount_in_terms_of_xrd = amount * cost_of_asset_in_terms_of_xrd;
 
-            // Check if user has enough collateral available for the loan
-            let user_available_collateral = self.calculate_available_collateral(&user); // TODO: Continue here
+            // Check if user has enough collateral available for the loan (this takes into account LTV)
+            let user_available_collateral = self.calculate_available_collateral(&user);
             info!(
                 "[LendingPlatform][USER:{}] Available collateral in terms of XRD: {}",
                 user_address,
@@ -298,11 +304,11 @@ blueprint! {
                 asset_address,
                 updated_asset_amount
             );
-
-            (user_auth, borrowed_asset)
+            user_auth.drop();
+            borrowed_asset
         }
 
-        pub fn repay_asset(&self, user_auth: BucketRef, asset: Bucket) -> BucketRef {
+        pub fn repay_asset(&self, user_auth: BucketRef, asset: Bucket) {
             let asset_address = asset.resource_address();
             let amount = asset.amount();
 
@@ -319,7 +325,8 @@ blueprint! {
             match self.assets.get(&asset_address) {
                 Some(x) =>  {
                     x.put(asset);
-                    let updated_asset_amount = self.assets.get(&asset_address).unwrap().amount();
+                    let updated_asset_amount = x.amount();
+
                     info!(
                         "[LendingPlatform][POOL] New liquidity balance for {} is {}.",
                         asset_address,
@@ -340,8 +347,7 @@ blueprint! {
                 asset_address,
                 updated_borrow_balance
             );
-
-            user_auth
+            user_auth.drop();
         }
     }
 }
