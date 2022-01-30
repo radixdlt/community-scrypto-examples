@@ -1,5 +1,5 @@
 [package]
-name = "utility-token-service"
+name = "ubi"
 version = "0.1.0"
 edition = "2021"
 
@@ -18,3 +18,4 @@ panic = 'abort'     # Abort on panic.
 
 [lib]
 crate-type = ["cdylib", "lib"]
+doctest = false

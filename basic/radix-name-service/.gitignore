@@ -1,0 +1,5 @@
+revup*.json
+*.rev
+.env
+env.bat
+env.ps1

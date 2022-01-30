@@ -1,5 +1,5 @@
 [package]
-name = "utility-token-service"
+name = "fisherman"
 version = "0.1.0"
 edition = "2021"
 

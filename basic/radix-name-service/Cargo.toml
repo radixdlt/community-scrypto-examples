@@ -1,11 +1,18 @@
 [package]
-name = "utility-token-service"
-version = "0.1.0"
+name = "radix-name-service"
+version = "0.2.0"
 edition = "2021"
+authors = ["backyard-coder <94840973+backyard-coder@users.noreply.github.com>"]
+license = "MIT OR Apache-2.0"
+readme = "README.md"
+description = """
+A basic Scrypto implementation of a DNS on Radix. Heavily inspired by ENS.
+"""
 
 [dependencies]
 sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.2.0" }
 scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.2.0" }
+sha2 = "0.10"
 
 [dev-dependencies]
 radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.2.0" }

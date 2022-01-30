@@ -46,11 +46,11 @@ blueprint! {
             metas.push(("Gummy Bear", "BEAR", "Gummy Bears rules!"));
             // Create a supply 
             for tup in metas {
-                let bucket = ResourceBuilder::new()
+                let bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                     .metadata("name", tup.0.to_string())
                     .metadata("symbol", tup.1.to_string())
                     .metadata("description", tup.2.to_string())
-                    .new_token_fixed(supply_size);
+                    .initial_supply_fungible(supply_size);
                 tagged_vaults.push((tup.1.to_string(), Vault::with_bucket(bucket)));
             }
             Self {
@@ -105,14 +105,14 @@ blueprint! {
         }
 
         pub fn add_candy(&mut self, name: String, symbol: String, description: String, supply_size: Decimal) {
-            scrypto_assert!(supply_size >= 1.into(), "Not enough initial candy");
-            scrypto_assert!(self.contains(&symbol) == false, "That type of candy is already available.");
+            assert!(supply_size >= 1.into(), "Not enough initial candy");
+            assert!(self.contains(&symbol) == false, "That type of candy is already available.");
             // Add a new kind of candy to the CandyShop
-            let bucket = ResourceBuilder::new()
+            let bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", name)
                 .metadata("symbol", symbol.to_string())
                 .metadata("description", description)
-                .new_token_fixed(supply_size);
+                .initial_supply_fungible(supply_size);
             self.candy_vaults.push((symbol, Vault::with_bucket(bucket)));
         }
     }
