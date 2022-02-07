@@ -11,7 +11,7 @@ How to use:
 	2.1 export account=...
 3. resim publish .
 	3.1 export package=...
-4. resim call-function <package> HelloNft new
+4. resim call-function package HelloNft new
 	4.1 export nft_minter=...
 	4.2 export nft=…
 	4.3 export material_minter=…
@@ -23,16 +23,16 @@ How to use:
 	4.9 export yeast=...
 	4.10 export zombo=…
 	4.11 export component=...
-5. resim show <account> 
+5. resim show account 
 	5.1 export xrd=...
-6. resim show <component> - Component contains both minter badges and zombo
-7. resim call-method <component> mint_nft 50,<xrd>
-	7.1 resim show <account> - account contains NFT with mutable data = 1
-8. resim call-method <component> buy_flour 100,<zombo> 1,<nft>
-9. resim call-method <component> buy_water 100,<zombo> 1,<nft>
-10. resim call-method <component> buy_yeast 100,<zombo> 1,<nft>
-11. resim call-method <component> make_bread 1,<flour> 1,<water> 1,<yeast>
-12. resim call-method <component> buy_butter 100,<zombo> 1,<bread>
-13. resim call-method <componet> eat_bread 1,<bread> 1,<butter> 1,<nft>
-14. resim show <account> - NFT mutable data = 2. Need mutable data = 3.  Repeat steps 8-13 one more time.
-15. resim call-method <component> next_level 1,<nft> 
+6. resim show component - Component contains both minter badges and zombo
+7. resim call-method component mint_nft 50,xrd
+	7.1 resim show account - account contains NFT with mutable data = 1
+8. resim call-method component buy_flour 100,zombo 1,nft
+9. resim call-method component buy_water 100,zombo 1,nft
+10. resim call-method component buy_yeast 100,zombo 1,nft
+11. resim call-method component make_bread 1,flour 1,water 1,yeast
+12. resim call-method component buy_butter 100,zombo 1,bread
+13. resim call-method componet eat_bread 1,bread 1,butter 1,nft
+14. resim show account - NFT mutable data = 2. Need mutable data = 3.  Repeat steps 8-13 one more time.
+15. resim call-method component next_level 1,nft
