@@ -17,8 +17,8 @@ blueprint! {
 
     impl Caller {
         pub fn new(loaner_component_address: Address, opportunity: Bucket) -> Component {
-            scrypto_assert!(opportunity.amount() > 1000.into(), "The amount of the opportunity must be bigger than 1000");
-            scrypto_assert!(opportunity.resource_address() == RADIX_TOKEN, "The tokens for the opportunity must be XRD");
+            assert!(opportunity.amount() > 1000.into(), "The amount of the opportunity must be bigger than 1000");
+            assert!(opportunity.resource_address() == RADIX_TOKEN, "The tokens for the opportunity must be XRD");
 
             Self {
                 loaner_component: loaner_component_address,
@@ -42,7 +42,7 @@ blueprint! {
 
         // Used to simulate an opportunity to make some XRD by paying 1000 XRD
         fn get_opportunity(&mut self, payment: Bucket) -> Bucket {
-            scrypto_assert!(payment.amount() >= 1000.into(), "You need to pay 1000 XRD !");
+            assert!(payment.amount() >= 1000.into(), "You need to pay 1000 XRD !");
             self.hidden_vault.put(payment);
 
             self.opportunity.take_all()

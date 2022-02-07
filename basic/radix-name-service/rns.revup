@@ -1,0 +1,59 @@
+// First we reset the simulator and publish our package
+reset
+publish . -> package
+
+// Then we create an account for a user that manages the RNS
+new-account -> admin_account
+
+// This user instantiates the component
+call-function $package RadixNameService new -> admin_badge _ name_resource component
+
+// Next we simulate that Dan uses the RNS
+new-account -> dans_account dans_pubkey
+set-default-account $dans_account $dans_pubkey
+
+// He registers the name "rns.xrd" to point to his account address.
+// He chooses to reserve that name for 10 years and deposits the required $XRD 500.
+call-method $component register_name dan.xrd $dans_account 10 500,$tokenXRD
+
+// Taking a look at his account, we see that he is now the owner of a DomainName NFT that represents his ownership of the "rns.xrd" name:
+// Resources:
+// ├─ { amount: 1, resource_def: 03d8541671ab09116ae450d468f91e5488a9b22c705d70dcfe9e09, name: "DomainName" }
+// │  └─ NFT { id: 46561620337667597649502408813985092395, immutable_data: Struct {  }, mutable_data: Struct { 02b8dd9f4232ce3c00dcb3496956fb57096d5d50763b989ca56f3b, 150000, 500 } }
+// It has an ID of 46561620337667597649502408813985092395 because that is, what "rns.xrd" is hashed to.
+// Next in the mutable_data part we have:
+// - the address that the name maps to (02b8dd9f4232ce3c00dcb3496956fb57096d5d50763b989ca56f3b)
+// - The last epoch in which the mapping is valid (150000)
+// - The amount of XRD that has been deposited when registering this name (500)
+show $dans_account
+
+// If we call the lookup_address method for "dan.xrd" on the RNS component, we can observer that it maps to 02b8dd9f4232ce3c00dcb3496956fb57096d5d50763b989ca56f3b
+// which is indeed his account address. You can find this address in the "Results" section of the transaction receipt.
+call-method $component lookup_address dan.xrd
+
+// Now Dan decides that he wants to receive payments on a different account
+new-account -> dans_payment_account
+
+// The only thing he has to do, is to call the update_address on the RNS component, supply a BucketRef with his DomainName NFT that identifies him as the
+// owner of that name and specify the new address, to which the name should be mapped going forward.
+call-method $component update_address #46561620337667597649502408813985092395,$name_resource $dans_payment_account 10,$tokenXRD
+
+// If we now lookup "dan.xrd", we can see that it points to his new account,
+// which has an address of 02fbffedd2e0f3d0f3c5381b57b02c0f3b30bad1c57120f1c334bd.
+call-method $component lookup_address dan.xrd
+
+// Because the Domain is really important to him, Dan decides to renew it for another 10 years.
+// He does so by calling the renew_name method on the RNS component, sending a BucketRef of his DomainName NFT, the number of years,
+// he wants to renew the name, and a bucket with the required fees.
+call-method $component renew_name #46561620337667597649502408813985092395,$name_resource 10 250,$tokenXRD
+// The name should now be reserved until epoch 300000.
+show $dans_account
+
+// Finnaly, if Dan decides that he now longer needs the Domain, he may unregister it by calling the unregister_name method.
+// At this point he has to surrender control of the DomainName NFT by sending it as a bucket to the component.
+// In return, he gets back his initial deposit of $XRD 500.  
+call-method $component unregister_name #46561620337667597649502408813985092395,$name_resource
+
+// Now Dan's account should hold exactly $XRD 999740. He intially deposited $XRD 500, which he got back,
+// but he payed another $XRD 10 to change the address and $XRD 250 to renew the name for 10 years.
+show $dans_account

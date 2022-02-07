@@ -17,7 +17,7 @@ struct TestUtils<'a, L: Ledger> {
 impl<'a, L: Ledger> TestUtils<'a, L> {
     fn new(ledger: &'a mut L) -> Self {
         let mut executor = TransactionExecutor::new(ledger, 0, 0);
-        let package = executor.publish_package(include_code!());
+        let package = executor.publish_package(include_code!("escrow"));
 
         Self {
             current_user: None,
@@ -31,7 +31,7 @@ impl<'a, L: Ledger> TestUtils<'a, L> {
             Some(user) => {
                 return *user;
             },
-            None => scrypto_abort("Specify current user by calling `act_as(user)`")
+            None => std::process::abort()
         }
     }
 
