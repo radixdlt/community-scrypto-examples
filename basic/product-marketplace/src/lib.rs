@@ -38,7 +38,7 @@ pub struct SellerNftData {
     #[scrypto(mutable)]
     buyer_address : PostalAddress, 
     #[scrypto(mutable)]
-    product_has_been_purchase : bool
+    product_has_been_purchased : bool
     // #[scrypto(mutable)]
     // products_sales : HashSet<u128>
 } 
@@ -61,11 +61,9 @@ blueprint! {
         seller_nft_id_by_product_id : HashMap<u128,u128>,
         buyer_nft_id_by_product_id : HashMap<u128, u128>,
         admin_badge: Address,
-        seller_product_minter_badge_vault : Vault,
-        buyer_minter_badge_vault : Vault,
+        seller_buyer_product_minter_badge_vault : Vault,
         seller_permanent_badge_vault : Vault,
-        seller_product_badge_def : ResourceDef,
-        buyer_badge_def :  ResourceDef,
+        seller_buyer_product_badge_def : ResourceDef,
         seller_permanent_badge_def : ResourceDef,
         vault_by_seller : HashMap<u128,Vault>,
         sell_fees : Decimal,
@@ -86,19 +84,19 @@ blueprint! {
             let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
             .initial_supply_fungible(1);
 
-            let seller_product_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-            .metadata("name", "seller minter product badge")
+            let seller_buyer_product_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            .metadata("name", "seller buyer minter product badge")
             .initial_supply_fungible(1);
 
             let seller_permanent_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
             .metadata("name", "seller minter permanent badge")
             .initial_supply_fungible(1);
 
-            let seller_product_badge_def = ResourceBuilder::new_non_fungible()
-            .metadata("name", "seller badge")
-            .metadata("description", "this badge give to seller rigth to get postal stamp to send product to buyer.")
+            let seller_buyer_product_badge_def = ResourceBuilder::new_non_fungible()
+            .metadata("name", "seller or buyer badge ")
+            .metadata("description", "this badge give to seller rigth to get postal stamp to send product to buyer. The buyer use this badge for confirming product reception")
             .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE | BURNABLE)
-            .badge(seller_product_minter_badge.resource_address(), MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA | MAY_BURN)
+            .badge(seller_buyer_product_minter_badge.resource_address(), MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA | MAY_BURN)
             .no_initial_supply(); 
             
             let seller_permanent_badge_def = ResourceBuilder::new_non_fungible()
@@ -106,17 +104,6 @@ blueprint! {
             .metadata("description", "this badge give to seller rigth to collect money")
             .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
             .badge(seller_permanent_minter_badge.resource_address(), MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA)
-            .no_initial_supply(); 
-            
-            let buyer_minter_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-            .metadata("name", "buyer minter badge")
-            .initial_supply_fungible(1);
-
-
-            let buyer_badge_def = ResourceBuilder::new_non_fungible()
-            .metadata("name", "buyer badge")
-            .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE | BURNABLE)
-            .badge(buyer_minter_badge.resource_address(), MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA | MAY_BURN)
             .no_initial_supply(); 
             
 
@@ -127,11 +114,9 @@ blueprint! {
                 seller_nft_id_by_product_id : HashMap::new(),
                 buyer_nft_id_by_product_id : HashMap::new(),
                 admin_badge: admin_badge.resource_address(),
-                seller_product_minter_badge_vault : Vault::with_bucket(seller_product_minter_badge),
-                buyer_minter_badge_vault : Vault::with_bucket(buyer_minter_badge),
+                seller_buyer_product_minter_badge_vault : Vault::with_bucket(seller_buyer_product_minter_badge),
                 seller_permanent_badge_vault : Vault::with_bucket(seller_permanent_minter_badge),
-                seller_product_badge_def : seller_product_badge_def,
-                buyer_badge_def :  buyer_badge_def,
+                seller_buyer_product_badge_def : seller_buyer_product_badge_def,
                 seller_permanent_badge_def : seller_permanent_badge_def,
                 vault_by_seller : HashMap::new(),
                 sell_fees : sell_fees,
@@ -174,14 +159,14 @@ blueprint! {
             self.products_for_sale.insert(id, product);
             self.permanent_seller_nft_id_by_products_id.insert(id , permanent_seller_nt_id); 
         
-            let seller_badge = self.seller_product_minter_badge_vault.authorize(|auth| {
-                return self.seller_product_badge_def.mint_nft(seller_nft_id, SellerNftData {
+            let seller_badge = self.seller_buyer_product_minter_badge_vault.authorize(|auth| {
+                return self.seller_buyer_product_badge_def.mint_nft(seller_nft_id, SellerNftData {
                      product_id : id,
                      has_been_sent : false,
                      postal_stamp_collected : false,
                      was_received_by_buyer : false,
                      buyer_address : Default :: default(),
-                     product_has_been_purchase : false
+                     product_has_been_purchased : false
                     //  products_sales : HashSet::new()
                 }, auth)
             }); 
@@ -200,14 +185,14 @@ blueprint! {
             let mut result : Vec<Product> = Vec::new();
             let mut products : Vec<String> = Vec::new();
              
-            for key in self.products_for_sale.keys().skip((MAX_PRODUCTS_BY_PAGE * (page_index)) as usize) {
+            for key in self.products_for_sale.keys().skip((MAX_PRODUCTS_BY_PAGE * (page_index)) as usize).take(MAX_PRODUCTS_BY_PAGE as usize) {
                 let product = self.products_for_sale.get(key).unwrap(); 
-                if  self.product_is_available_for_sale(*key) {
+                if  self.product_is_available_for_sale(key) {
                
                     result.push( Product {
-                                        id : (*product).id, 
-                                        name : (*product).name.clone(),
-                                        price : (*product).price,
+                                        id : product.id, 
+                                        name : product.name.clone(),
+                                        price : product.price,
                                 }); 
                     products.push(product.to_string()); 
                 }
@@ -226,7 +211,7 @@ blueprint! {
         {
             assert!(payment.resource_address() == self.token_type , "token address must match");
             assert!(self.products_for_sale.contains_key(&product_id), "product not found");
-            assert!(self.product_is_available_for_sale(product_id), "product is not available");
+            assert!(self.product_is_available_for_sale(&product_id), "product is not available");
             let product = self.products_for_sale.get_mut(&product_id).unwrap(); 
             let total_amount : Decimal = self.buy_fees + (*product).price; 
             assert!(payment.amount() >= total_amount, "payment amount must be greather than or equal {}", total_amount); 
@@ -237,8 +222,8 @@ blueprint! {
                                                                } ;   
 
             let buyer_nft_id = self.buyer_nft_id_by_product_id.get(&product_id).unwrap(); 
-            let buyer_badge = self.buyer_minter_badge_vault.authorize(|auth| {
-                return self.buyer_badge_def.mint_nft(*buyer_nft_id, BuyerNftData {
+            let buyer_badge = self.seller_buyer_product_minter_badge_vault.authorize(|auth| {
+                return self.seller_buyer_product_badge_def.mint_nft(*buyer_nft_id, BuyerNftData {
                      product_id : product_id,
                      fees : self.buy_fees,
                      has_been_sent_by_seller : false 
@@ -248,32 +233,33 @@ blueprint! {
            
             // set buyer address
             let seller_nft_id : u128 = *self.seller_nft_id_by_product_id.get(&product_id).unwrap();
-            let mut seller_nft_data  : SellerNftData = self.seller_product_badge_def.get_nft_data(seller_nft_id);  
+            let mut seller_nft_data  : SellerNftData = self.seller_buyer_product_badge_def.get_nft_data(seller_nft_id);  
             
             seller_nft_data.buyer_address = buyer_address; 
-            seller_nft_data.product_has_been_purchase = true; 
-            self.seller_product_minter_badge_vault.authorize(|a|  {
-                self.seller_product_badge_def.update_nft_data(seller_nft_id, seller_nft_data,a); 
+            seller_nft_data.product_has_been_purchased = true; 
+            self.seller_buyer_product_minter_badge_vault.authorize(|a|  {
+                self.seller_buyer_product_badge_def.update_nft_data(seller_nft_id, seller_nft_data,a); 
             }); 
 
              // take fees 
             self.fees_vault.put(payment.take(self.buy_fees));
             // hold payments
-            let vault = self.payment_by_buyer_nft_id.entry(*buyer_nft_id).or_insert(Vault::new(self.token_type));
-            vault.put(payment.take((*product).price));
+            self.payment_by_buyer_nft_id.entry(*buyer_nft_id)
+                .and_modify(|vault| vault.put(payment.take(product.price)))
+                .or_insert(Vault::with_bucket(payment.take(product.price)));
 
             return (buyer_badge, payment);
         }
 
-        #[auth(seller_product_badge_def)]
+        #[auth(seller_buyer_product_badge_def)]
         pub fn collect_postal_stamp(&mut self) -> PostalAddress
         {
             let id = auth.get_nft_id(); 
-            let mut seller_nft_data  : SellerNftData = self.seller_product_badge_def.get_nft_data(id); 
+            let mut seller_nft_data  : SellerNftData = self.seller_buyer_product_badge_def.get_nft_data(id); 
             assert!(!seller_nft_data.postal_stamp_collected, "postale stamp has already collected"); 
-            assert!(seller_nft_data.product_has_been_purchase , 
+            assert!(seller_nft_data.product_has_been_purchased , 
                     "product must be purchased");
-                    
+
             let buyer_postal_address :PostalAddress = PostalAddress {
                  street : seller_nft_data.buyer_address.street.clone(),
                  city : seller_nft_data.buyer_address.city.clone(),
@@ -281,31 +267,32 @@ blueprint! {
             };
 
             seller_nft_data.postal_stamp_collected = true; 
-            self.seller_product_minter_badge_vault.authorize(|a|  {
-                self.seller_product_badge_def.update_nft_data(id, seller_nft_data, a); 
+            self.seller_buyer_product_minter_badge_vault.authorize(|a|  {
+                self.seller_buyer_product_badge_def.update_nft_data(id, seller_nft_data, a); 
             }); 
 
             return buyer_postal_address;
         }
     
-        #[auth(seller_product_badge_def)]
+        #[auth(seller_buyer_product_badge_def)]
         pub fn send_product(&mut self)
         {
             let seller_nft_id = auth.get_nft_id(); 
-            let mut seller_nft_data  : SellerNftData = self.seller_product_badge_def.get_nft_data(seller_nft_id); 
-            assert!(seller_nft_data.product_has_been_purchase , 
+            let mut seller_nft_data  : SellerNftData = self.seller_buyer_product_badge_def.get_nft_data(seller_nft_id); 
+            assert!(seller_nft_data.product_has_been_purchased , 
                 "product must be purchased");
+
             let product_id = seller_nft_data.product_id;
             seller_nft_data.has_been_sent = true; 
-            self.seller_product_minter_badge_vault.authorize(|a|  {
-                self.seller_product_badge_def.update_nft_data(seller_nft_id, seller_nft_data,a); 
+            self.seller_buyer_product_minter_badge_vault.authorize(|a|  {
+                self.seller_buyer_product_badge_def.update_nft_data(seller_nft_id, seller_nft_data,a); 
             }); 
 
             let buyer_nft_id  : u128 = *self.buyer_nft_id_by_product_id.get(&product_id).unwrap(); 
-            let mut buyer_nft_data : BuyerNftData = self.buyer_badge_def.get_nft_data(buyer_nft_id);
+            let mut buyer_nft_data : BuyerNftData = self.seller_buyer_product_badge_def.get_nft_data(buyer_nft_id);
             buyer_nft_data.has_been_sent_by_seller = true;
-            self.buyer_minter_badge_vault.authorize(|a| {
-                self.buyer_badge_def.update_nft_data(buyer_nft_id , buyer_nft_data, a); 
+            self.seller_buyer_product_minter_badge_vault.authorize(|a| {
+                self.seller_buyer_product_badge_def.update_nft_data(buyer_nft_id , buyer_nft_data, a); 
             }); 
 
         }
@@ -313,29 +300,30 @@ blueprint! {
         
         pub fn confirm_reception(&mut self , buyer_nft : Bucket)
         {
-            assert!(buyer_nft.resource_address() == self.buyer_badge_def.address(), "the nft bucket is not buyer nft");
+            assert!(buyer_nft.amount() > Decimal::zero(), "the nft bucket quantity must be greather than or equal 1"); 
+            assert!(buyer_nft.resource_address() == self.seller_buyer_product_badge_def.address(), "the nft bucket is not buyer nft");
             let buyer_nft_id = buyer_nft.get_nft_id(); 
-            let buyer_nft_data : BuyerNftData = self.buyer_badge_def.get_nft_data(buyer_nft_id);
+            let buyer_nft_data : BuyerNftData = self.seller_buyer_product_badge_def.get_nft_data(buyer_nft_id);
             
             let seller_nft_id = *self.seller_nft_id_by_product_id.get(&buyer_nft_data.product_id).unwrap(); 
-            let mut seller_nft_data  : SellerNftData = self.seller_product_badge_def.get_nft_data(seller_nft_id);  
+            let mut seller_nft_data  : SellerNftData = self.seller_buyer_product_badge_def.get_nft_data(seller_nft_id);  
             seller_nft_data.was_received_by_buyer = true; 
             let product_id = seller_nft_data.product_id; 
-            self.seller_product_minter_badge_vault.authorize(|a|  {
-                self.seller_product_badge_def.update_nft_data(seller_nft_id, seller_nft_data,a); 
+            self.seller_buyer_product_minter_badge_vault.authorize(|a|  {
+                self.seller_buyer_product_badge_def.update_nft_data(seller_nft_id, seller_nft_data,a); 
             }); 
 
             let payment = self.payment_by_buyer_nft_id.get_mut(&buyer_nft_id).unwrap();
             let permanent_nft_id = *self.permanent_seller_nft_id_by_products_id.get(&product_id).unwrap(); 
    
-            let seller_vault = self.vault_by_seller.entry(permanent_nft_id).or_insert(Vault::new(self.token_type));
+            self.vault_by_seller.entry(permanent_nft_id)
+                                .and_modify(|vault| vault.put(payment.take_all()))
+                                .or_insert(Vault::with_bucket(payment.take_all()));
 
-            // confirm transaction
-            seller_vault.put(payment.take_all()); 
             self.payment_by_buyer_nft_id.remove(&buyer_nft_id); 
 
             //burn buyer nft 
-            self.buyer_minter_badge_vault.authorize(|a|  {
+            self.seller_buyer_product_minter_badge_vault.authorize(|a|  {
                 buyer_nft.burn_with_auth(a);
             }); 
         }
@@ -371,20 +359,21 @@ blueprint! {
 
         pub fn burn_seller_nft(&mut self, seller_nft : Bucket)
         {
-            assert!(seller_nft.resource_def() == self.seller_product_badge_def, "bucket must be seller nft"); 
+            assert!(seller_nft.amount() > Decimal::from(0) , "the nft bucket quantity must be greather than or equal 1");
+            assert!(seller_nft.resource_def() == self.seller_buyer_product_badge_def, "bucket must be seller nft"); 
             let nft_id = seller_nft.get_nft_id(); 
             self.seller_nft_id_by_product_id.remove(&nft_id);
-            self.seller_product_minter_badge_vault.authorize(|a| {
+            self.seller_buyer_product_minter_badge_vault.authorize(|a| {
                 seller_nft.burn_with_auth(a); 
             }); 
         }
 
-        fn product_is_available_for_sale(&self, product_id : u128) -> bool
+        fn product_is_available_for_sale(&self, product_id : &u128) -> bool
         {   
-               if self.seller_nft_id_by_product_id.contains_key(&product_id) {
-                    let seller_nft_id = *self.seller_nft_id_by_product_id.get(&product_id).unwrap(); 
-                    let  seller_nft_data  : SellerNftData = self.seller_product_badge_def.get_nft_data(seller_nft_id); 
-                    return !seller_nft_data.product_has_been_purchase;
+               if self.seller_nft_id_by_product_id.contains_key(product_id) {
+                    let seller_nft_id = *self.seller_nft_id_by_product_id.get(product_id).unwrap(); 
+                    let  seller_nft_data  : SellerNftData = self.seller_buyer_product_badge_def.get_nft_data(seller_nft_id); 
+                    return !seller_nft_data.product_has_been_purchased;
                }           
                return false; 
         }

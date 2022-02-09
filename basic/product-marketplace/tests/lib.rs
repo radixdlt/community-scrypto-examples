@@ -99,6 +99,57 @@ fn try_get_available_products_must_be_succeeded() {
     assert!(log_message.contains(";"));
 }
 
+
+#[test]
+fn test_get_available_products_pagination() {
+    
+    // Set up environment.
+    let mut ledger = InMemoryLedger::with_bootstrap();
+    let mut test_env = TestEnv::new(&mut ledger, RADIX_TOKEN,Decimal::from(1), Decimal::from(1));
+    assert_eq!(test_env.get_balance(test_env.admin_account, RADIX_TOKEN).unwrap(), Decimal::from(1_000_000));
+
+    // register as seller   
+    let  (seller_key, seller_address)  = test_env.new_account();
+    let receipt =  test_env.register_as_seller(seller_key, seller_address); 
+    assert!(receipt.success);
+
+    let price : Decimal = Decimal::from(10); 
+    let fees : Decimal = Decimal::from(1);
+
+    //list a product
+    for elem in 0..200 {
+        let product_name = format!("iphone 12 - {}", elem);
+        test_env.list_product(seller_key, seller_address, product_name, price, fees, RADIX_TOKEN);    
+    }
+    
+    //get_available_products
+    let  (user_key, user_address)  = test_env.new_account();
+    
+    let get_available_products_receipt = test_env.get_available_products(0, user_key, user_address);
+    assert!(get_available_products_receipt.success); 
+    let log_message = &get_available_products_receipt.logs.get(0).unwrap().1; 
+    println!("{:?}\n", log_message);
+    assert!(log_message.contains(";"));
+    let split = log_message.split(';').collect::<Vec<&str>>();
+    assert!(split.len() == 100);
+
+    let get_available_products_receipt_1 = test_env.get_available_products(1, user_key, user_address);
+    assert!(get_available_products_receipt_1.success); 
+    let log_message_1 = &get_available_products_receipt_1.logs.get(0).unwrap().1; 
+    println!("{:?}\n", log_message_1);
+    assert!(log_message_1.contains(";"));
+    let split_1 = log_message_1.split(';').collect::<Vec<&str>>();
+    assert!(split_1.len() == 100);
+
+    
+    let get_available_products_receipt_2 = test_env.get_available_products(2, user_key, user_address);
+    assert!(get_available_products_receipt_2.success); 
+    let log_message_2 = &get_available_products_receipt_2.logs.get(0).unwrap().1; 
+    println!("{:?}\n", log_message_2);
+    assert!(!log_message_2.contains(";"));
+}
+
+
 #[test]
 fn try_buy_product_with_sufficient_amount_must_be_succeeded() {
     
@@ -531,11 +582,11 @@ fn try_confirm_product_reception_must_be_succeded() {
     assert!(send_product_receipt.success); 
 
     // buyer confirm product reception
-    let nft_ids = test_env.get_nft_ids(user_address, test_env.buyer_minter_badge).unwrap();
+    let nft_ids = test_env.get_nft_ids(user_address, test_env.seller_buyer_badge).unwrap();
     let nft_id = *nft_ids.get(0).unwrap(); 
     let confirm_reception_receipt = test_env.confirm_reception(user_key,user_address, nft_id); 
     assert!(confirm_reception_receipt.success); 
-    let nft_ids_after_confirm = test_env.get_nft_ids(user_address, test_env.buyer_minter_badge).unwrap();
+    let nft_ids_after_confirm = test_env.get_nft_ids(user_address, test_env.seller_buyer_badge).unwrap();
     // check if Buyer nft is burn
     assert!(!nft_ids_after_confirm.contains(&nft_id));
 
@@ -609,11 +660,11 @@ fn try_collect_by_seller_must_be_succeeded() {
     assert!(send_product_receipt.success); 
 
     // buyer confirm product reception
-    let nft_ids = test_env.get_nft_ids(user_address, test_env.buyer_minter_badge).unwrap();
+    let nft_ids = test_env.get_nft_ids(user_address, test_env.seller_buyer_badge).unwrap();
     let nft_id = *nft_ids.get(0).unwrap(); 
     let confirm_reception_receipt = test_env.confirm_reception(user_key,user_address, nft_id); 
     assert!(confirm_reception_receipt.success); 
-    let nft_ids_after_confirm = test_env.get_nft_ids(user_address, test_env.buyer_minter_badge).unwrap();
+    let nft_ids_after_confirm = test_env.get_nft_ids(user_address, test_env.seller_buyer_badge).unwrap();
     // check if Buyer nft is burn
     assert!(!nft_ids_after_confirm.contains(&nft_id));
 
@@ -692,11 +743,11 @@ fn try_collect_by_admin_must_be_succeeded() {
     assert!(send_product_receipt.success); 
 
     // buyer confirm product reception
-    let nft_ids = test_env.get_nft_ids(user_address, test_env.buyer_minter_badge).unwrap();
+    let nft_ids = test_env.get_nft_ids(user_address, test_env.seller_buyer_badge).unwrap();
     let nft_id = *nft_ids.get(0).unwrap(); 
     let confirm_reception_receipt = test_env.confirm_reception(user_key,user_address, nft_id); 
     assert!(confirm_reception_receipt.success); 
-    let nft_ids_after_confirm = test_env.get_nft_ids(user_address, test_env.buyer_minter_badge).unwrap();
+    let nft_ids_after_confirm = test_env.get_nft_ids(user_address, test_env.seller_buyer_badge).unwrap();
     // check if Buyer nft is burn
     assert!(!nft_ids_after_confirm.contains(&nft_id));
 
@@ -712,8 +763,7 @@ struct TestEnv<'a> {
     admin_account: Address,
     component: Address,
     admin_badge : Address,
-    buyer_minter_badge : Address,
-    seller_product_badge: Address,
+    seller_buyer_badge : Address,
     seller_permanent_badge : Address
 }
 
@@ -742,8 +792,7 @@ impl<'a> TestEnv<'a> {
 
        
         let admin_badge = receipt.resource_def(0).unwrap();
-        let seller_product_badge = receipt.resource_def(3).unwrap();
-        let buyer_minter_badge = receipt.resource_def(6).unwrap(); 
+        let seller_buyer_badge = receipt.resource_def(3).unwrap();
         let seller_permanent_badge = receipt.resource_def(4).unwrap(); 
 
         Self {
@@ -752,8 +801,7 @@ impl<'a> TestEnv<'a> {
             admin_account,
             component: receipt.component(0).unwrap(),
             admin_badge,
-            buyer_minter_badge,
-            seller_product_badge,
+            seller_buyer_badge,
             seller_permanent_badge
         }
     }
@@ -867,7 +915,7 @@ impl<'a> TestEnv<'a> {
             self.component,
             "collect_postal_stamp",
             vec![
-                format!("1,{}",self.seller_product_badge),
+                format!("1,{}",self.seller_buyer_badge),
             ],
             Some(seller_address),
         )
@@ -888,7 +936,7 @@ impl<'a> TestEnv<'a> {
             self.component,
             "send_product",
             vec![
-                format!("1,{}",self.seller_product_badge),
+                format!("1,{}",self.seller_buyer_badge),
             ],
             Some(seller_address),
         )
@@ -909,7 +957,7 @@ impl<'a> TestEnv<'a> {
             self.component,
             "confirm_reception",
             vec![
-                format!("#{},{}",nft_id,self.buyer_minter_badge),
+                format!("#{},{}",nft_id,self.seller_buyer_badge),
             ],
             Some(buyer_address),
         )
