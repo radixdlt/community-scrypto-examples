@@ -39,8 +39,6 @@ pub struct SellerNftData {
     buyer_address : PostalAddress, 
     #[scrypto(mutable)]
     product_has_been_purchased : bool
-    // #[scrypto(mutable)]
-    // products_sales : HashSet<u128>
 } 
 
 
