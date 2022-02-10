@@ -27,7 +27,7 @@ blueprint! {
     }
 
     impl ZomboBakery {
-        pub fn new() -> Component {
+        pub fn new(baker_nft_price:Decimal, material_price:Decimal) -> Component {
 
             let nft_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Baker NFT Minter")
@@ -90,14 +90,14 @@ blueprint! {
             Self{
                 baker_nft_minter:Vault::with_bucket(nft_minter),
                 baker_nft_def,
-                baker_nft_price:50.into(),
+                baker_nft_price:baker_nft_price,
                 baker_card_id_counter:0,
                 bread:bread_def,
                 butter:butter_def,
                 cake_pan:cake_pan_def,
                 collected_xrd:Vault::new(RADIX_TOKEN),
                 flour:flour_def,
-                material_price:100.into(),
+                material_price:material_price,
                 material_minter:Vault::with_bucket(material_minter),
                 water:water_def,
                 yeast:yeast_def,
@@ -109,10 +109,6 @@ blueprint! {
 
         }
 
-        pub fn set_prices(&mut self, baker_nft:Decimal, material:Decimal ) {
-            self.baker_nft_price = baker_nft;
-            self.material_price = material;
-        }
 
         pub fn mint_nft(&mut self, payment: Bucket) -> (Bucket, Bucket, Bucket) {
             // Take NFT price out of the payment bucket and place in XRD vault 
