@@ -8,7 +8,7 @@ pub struct Baker {
 }
 
 blueprint! {
-    struct HelloNft {
+    struct ZomboBakery {
         baker_nft_minter:Vault,
         baker_nft_def:ResourceDef,
         baker_nft_price:Decimal,
@@ -26,7 +26,7 @@ blueprint! {
         
     }
 
-    impl HelloNft {
+    impl ZomboBakery {
         pub fn new() -> Component {
 
             let nft_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
@@ -109,6 +109,11 @@ blueprint! {
 
         }
 
+        pub fn set_prices(&mut self, baker_nft:Decimal, material:Decimal ) {
+            self.baker_nft_price = baker_nft;
+            self.material_price = material;
+        }
+
         pub fn mint_nft(&mut self, payment: Bucket) -> (Bucket, Bucket, Bucket) {
             // Take NFT price out of the payment bucket and place in XRD vault 
             self.collected_xrd.put(payment.take(self.baker_nft_price));
@@ -137,7 +142,7 @@ blueprint! {
         pub fn buy_flour(&self, payment:Bucket) -> (Bucket,Bucket) {
             //take payment in zombo
             self.zombo.put(payment.take(self.material_price));
-            info!("{}", "Enjoy the flour!");
+            info!("Enjoy the flour!");
             //return flour and remaining zombo
             (self.material_minter.authorize(|auth| self.flour.mint(1, auth)),payment)
         }
@@ -148,7 +153,7 @@ blueprint! {
         pub fn buy_water(&self, payment:Bucket) -> (Bucket,Bucket) {
             //take payment in zombo
             self.zombo.put(payment.take(self.material_price));
-            info!("{}", "Enjoy the water!");
+            info!("Enjoy the water!");
             //return water and remaining zombo
             (self.material_minter.authorize(|auth| self.water.mint(1, auth)),payment)
         }
@@ -159,7 +164,7 @@ blueprint! {
         pub fn buy_yeast(&self, payment:Bucket) -> (Bucket, Bucket) {
             //take payment in zombo
             self.zombo.put(payment.take(self.material_price));
-            info!("{}", "Enjoy the yeast!");
+            info!("Enjoy the yeast!");
             //return water and remaining zombo
             (self.material_minter.authorize(|auth| self.yeast.mint(1, auth)),payment)
         }
@@ -167,15 +172,18 @@ blueprint! {
         //Combine all ingredients in bread maker
         //Need flour water and yest to make bread
         pub fn make_bread(&self, flour:Bucket, water:Bucket, yeast:Bucket) -> Bucket {
-            assert!(water.resource_def() == self.water, "That aint flour!");
-            assert!(flour.resource_def() == self.flour, "That aint water!");
+            assert!(water.resource_def() == self.water, "That aint water!");
+            assert!(water.amount() > Decimal::zero(), "No water provided!");
+            assert!(flour.resource_def() == self.flour, "That aint flour!");
+            assert!(flour.amount() > Decimal::zero(), "No flour provided!");
             assert!(yeast.resource_def() == self.yeast, "That aint yeast!");
+            assert!(yeast.amount() > Decimal::zero(), "No yeast provided!");
 
             //burn flour water and yeast and mint bread
             self.material_minter.authorize(|auth| self.water.burn_with_auth(water, auth));
             self.material_minter.authorize(|auth| self.flour.burn_with_auth(flour, auth));
             self.material_minter.authorize(|auth| self.yeast.burn_with_auth(yeast, auth));
-            info!("{}", "Enjoy your bread, careful it's hot!!!");
+            info!("Enjoy your bread, careful it's hot!!!");
             self.material_minter.authorize(|auth| self.bread.mint(1, auth))
         }
 
@@ -183,44 +191,47 @@ blueprint! {
         //Need bread to purchase butter
         #[auth(bread)]
         pub fn buy_butter(&self,payment:Bucket)->(Bucket,Bucket){
-            info!("{}", "Bread and butter is the best!");
+            info!("Bread and butter is the best!");
             (self.material_minter.authorize(|auth| self.butter.mint(1, auth)),payment)
         }
 
         //Enjoy your bread
         //Need bread butter and NFT to eat bread
-        pub fn eat_bread(&self, bread:Bucket, butter:Bucket, nft_bucket:Bucket)->Bucket{
+        pub fn eat_bread(&self, bread:Bucket, butter:Bucket, baker_nft:BucketRef) {
             assert!(bread.resource_def() == self.bread, "That aint bread!");
-            assert!(butter.resource_def() == self.butter, "That aint bread!");
+            assert!(bread.amount() > Decimal::zero(), "No bread provided!");
+            assert!(butter.resource_def() == self.butter, "That aint butter!");
+            assert!(butter.amount() > Decimal::zero(), "No butter provided!");
             assert!(
-                nft_bucket.amount() == 1.into(),
+                baker_nft.amount() == 1.into(),
                 "You can only feed Qty. 1 NFT at a time!"
             );
-            let nft_id = nft_bucket.get_nft_ids()[0];
+            let nft_id = baker_nft.get_nft_id();
 
-            let mut nft_data: Baker = nft_bucket.get_nft_data(nft_id);
+            let mut nft_data: Baker = self.baker_nft_def.get_nft_data(nft_id);
             nft_data.weight += 1;
 
             self.baker_nft_minter
-                .authorize(|auth| nft_bucket.update_nft_data(nft_id, nft_data, auth));
+                .authorize(|auth| self.baker_nft_def.update_nft_data(nft_id, nft_data, auth));
 
             self.material_minter.authorize(|auth| self.bread.burn_with_auth(bread, auth));
             self.material_minter.authorize(|auth| self.butter.burn_with_auth(butter, auth));
-            info!("{}", "Damn, that's some good bread!");
+            info!("Damn, that's some good bread!");
 
-            nft_bucket
+            baker_nft.drop()
 
         }
         //Now that you are sick of bread, lets make somthing else
         //Need NFT weight >= 3 
-        pub fn next_level(&self, nft_bucket:Bucket) ->  (Bucket, Bucket) {
-            let nft_id = nft_bucket.get_nft_ids()[0];
-            let nft_data: Baker = nft_bucket.get_nft_data(nft_id);
-            //check NFT weight
+        pub fn next_level(&self, baker_nft:BucketRef) ->  Bucket {
+            let nft_id = baker_nft.get_nft_id();
+            let nft_data: Baker = self.baker_nft_def.get_nft_data(nft_id);
+             //check NFT weight
             assert!(nft_data.weight >= 3, "Eat more bread, your too skinny");
-            info!("{}", "We will now be making cake, here is your free cake pan!");
-            //mint cake pan 
-            (self.material_minter.authorize(|auth| self.cake_pan.mint(1, auth)),nft_bucket)
+            info!("We will now be making cake, here is your free cake pan!");
+             //mint cake pan 
+            baker_nft.drop();
+            self.material_minter.authorize(|auth| self.cake_pan.mint(1, auth))
 
         }
         
