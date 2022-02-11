@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 sbor = { path = "../../../sbor" }
 scrypto = { path = "../../../scrypto" }
-rand = "0.7"
 
 [dev-dependencies]
 radix-engine = { path = "../../../radix-engine" }

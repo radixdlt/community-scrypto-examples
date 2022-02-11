@@ -12,5 +12,7 @@ resim call-method $component free_token
 resim call-method $component play "1,$token"
 resim call-method $component play "1,$token"
 resim call-method $component play "1,$token"
+resim call-method $component play "1,$token"
+resim call-method $component play "1,$token"
 resim show $acc
 resim show $component
