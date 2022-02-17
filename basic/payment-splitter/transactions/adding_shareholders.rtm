@@ -6,10 +6,10 @@ CLONE_BUCKET_REF BucketRef("admin_badge_bucket_ref0") BucketRef("admin_badge_buc
 CLONE_BUCKET_REF BucketRef("admin_badge_bucket_ref0") BucketRef("admin_badge_bucket_ref2");
 CLONE_BUCKET_REF BucketRef("admin_badge_bucket_ref0") BucketRef("admin_badge_bucket_ref3");
 
-CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a") Decimal("107.00") BucketRef("admin_badge_bucket_ref0");
-CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") Decimal("144.00") BucketRef("admin_badge_bucket_ref1");
-CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("02a2a79aa613da237bcda37fd79af36e09eadd195976092cb24696") Decimal("123.00") BucketRef("admin_badge_bucket_ref2");
-CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("028409720f1810e607a090de34f2399f722f96f71324fcac9347fc") Decimal("115.00") BucketRef("admin_badge_bucket_ref3");
+CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a") Decimal("117.00") BucketRef("admin_badge_bucket_ref0");
+CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") Decimal("76.00") BucketRef("admin_badge_bucket_ref1");
+CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("02a2a79aa613da237bcda37fd79af36e09eadd195976092cb24696") Decimal("70.00") BucketRef("admin_badge_bucket_ref2");
+CALL_METHOD Address("029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427") "add_shareholder" Address("028409720f1810e607a090de34f2399f722f96f71324fcac9347fc") Decimal("104.00") BucketRef("admin_badge_bucket_ref3");
 
 CALL_METHOD Address("0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a") "deposit" Bucket("admin_badge_bucket");
 

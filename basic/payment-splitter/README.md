@@ -10,7 +10,54 @@ The motivation behind this blueprint is to build a payment splitter similar to E
 
 If you wand to try out this blueprint there are two ways to do that, the first is to run the `example.py` file which will handle the account creation and deployment of the package, and the second method is to perform all of the steps manually in the command line.
 
-### Method 1: Automatic method using `example.py`.
+### Method 1: Using transaction manifest files
+
+Transaction manifests is an extremely cool new feature introduced with v0.3.0 of scrypto which allows for transaction instructions to be written in an external `.rtm` file and run by resim. This feature allows for extremely powerful transactions to be created where multiple different actions take place in a single transaction. 
+
+The addresses of the packages, components, and resources changes from one local machine to another and also changes depending on the current state of the resim simulator. To account for that, I have included a `rtm_creator.py` script which is used to create the transaction manifest files depending on the addresses of the resources on your local machine. You may run this script by doing the following:
+
+```shell
+$ python3 rtm_creator.py
+Created 4 accounts:
+        Account(address = 0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a, public_key = 005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9)
+        Account(address = 0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4, public_key = 00d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35)
+        Account(address = 02a2a79aa613da237bcda37fd79af36e09eadd195976092cb24696, public_key = 004b227777d4dd1fc61c6f884f48641d02b4d121d3fd328cb08b5531fcacdabf8a)
+        Account(address = 028409720f1810e607a090de34f2399f722f96f71324fcac9347fc, public_key = 00e7f6c011776e8db7cd330b54174fd76f7d0216b612387a5ffcfb81e6f0919683)
+Published the package: 011773788de8e4d2947d6592605302d4820ad060ceab06eb2d4711
+Instantiated the component:
+        Component: 029443fa0a3bc0eabf5b2ccd27d80b6031ead2057707804191a427
+        Admin Badge: 03aedb7960d1f87dc25138f4cd101da6c98d57323478d53c5fb951
+        Internal Admin Badge: 03467d8a533602e8cba096a92098b42f1a3c00e764bccee4ac1b63
+        Shareholders Badge: 03d21e9973030d9ccd35e3955f3cf42d79b8733ff22ed2b2b62a87
+```
+
+While the script runs it prints the relevant addresses to the console so you can keep track of them for later use. After this script finishes running, the files in your `transactions` directory may or may not have changed depending on whether any of the addresses needed to be changed.
+
+Now begins the exciting stuff with the new transaction model. What we would like to do now is to add shareholders to our PaymentSplitter component and to send the shareholders the NFTs that prove their identity. If we decide not to use the new transaction manifest feature we would have twice as many transaction as shareholders we wish to add (i.e. 10 shareholders = 20 transactions) as each shareholder would require a transaction for the minting of the NFT and another transaction for the sending of the NFT. However, with the new transaction model and the introduction of the transaction manifest, we can perform all of that in a single transaction! The `rtm_creator.py` script has created for us a transaction that we can use for this specific purpose. You may run it through the following command:
+
+```shell
+$ resim run ./transactions/adding_shareholders.rtm
+```
+
+After the above command runs you can check the balances of the four accounts that we have and you will see that each one of those accounts now have 1 shareholder NFT.
+
+We would now like to test the PaymentSplitter to make sure that it does indeed do what we expect it to do. For that purpose we will deposit some funds into the payment splitter from account 1 and then we will withdraw them the share of the second account of the funds.
+
+Let's run the transaction manifest file containing the instruction of the depositing of tokens through account 1.
+```shell
+$ resim run ./transactions/funding_the_splitter.rtm 
+```
+
+We may now switch to account 2 and try to withdraw the funds.
+
+```shell
+$ resim set-default-account 0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4 00d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35
+$ resim run ./transactions/withdrawing_owed_amount.rtm 
+```
+
+And that's it! Now if you check the balance of account 2 you would see that account 2 now has more XRD as a result of the splitting of profits made.
+
+### Method 2: Automatic method using `example.py`.
 
 The `example.py` file included with this blueprint is a quick python script written during the implementation of the blueprint to allow for a quick way for the package to be redeployed and for accounts to be created quickly and with ease.
 
@@ -29,7 +76,7 @@ You do not need to install any additional packages to run this `example.py` file
 python3 example.py
 ```
 
-### Method 2: Manual method using Resim and CLI.
+### Method 3: Manual method using Resim and CLI.
 
 This method is the typical method used to run Scrypto programs which is through the command line interface and the `resim` tool. In this section of the document we will go through a similar example to the one above using the resim CLI.
 
@@ -144,8 +191,11 @@ Our payment splitter has now been created and initialized. We may now begin addi
 ```shell
 $ resim call-method $component add_shareholder $address1 $RANDOM 1,$adm
 $ resim call-method $component add_shareholder $address2 $RANDOM 1,$adm
+$ resim transfer "#00000000000000000000000000000001,$shb" $address2
 $ resim call-method $component add_shareholder $address3 $RANDOM 1,$adm
+$ resim transfer "#00000000000000000000000000000002,$shb" $address3
 $ resim call-method $component add_shareholder $address4 $RANDOM 1,$adm
+$ resim transfer "#00000000000000000000000000000003,$shb" $address4
 ```
 
 Now we can finally do the exciting stuff! Let's now deposit some XRD using account 1 and then try to withdraw our share as account 2. Note that when account 1 deposits the money, the NFT metadata will get updated to reflect on the amount of XRD that each shareholder is owed.
