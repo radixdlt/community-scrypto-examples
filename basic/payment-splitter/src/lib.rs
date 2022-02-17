@@ -46,6 +46,9 @@ blueprint! {
         /// This decimal number is used to keep track of the number of shareholders that we have so far under this
         /// payment splitter. This is used to allow for us to easily index all of the Shareholder NFTs.
         number_of_shareholders: u128,
+
+        /// This describes the total amount of shares across all of the shareholders 
+        total_quantity_of_shares: Decimal
     }
 
     impl PaymentSplitter {
@@ -86,7 +89,8 @@ blueprint! {
                 admin_badge_def: admin_badge.resource_def(),
                 internal_admin_badge: Vault::with_bucket(internal_admin_badge),
                 shareholder_def: shareholder_def,
-                number_of_shareholders: 0
+                number_of_shareholders: 0,
+                total_quantity_of_shares: Decimal::zero(),
             }.instantiate();
 
             // Returning the PaymentSplitter component and the admin badge
@@ -122,6 +126,10 @@ blueprint! {
             );
             self.number_of_shareholders += 1;
 
+            // Incrementing the total amount of shares by the amount of shares added with this 
+            // method call
+            self.total_quantity_of_shares += shareholder_shares;
+
             // Logging the addition of the shareholder to the payment splitter
             info!("Added shareholder {} with shares {} to the splitter. Number of current shareholders: {}", shareholder_address, shareholder_shares, self.number_of_shareholders);
             
@@ -156,14 +164,6 @@ blueprint! {
             // Taking the XRD bucket passed and depositing it into the XRD vault
             self.xrd_vault.put(xrd_bucket);
 
-            // Getting the total number of shares that we have across all of our shareholders
-            let mut total_quantity_of_shares: Decimal = Decimal(0);
-            for i in 0..self.number_of_shareholders {
-                let shareholder: ShareHolder = self.shareholder_def.get_non_fungible_data(&NonFungibleKey::from(i));
-                total_quantity_of_shares += shareholder.shares;
-            }
-            info!("Total number of shares: {}", total_quantity_of_shares);
-
             // Updating the total_xrd_owed for all of the shareholders since the PaymentSplitter 
             // has just received a new payment
             for i in 0..self.number_of_shareholders {
@@ -172,7 +172,7 @@ blueprint! {
 
                 // Loading in the data for this specific shareholder
                 let mut shareholder: ShareHolder = self.shareholder_def.get_non_fungible_data(&key);
-                shareholder.total_xrd_owed += xrd_amount * shareholder.shares / total_quantity_of_shares;
+                shareholder.total_xrd_owed += xrd_amount * shareholder.shares / self.total_quantity_of_shares;
 
                 info!("XRD owed to {} is {}", i, shareholder.total_xrd_owed);
 
