@@ -75,13 +75,17 @@ def main() -> None:
     for address in [address1, address2, address3, address4]:
         os_command('resim', 'call-method', component, 'add_shareholder', address, random.randint(50, 150), f'1,{adm}')
 
+    # Transfering the NFTs to their owners
+    for i, addr in enumerate([address1, address2, address3, address4]):
+        os_command('resim', 'transfer', f"\"#{i:032x},{shb}\"", addr)
+
     # Depositing some XRD into the payment splitter from my default account (currently account 1) to 
     # test the splitting of payment across the differnet shareholders.
-    print(os_command('resim', 'call-method', component, 'deposit_xrd', f"{100_000},{RADIX_TOKEN}"))
+    os_command('resim', 'call-method', component, 'deposit_xrd', f"{100_000},{RADIX_TOKEN}")
 
     # Switching the default account to be account 2 and attempting to withdraw the funds owed to us
     os_command('resim', 'set-default-account', address2, public_key2)
-    print(os_command('resim', 'call-method', component, 'withdraw_xrd', f'1,{shb}'))
+    os_command('resim', 'call-method', component, 'withdraw_xrd', f'1,{shb}')
 
 if __name__ == "__main__":
     main()
