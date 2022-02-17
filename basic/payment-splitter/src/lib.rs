@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 
 /// Defines the data of the shareholders badge which is an NFT.
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 pub struct ShareHolder {
     /// Defines the account address of the shareholder. While this address is never used after the airdrop of the NFTs,
     /// we still keep track of it just in case.
@@ -75,9 +75,9 @@ blueprint! {
             let shareholder_def: ResourceDef = ResourceBuilder::new_non_fungible()
                 .metadata("name", "Shareholder")
                 .metadata("symbol", "shr")
-                .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE | SHARED_METADATA_MUTABLE)
+                .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
                 .badge(admin_badge.resource_address(), MAY_MINT)
-                .badge(internal_admin_badge.resource_address(), MAY_CHANGE_INDIVIDUAL_METADATA | MAY_CHANGE_SHARED_METADATA)
+                .badge(internal_admin_badge.resource_address(), MAY_CHANGE_INDIVIDUAL_METADATA)
                 .no_initial_supply();
 
             // Creating the payment splitter component
@@ -97,21 +97,21 @@ blueprint! {
         /// 
         /// This is an authenticated method which needs to be called and presented the admin badge (obtained from creating the component).
         /// This method is used to add a shareholder to the PaymentSplitter by minting an NFT to authenticate and keep track of the shareholder
-        /// data and then airdropping it to the specific shareholder that we specified the address for.
+        /// data.
         /// 
         /// # Arguments
         /// 
         /// * `shareholder_address` - The address of the shareholder. This address will be airdropped the NFT.
         /// * `shareholder_shares` - The amount of shares that belong to this shareholder.
-        #[auth(admin_badge_def, keep_auth)]
+        #[auth(admin_badge_def)]
         pub fn add_shareholder(
             &mut self,
             shareholder_address: Address,
             shareholder_shares: Decimal
-        ) {
+        ) -> Bucket {
             // Creating this NFT for this specific shareholder and storing it in a bucket
-            let nft_bucket: Bucket = self.shareholder_def.mint_nft(
-                self.number_of_shareholders,
+            let nft_bucket: Bucket = self.shareholder_def.mint_non_fungible(
+                &NonFungibleKey::from(self.number_of_shareholders),
                 ShareHolder {
                     address: shareholder_address,
                     shares: shareholder_shares,
@@ -122,11 +122,22 @@ blueprint! {
             );
             self.number_of_shareholders += 1;
 
-            // Airdropping the NFT to the user with the specified address
-            Account::from(shareholder_address).deposit(nft_bucket);
+            // Logging the addition of the shareholder to the payment splitter
+            info!("Added shareholder {} with shares {} to the splitter. Number of current shareholders: {}", shareholder_address, shareholder_shares, self.number_of_shareholders);
+            
+            // Now that we have created the shareholder NFTs, there two two main ways we can get these NFTs to the shareholders:
+            //
+            // 1- We could airdrop them to the shareholders through the account component.
+            // 2- We could return the shareholder's badge as a bucket and trust that the caller would send them their badges.
+            //
+            // Method 1 seems somewhat better as there is no need to trust the admin to send the badges when they're created and 
+            // admin can't go back on their word one the badges are created. However, this would go against the asset oriented 
+            // style of coding used in Radix. So, if you want to directly airdrop the tokens instead of returning them in a bucket
+            // then you can use the line of code below:
+            // Component::from(shareholder_address).call::<()>("deposit", vec![scrypto_encode(&nft_bucket)]);
 
-            // Logging the event
-            info!("Added shareholder {} with shares {} to the splitter. Number of current shareholders: {}", shareholder_address, shareholder_shares, self.number_of_shareholders)
+            // Returning the bucket of shareholder NFTs back to the caller
+            return nft_bucket;
         }
 
         /// Used to deposit XRD into the XRD vault controlled by this component.
@@ -148,7 +159,7 @@ blueprint! {
             // Getting the total number of shares that we have across all of our shareholders
             let mut total_quantity_of_shares: Decimal = Decimal(0);
             for i in 0..self.number_of_shareholders {
-                let shareholder: ShareHolder = self.shareholder_def.get_nft_data(i);
+                let shareholder: ShareHolder = self.shareholder_def.get_non_fungible_data(&NonFungibleKey::from(i));
                 total_quantity_of_shares += shareholder.shares;
             }
             info!("Total number of shares: {}", total_quantity_of_shares);
@@ -156,15 +167,18 @@ blueprint! {
             // Updating the total_xrd_owed for all of the shareholders since the PaymentSplitter 
             // has just received a new payment
             for i in 0..self.number_of_shareholders {
+                // Creating a non fungible key from the variable i
+                let key: NonFungibleKey = NonFungibleKey::from(i);
+
                 // Loading in the data for this specific shareholder
-                let mut shareholder: ShareHolder = self.shareholder_def.get_nft_data(i);
+                let mut shareholder: ShareHolder = self.shareholder_def.get_non_fungible_data(&key);
                 shareholder.total_xrd_owed += xrd_amount * shareholder.shares / total_quantity_of_shares;
 
                 info!("XRD owed to {} is {}", i, shareholder.total_xrd_owed);
 
                 // Updating the metadata of the NFT with the newly calculated information
                 self.internal_admin_badge.authorize(|auth| {
-                    self.shareholder_def.update_nft_data(i, shareholder, auth);
+                    self.shareholder_def.update_non_fungible_data(&key, shareholder, auth);
                 })
             }
         }
@@ -182,8 +196,8 @@ blueprint! {
         #[auth(shareholder_def)]
         pub fn withdraw_xrd(&mut self) -> Bucket {
             // Getting the ID of the NFT passed in the badge and then loading in the nft data
-            let nft_id: u128 = auth.get_nft_id(); 
-            let mut shareholder: ShareHolder = self.shareholder_def.get_nft_data(nft_id);
+            let nft_id: NonFungibleKey = auth.get_non_fungible_key(); 
+            let mut shareholder: ShareHolder = self.shareholder_def.get_non_fungible_data(&nft_id);
             info!("Shareholder is entitled to: {}", shareholder.total_xrd_owed);
 
             // Creating a bucket with the maximum amount of XRD that this shareholder may withdraw
@@ -194,7 +208,7 @@ blueprint! {
             // Updating the NFT metadata to indicate that the withdraw has taken place and that this shareholder
             // has been given this portion of their shares
             self.internal_admin_badge.authorize(|auth| {
-                self.shareholder_def.update_nft_data(nft_id, shareholder, auth);
+                self.shareholder_def.update_non_fungible_data(&nft_id, shareholder, auth);
             });
 
             // Return the XRD bucket back to the shareholder
