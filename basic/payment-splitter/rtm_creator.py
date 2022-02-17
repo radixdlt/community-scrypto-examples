@@ -204,6 +204,7 @@ def main() -> None:
 
     }
 
+    # Saving the radix transaction manifest files to the manifest directory
     for file_name, file_content in manifest_file_content_mapping.items():
         with open(os.path.join(MANIFEST_DIR, f"{file_name}.rtm"), 'w') as file:
             file.write(clean_manifest_content(file_content))
