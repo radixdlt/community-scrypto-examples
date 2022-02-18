@@ -9,7 +9,7 @@ Simulator reset & New Default-account generation
 >
 >resim new-account
 
-└─ Component: $Default-account = $Default-account
+└─ Account address : 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
 
 -------------------------------------------------------------------------------------------
 Publish CandyDex Blueprint & Component instantiate 
@@ -67,7 +67,7 @@ Let's check out our Default-account.
 Let's stock candies, inspect resturned resources and Default-account balances.
 -------------------------------------------------------------------------------------------
 
->resim call-method $CandyDex stock_candy 10000,$THG 2 "THETAGUM" "THG" 
+>resim call-method $CandyDex stock_candy 10000,$THG 2 
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 THETAGUM candy, THG symbol @2XRD price
 
@@ -76,7 +76,7 @@ Let's stock candies, inspect resturned resources and Default-account balances.
 └─ ResourceDef: 03411b8e24f4acfd9b8f35d6089fa892521ddaf86d7a07aa75dbd5  = $mBadgeTHG_0
 
 ---
->resim call-method $CandyDex stock_candy 10000,$OMG 2 "OMICRONGUM" "OMG" 
+>resim call-method $CandyDex stock_candy 10000,$OMG 2  
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 OMICRONGUM candy, OMG symbol @2XRD price
 
@@ -182,7 +182,7 @@ Let's swap some candies to gain some accrued fee profit.
 Let's check out Default-account balances.
 -------------------------------------------------------------------------------------------
 
->resim show 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42
+>resim show $Default-account
 
 ├─ { amount: 1000000, resource_def: $XRD, name: "Radix", symbol: "XRD" }
 
@@ -353,7 +353,7 @@ Let's issue another candy token, stock it & swap some candies to rebalance Candy
 └─ ResourceDef: 03a78cfec3dac583cc2394d14452099892a5af4a5201d771d918a2 = $ETG
 
 ---
->resim call-method $CandyDex stock_candy 10000,$ETG 2 "ETAGUM" "ETG" 
+>resim call-method $CandyDex stock_candy 10000,$ETG 2  
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 ETAGUM candy, ETG symbol @2XRD price
 
@@ -449,7 +449,7 @@ Simulator reset & New Default-account generation
 >
 >resim new-account
 
-└─ Component: 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
+└─ Account address : 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
 
 -------------------------------------------------------------------------------------------
 Publish CandyDex Blueprint & Component instantiate 
@@ -495,7 +495,7 @@ Let's create some candy tokens.
 Let's check out our Default-account balances.
 -------------------------------------------------------------------------------------------
 
->resim show 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42
+>resim show $Default-account
 
 ├─ { amount: 1, resource_def: $OwnerBadge, name: " OwnerBadge " }
 
@@ -510,7 +510,7 @@ Let's check out our Default-account balances.
 Let's stock candies and check Default-account balances.
 -------------------------------------------------------------------------------------------
 
->resim call-method $CandyDex stock_candy 50000,$ALG 2 "ALPHAGUM" "ALG" 
+>resim call-method $CandyDex stock_candy 50000,$ALG 2  
 
 └─ [←[32mINFO ←[0m] ←[32m Added 50000 ALPHAGUM candy, ALG symbol @2XRD price
 
@@ -519,7 +519,7 @@ Let's stock candies and check Default-account balances.
 └─ ResourceDef: 03570bd52401c8b3e6a6e551549f64199cc5c629726627e83211e1
 
 ---
->resim call-method $CandyDex stock_candy 50000,$BTG 1.5 "BETAGUM" "BTG" 
+>resim call-method $CandyDex stock_candy 50000,$BTG 1.5 
 
 └─ [←[32mINFO ←[0m] ←[32m Added 50000 BETAGUM candy, BTG symbol @1.5XRD price
 
@@ -579,7 +579,7 @@ Test "get_xrd_sell_amount_becsx" method coupled with "buy_exact_candy_sell_xrd" 
 -8426.966292134831459596
 
 ---
->P.S. Due to calculation approximation , to obtain the exact output amount required, sometimes it could required to round in excess last numbers of the fractional part >beyond dot (17/18).
+>P.S. Due to calculation approximation , to obtain the exact output amount, sometimes it could required to round in excess last numbers of the fractional part >beyond dot (17/18).
 
 ------------------------------------------------------------------------------------------------------------------------
 Test "get_candy_buy_amount_bcsex" method coupled with "buy_candy_sell_exact_xrd" method & check default-account balances
@@ -841,11 +841,11 @@ Create some candy resources
 Stock candies resources in CandyDex Blueprint from Default-account 
 ----------------------------------------------------------------------------------------------------------
 
->resim call-method $CandyDex stock_candy 20000,$GMG 2 "GAMMAGUM" "GMG"
+>resim call-method $CandyDex stock_candy 20000,$GMG 2
 >
->resim call-method $CandyDex stock_candy 20000,$DTG 2 "DELTAGUM" "DTG"
+>resim call-method $CandyDex stock_candy 20000,$DTG 2 
 >
->resim call-method $CandyDex stock_candy 20000,$SGG 1.5 "SIGMAGUM" "SGG"
+>resim call-method $CandyDex stock_candy 20000,$SGG 1.5 
 
 ----------------------------------------------------------------------------------------------------------
 Buy some candies to make some $XRD flowing into CandyDex Blueprint from Default-account and check balances 
@@ -1016,7 +1016,9 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 
 ├─ { amount: 980500.54606599525561818, resource_def: $XRD, name: "Radix", symbol: "XRD" }    +48.500000000000000000
 
------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------
+Check a reversed transaction due to unprofitable flashswap
+---------------------------------------------------------------------------------------------------------- 
 
 >resim call-method $CandyDex flashswap 100 $DTG 0,$GMG $DummyDex "arb_dex"
 
