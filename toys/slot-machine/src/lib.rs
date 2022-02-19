@@ -14,7 +14,6 @@ blueprint! {
                 .metadata("symbol", "VEG")
                 .initial_supply_fungible(supply);
 
-            // Instantiate a Hello component, populating its vault with our supply of 1000 HelloToken
             Self {
                 casino_bank: Vault::with_bucket(bank_bucket),
             }
