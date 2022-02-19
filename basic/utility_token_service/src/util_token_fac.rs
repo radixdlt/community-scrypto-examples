@@ -21,21 +21,23 @@ blueprint! {
     impl UtilityTokenFactory {
 
         pub fn new( my_id: String, ut_name: String, ut_symbol: String, ut_description: String, price: u32, mint_size: u32, max_buy: u32 ) -> (Component, Bucket) {
-            let ut_minter_bucket = ResourceBuilder::new()
+            let ut_minter_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", my_id)
-                .new_badge_fixed(2);
+                .initial_supply_fungible(2);
             let ut_minter_resource_def = ut_minter_bucket.resource_def();
             let ut_minter_return_bucket: Bucket = ut_minter_bucket.take(1); // Return this badge to the caller
 
-            let ut_resource_def = ResourceBuilder::new()
+            let ut_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", ut_name)
                 .metadata("symbol", ut_symbol)
                 .metadata("description", ut_description)
-                .new_token_mutable(ut_minter_bucket.resource_address());
-            let ut_tokens = ut_resource_def.mint(mint_size, ut_minter_bucket.borrow());
+                .flags(MINTABLE | BURNABLE)
+                .badge(ut_minter_bucket.resource_address(), MAY_MINT | MAY_BURN)
+                .no_initial_supply();
+            let ut_tokens = ut_resource_def.mint(mint_size, ut_minter_bucket.present());
 
-            scrypto_assert!(mint_size > 0, "You must specify a non-zero number for the mint_size.");
-            scrypto_assert!(max_buy <= mint_size, "The single purchase max buy size should be less than or equal to the mint size.");
+            assert!(mint_size > 0, "You must specify a non-zero number for the mint_size.");
+            assert!(max_buy <= mint_size, "The single purchase max buy size should be less than or equal to the mint size.");
             let component = Self {
                 ut_minter_vault: Vault::with_bucket(ut_minter_bucket),
                 ut_minter_badge: ut_minter_resource_def,
@@ -64,7 +66,7 @@ blueprint! {
         // Purchase UT tokens
         //
         pub fn purchase(&mut self, number: u32, payment: Bucket) -> (Bucket, Bucket) {
-            scrypto_assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must purchase the utility tokens with Radix (XRD).");
+            assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must purchase the utility tokens with Radix (XRD).");
             let ut_bucket = Bucket::new(self.address());
             let mut num = number;
             if num > self.ut_max_buy {
@@ -106,10 +108,10 @@ blueprint! {
 
         pub fn redeem(&mut self, used_tokens: Bucket) {
             if used_tokens.amount() > 0.into() {
-                scrypto_assert!(used_tokens.resource_def() == self.available_ut.resource_def(), "You can only redeem the expected utility tokens.");
+                assert!(used_tokens.resource_def() == self.available_ut.resource_def(), "You can only redeem the expected utility tokens.");
                 self.total_redeemed += used_tokens.amount();
                 self.ut_minter_vault.authorize(|badge| {
-                    used_tokens.burn(badge);
+                    used_tokens.burn_with_auth(badge);
                 })
             }
         }
