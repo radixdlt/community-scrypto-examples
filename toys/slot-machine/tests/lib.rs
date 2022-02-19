@@ -1,4 +1,5 @@
 use radix_engine::ledger::*;
+use radix_engine::model::*;
 use radix_engine::transaction::*;
 use scrypto::prelude::*;
 
@@ -22,8 +23,6 @@ fn test_slot_machine() {
             ],
             None
         )
-        .drop_all_bucket_refs()
-        .deposit_all_buckets(account)
         .build(vec![key])
         .unwrap();
     let receipt1 = executor.run(transaction1).unwrap();
@@ -31,11 +30,21 @@ fn test_slot_machine() {
     assert!(receipt1.result.is_ok());
 
     // Test the `free_token` method.
-    let component = receipt1.component(0).unwrap();
+    let casino = receipt1.component(0).unwrap();
+    let vegas_token_ref = receipt1.resource_def(0).unwrap();
+    let amount = fungible_amount(10, vegas_token_ref);
     let transaction2 = TransactionBuilder::new(&executor)
-        .call_method(component, "free_token", vec![], Some(account))
-        .drop_all_bucket_refs()
-        .deposit_all_buckets(account)
+        .call_method(casino, "free_token", vec![], Some(account))
+        .assert_worktop_contains(amount.amount().unwrap(), amount.resource_address())
+        .take_from_worktop(&amount, |builder, bid| {
+            builder
+                .add_instruction(Instruction::CallMethod {
+                    component_address: account,
+                    method: "deposit".to_owned(),
+                    args: vec![scrypto_encode(&bid)],
+                })
+                .0
+        })
         .build(vec![key])
         .unwrap();
     let receipt2 = executor.run(transaction2).unwrap();
@@ -43,21 +52,35 @@ fn test_slot_machine() {
     assert!(receipt2.result.is_ok());
 
     // Test the `play` method.
-    let vegas_token_id = receipt1.resource_def(0).unwrap();
-    let bet = 1;
+    let bet = Decimal::one();
+    let winnigs = fungible_amount(2, vegas_token_ref);
     let transaction3 = TransactionBuilder::new(&executor)
         .call_method(
-            component,
+            casino,
             "play",
             vec![
-                format!("{},{}", bet, vegas_token_id).to_owned()
+                format!("{},{}", bet, vegas_token_ref).to_owned()
             ],
             Some(account))
-        .drop_all_bucket_refs()
-        .deposit_all_buckets(account)
+        .take_from_worktop(&winnigs, |builder, winnigs| {
+            builder
+                .add_instruction(Instruction::CallMethod {
+                    component_address: account,
+                    method: "deposit".to_owned(),
+                    args: vec![scrypto_encode(&winnigs)],
+                })
+                .0
+        })
         .build(vec![key])
         .unwrap();
     let receipt3 = executor.run(transaction3).unwrap();
     println!("{:?}\n", receipt3);
     assert!(receipt3.result.is_ok());
+}
+
+fn fungible_amount(amount: i32, resource_address: Address) -> Resource {
+    Resource::Fungible {
+        amount: Decimal::from(amount),
+        resource_address: resource_address,
+    }
 }

@@ -21,11 +21,12 @@ blueprint! {
         }
 
         pub fn free_token(&mut self) -> Bucket {
+            let free_amount: i32 = 10;
             info!(
-                "My balance is: {} VegasToken. Now giving away 100 token!",
-                self.casino_bank.amount()
+                "My balance is: {} VegasToken. Now giving away {} token!",
+                self.casino_bank.amount(), free_amount
             );
-            self.casino_bank.take(100)
+            self.casino_bank.take(Decimal::from(free_amount))
         }
 
         pub fn play(&mut self, bet: Bucket) -> Bucket {
