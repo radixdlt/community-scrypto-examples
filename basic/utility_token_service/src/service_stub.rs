@@ -52,9 +52,9 @@ blueprint! {
 
         // Now we define our services
         pub fn simple_service(&mut self, payment: Bucket) -> Bucket {
-            scrypto_assert!(payment.resource_def().address() == self.utf.address(), "Simple service requires 1 util token");
-            scrypto_assert!(payment.amount() >= 1.into(), "Simple service requires 1 util token");
-            scrypto_assert!(self.utf.address() == self.used_tokens.resource_def().address(), "Mismatch in Vault setup.");
+            assert!(payment.resource_def().address() == self.utf.address(), "Simple service requires 1 util token");
+            assert!(payment.amount() >= 1.into(), "Simple service requires 1 util token");
+            assert!(self.utf.address() == self.used_tokens.resource_def().address(), "Mismatch in Vault setup.");
             self.used_tokens.put(payment.take(1));
             info!("Performing Simple Service now.");
             self.simple_service_count += 1;
@@ -63,8 +63,8 @@ blueprint! {
         }
 
         pub fn premium_service(&mut self, payment: Bucket) -> Bucket {
-            scrypto_assert!(payment.resource_def().address() == self.utf.address(), "Premium service requires 3 util tokens");
-            scrypto_assert!(payment.amount() >= 3.into(), "Premium service requires 3 util tokens");
+            assert!(payment.resource_def().address() == self.utf.address(), "Premium service requires 3 util tokens");
+            assert!(payment.amount() >= 3.into(), "Premium service requires 3 util tokens");
             self.used_tokens.put(payment.take(3));
             info!("Performing Premium Service now.");
             self.premium_service_count += 1;
