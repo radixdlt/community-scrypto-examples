@@ -9,7 +9,9 @@ Simulator reset & New Default-account generation
 >
 >resim new-account
 
-└─ Account address : 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
+├─ Account address: 0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a = $Default-account
+
+└─ Public key: 005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9 = $Public-key
 
 -------------------------------------------------------------------------------------------
 Publish CandyDex Blueprint & Component instantiate 
@@ -17,16 +19,16 @@ Publish CandyDex Blueprint & Component instantiate
 
 >resim publish .
 
-└─ Package: 013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f
+└─ Package: 013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f = $Package
 
 ---
->resim call-function 013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f CandyDex new 1 
+>resim call-function $Package CandyDex new 1 
 
-├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62
+├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
 
-├─ ResourceDef: $OwnerBadge
+├─ ResourceDef: 0347dfe3a58e8a630305f2f3df82949cd70ce49e2cde097b259f8d = $OwnerBadge
 
-└─ Component: $CandyDex   = $CandyDex
+└─ Component: 02ac00a15a87df7c43b55e49d5d229bc770136c108586a9d7b38b5   = $CandyDex
 
 -------------------------------------------------------------------------------------------
 Let's check out CandyDex Component.
@@ -34,7 +36,7 @@ Let's check out CandyDex Component.
 
 >resim show $CandyDex
 
-├─ { amount: 0, resource_def: $XRD, name: "Radix", symbol: "XRD" } = $XRD
+├─ { amount: 0, resource_def: 030000000000000000000000000000000000000000000000000004, name: "Radix", symbol: "XRD" } = $XRD
 
 └─ { amount: 1, resource_def: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62, name: " MinterBadge " }
 
@@ -353,7 +355,7 @@ Let's issue another candy token, stock it & swap some candies to rebalance Candy
 └─ ResourceDef: 03a78cfec3dac583cc2394d14452099892a5af4a5201d771d918a2 = $ETG
 
 ---
->resim call-method $CandyDex stock_candy 10000,$ETG 2  
+>resim call-method $CandyDex stock_candy 10000,$ETG 2 
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 ETAGUM candy, ETG symbol @2XRD price
 
@@ -449,24 +451,26 @@ Simulator reset & New Default-account generation
 >
 >resim new-account
 
-└─ Account address : 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
+├─ Account address: 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
 
+└─ Public key: 005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9 = $Public-key
+                    
 -------------------------------------------------------------------------------------------
 Publish CandyDex Blueprint & Component instantiate 
 -------------------------------------------------------------------------------------------
 
 >resim publish .
 
-└─ Package: 01ca59a8d6ea4f7efa1765cef702d14e47570c079aedd44992dd09
+└─ Package: 01ca59a8d6ea4f7efa1765cef702d14e47570c079aedd44992dd09 = $Package
 
 ---
->resim call-function 01ca59a8d6ea4f7efa1765cef702d14e47570c079aedd44992dd09 CandyDex new 1 
+>resim call-function $Package CandyDex new 1 
 
-├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62
+├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
 
-├─ ResourceDef: $OwnerBadge
+├─ ResourceDef: 0399d3f4678fbf0ec6abb57bb17af7ddcc48ce1370e65eb99f8e13 = $OwnerBadge
 
-└─ Component: $CandyDex   = $CandyDex
+└─ Component: 02ac00a15a87df7c43b55e49d5d229bc770136c108586a9d7b38b5   = $CandyDex
 
 -------------------------------------------------------------------------------------------
 Let's check out CandyDex Component.
@@ -474,7 +478,7 @@ Let's check out CandyDex Component.
 
 >resim show $CandyDex
 
-├─ { amount: 0, resource_def: $XRD, name: "Radix", symbol: "XRD" } = $XRD
+├─ { amount: 0, resource_def: 030000000000000000000000000000000000000000000000000004, name: "Radix", symbol: "XRD" } = $XRD
 
 └─ { amount: 1, resource_def: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62, name: " MinterBadge " }
 
@@ -519,7 +523,7 @@ Let's stock candies and check Default-account balances.
 └─ ResourceDef: 03570bd52401c8b3e6a6e551549f64199cc5c629726627e83211e1
 
 ---
->resim call-method $CandyDex stock_candy 50000,$BTG 1.5 
+>resim call-method $CandyDex stock_candy 50000,$BTG 1.5  
 
 └─ [←[32mINFO ←[0m] ←[32m Added 50000 BETAGUM candy, BTG symbol @1.5XRD price
 
@@ -579,7 +583,7 @@ Test "get_xrd_sell_amount_becsx" method coupled with "buy_exact_candy_sell_xrd" 
 -8426.966292134831459596
 
 ---
->P.S. Due to calculation approximation , to obtain the exact output amount, sometimes it could required to round in excess last numbers of the fractional part >beyond dot (17/18).
+>P.S. Due to calculation approximation , to obtain the exact output amount required, sometimes it could required to round in excess last numbers of the fractional part >beyond dot (17/18).
 
 ------------------------------------------------------------------------------------------------------------------------
 Test "get_candy_buy_amount_bcsex" method coupled with "buy_candy_sell_exact_xrd" method & check default-account balances
@@ -787,7 +791,9 @@ Simulator reset & New Default-account generation
 >
 >resim new-account 
 
-└─ Component: 02c1897261516ff0597fded2b19bf2472ff97b2d791ea50bd02ab2 = $Default-Account
+├─ Account address: 02ffa01926302c78c0f050f6d08140ec77757ec6cd277f7eecef42 = $Default-account
+
+└─ Public key: 005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9 = $Public-key
 
 ----------------------------------------------------------------------------------------------------------
 Publish DummyDex Blueprint & Component instantiate 
@@ -795,12 +801,12 @@ Publish DummyDex Blueprint & Component instantiate
 
 >resim publish .
 
-└─ Package: 018c890168ca8b6702cc8c1ce7030d65667390bdea7661767df694
+└─ Package: 018c890168ca8b6702cc8c1ce7030d65667390bdea7661767df694 = $Package-DummyDex
 
 ---
->resim call-function 018c890168ca8b6702cc8c1ce7030d65667390bdea7661767df694 DummyDex new
+>resim call-function $Package-DummyDex DummyDex new
 
-└─ Component: 026c202008c0bc5323a2b57e409b4ffff0a8c30d7ce12645b21806     =$DummyDex
+└─ Component: 026c202008c0bc5323a2b57e409b4ffff0a8c30d7ce12645b21806 = $DummyDex
 
 ----------------------------------------------------------------------------------------------------------
 Publish CandyDex Blueprint & Component instantiate 
@@ -808,16 +814,16 @@ Publish CandyDex Blueprint & Component instantiate
 
 >resim publish .
 
-└─ Package: 013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f
+└─ Package: 013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f = $Package-CandyDex
 
 ---
->resim call-function 013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f CandyDex new 1 
+>resim call-function $Package-CandyDex CandyDex new 1 
 
-├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62
+├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
 
-├─ ResourceDef: $OwnerBadge
+├─ ResourceDef: 03d527faee6d0b91e7c1bab500c6a986e5777a25d704acc288d542 = $OwnerBadge
 
-└─ Component: $CandyDex	= $CandyDex
+└─ Component: 02ac00a15a87df7c43b55e49d5d229bc770136c108586a9d7b38b5	= $CandyDex
 
 ----------------------------------------------------------------------------------------------------------
 Create some candy resources 
@@ -841,7 +847,7 @@ Create some candy resources
 Stock candies resources in CandyDex Blueprint from Default-account 
 ----------------------------------------------------------------------------------------------------------
 
->resim call-method $CandyDex stock_candy 20000,$GMG 2
+>resim call-method $CandyDex stock_candy 20000,$GMG 2 
 >
 >resim call-method $CandyDex stock_candy 20000,$DTG 2 
 >
@@ -898,6 +904,10 @@ Transfer some $XRD resources to DummyDex Blueprint from Default-account and chec
 ----------------------------------------------------------------------------------------------------------
 Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 ---------------------------------------------------------------------------------------------------------- 
+
+----------------------------------------------------------------------------------------------------------
+Loan XRD & reimburse XRD
+----------------------------------------------------------------------------------------------------------
 >resim show $CandyDex
 
 ├─ { amount: 9556.95393400474438182, resource_def: $XRD, name: "Radix", symbol: "XRD" }
@@ -913,7 +923,7 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 ├─ { amount: 980443.04606599525561818, resource_def: $XRD, name: "Radix", symbol: "XRD" }
 
 ---
->resim call-method $CandyDex flashswap 100 $XRD 0,$XRD $DummyDex "arb_dex"
+>resim call-method $CandyDex flashswap 100 $XRD $XRD $DummyDex "arb_dex"
 
 ---
 >resim show $CandyDex
@@ -928,7 +938,9 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 
 ├─ { amount: 980452.04606599525561818, resource_def: $XRD, name: "Radix", symbol: "XRD" }	+9.000000000000000000
 
------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------
+Loan Candy & reimburse a different Candy
+----------------------------------------------------------------------------------------------------------
 
 >resim show $CandyDex
 
@@ -951,7 +963,7 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 ├─ { amount: 70009, resource_def: $GMG, name: "GAMMAGUM", symbol: "GMG" }
 
 ---
->resim call-method $CandyDex flashswap 100 $GMG 0,$DTG $DummyDex "arb_dex"
+>resim call-method $CandyDex flashswap 100 $GMG $DTG $DummyDex "arb_dex"
 
 ---
 >resim show $CandyDex
@@ -972,7 +984,9 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 
 ├─ { amount: 74061.725923658583591204, resource_def: $DTG, name: "DELTAGUM", symbol: "DTG" }    +52.725923658583591204
 
------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------
+Loan Candy & reimburse XRD
+----------------------------------------------------------------------------------------------------------
 
 >resim show $CandyDex
 
@@ -995,7 +1009,7 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 └─ { amount: 70000, resource_def: $SGG, name: "SIGMAGUM", symbol: "SGG" }
 
 ---
->resim call-method $CandyDex flashswap 100 $SGG 0,$XRD $DummyDex "arb_dex"
+>resim call-method $CandyDex flashswap 100 $SGG $XRD $DummyDex "arb_dex"
 
 ---
 >resim show $CandyDex
@@ -1017,14 +1031,14 @@ Check balances, Call "flashswap" method on CandyDex Blueprint & verify amounts
 ├─ { amount: 980500.54606599525561818, resource_def: $XRD, name: "Radix", symbol: "XRD" }    +48.500000000000000000
 
 ----------------------------------------------------------------------------------------------------------
-Check a reversed transaction due to unprofitable flashswap
----------------------------------------------------------------------------------------------------------- 
+Example of reverted transaction due to unprofitable "flashswap" method call
+----------------------------------------------------------------------------------------------------------
 
->resim call-method $CandyDex flashswap 100 $DTG 0,$GMG $DummyDex "arb_dex"
+>resim call-method $CandyDex flashswap 100 $DTG $GMG $DummyDex "arb_dex"
 
 └─ [←[32mINFO ←[0m] ←[32m Sorry mate, ain't nothin' to scrape!
 
-Error: TransactionFailed
+Error: TransactionExecutionError(InvokeError(Trap(Trap { kind: Unreachable })))
 
 
 
