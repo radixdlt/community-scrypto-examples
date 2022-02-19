@@ -60,7 +60,7 @@ blueprint! {
 
         fn spin_wheel() -> String {
             let rand = Uuid::generate() % 6;
-            info!("Generated number: {}", rand);
+            dbg!("Generated number: {}", rand);
 
             let item;
             match rand {

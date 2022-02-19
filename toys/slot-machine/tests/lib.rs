@@ -5,11 +5,11 @@ use scrypto::prelude::*;
 #[test]
 fn test_slot_machine() {
     // Set up environment.
-    let mut ledger = InMemoryLedger::with_bootstrap();
-    let mut executor = TransactionExecutor::new(&mut ledger, 0, 0);
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
+    let mut executor = TransactionExecutor::new(&mut ledger, true);
     let key = executor.new_public_key();
     let account = executor.new_account(key);
-    let package = executor.publish_package(include_code!("slot_machine"));
+    let package = executor.publish_package(include_code!("slot_machine")).unwrap();
 
     // Test the `new` function.
     let transaction1 = TransactionBuilder::new(&executor)
@@ -26,9 +26,9 @@ fn test_slot_machine() {
         .deposit_all_buckets(account)
         .build(vec![key])
         .unwrap();
-    let receipt1 = executor.run(transaction1, false).unwrap();
+    let receipt1 = executor.run(transaction1).unwrap();
     println!("{:?}\n", receipt1);
-    assert!(receipt1.success);
+    assert!(receipt1.result.is_ok());
 
     // Test the `free_token` method.
     let component = receipt1.component(0).unwrap();
@@ -38,9 +38,9 @@ fn test_slot_machine() {
         .deposit_all_buckets(account)
         .build(vec![key])
         .unwrap();
-    let receipt2 = executor.run(transaction2, true).unwrap();
+    let receipt2 = executor.run(transaction2).unwrap();
     println!("{:?}\n", receipt2);
-    assert!(receipt2.success);
+    assert!(receipt2.result.is_ok());
 
     // Test the `play` method.
     let vegas_token_id = receipt1.resource_def(0).unwrap();
@@ -57,7 +57,7 @@ fn test_slot_machine() {
         .deposit_all_buckets(account)
         .build(vec![key])
         .unwrap();
-    let receipt3 = executor.run(transaction3, false).unwrap();
+    let receipt3 = executor.run(transaction3).unwrap();
     println!("{:?}\n", receipt3);
-    assert!(receipt3.success);
+    assert!(receipt3.result.is_ok());
 }
