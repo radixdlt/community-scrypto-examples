@@ -1,0 +1,36 @@
+name: Slot Maschine
+
+on:
+  push:
+    paths:
+    - 'toys/slot-machine/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Clone Radix scrypto environment
+      uses: actions/checkout@v2
+      with:
+        repository: radixdlt/radixdlt-scrypto
+
+    - name: Clone community scrypto repository
+      uses: actions/checkout@v2
+      with:
+        path: ./community-scrypto
+
+    - name: Init radix simulator
+      run: |
+        source $HOME/.cargo/env
+        rustup target add wasm32-unknown-unknown
+        cargo install --path ./simulator
+
+    - name: Execute tests
+      run: |
+        cd ./community-scrypto/toys/slot-machine
+        scrypto test
+
