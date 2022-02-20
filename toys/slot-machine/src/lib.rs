@@ -1,7 +1,17 @@
 use scrypto::prelude::*;
 use scrypto::core::Uuid;
 
+const CHERRY: i32 = 0;
+const LEMON:  i32 = 1;
+const ORANGE: i32 = 2;
+const PLUM:   i32 = 3;
+const BELL:   i32 = 4;
+const BAR:    i32 = 5;
+
+const NUMBER_OF_ITEMS: u128 = 6;
+
 blueprint! {
+
     struct SlotMachine {
         casino_bank: Vault,
     }
@@ -37,15 +47,18 @@ blueprint! {
 
             self.casino_bank.put(bet);
 
-            let first_wheel: String = Self::spin_wheel();
-            let second_wheel: String = Self::spin_wheel();
-            let third_wheel: String = Self::spin_wheel();
+            let first_wheel: i32 = Self::spin_wheel();
+            let second_wheel: i32 = Self::spin_wheel();
+            let third_wheel: i32 = Self::spin_wheel();
 
             let score = Self::get_score(&first_wheel, &second_wheel, &third_wheel);
 
             info!(
                 "You rolled {}, {}, {} and your score is {}.",
-                first_wheel, second_wheel, third_wheel, score
+                Self::get_fruit_symbol(&first_wheel),
+                Self::get_fruit_symbol(&second_wheel),
+                Self::get_fruit_symbol(&third_wheel),
+                score
             );
 
             if score == 0 {
@@ -59,53 +72,46 @@ blueprint! {
             }
         }
 
-        fn spin_wheel() -> String {
-            let rand = Uuid::generate() % 6;
-            dbg!("Generated number: {}", rand);
-
-            let item;
-            match rand {
-                0 => item = "CHERRY",
-                1 => item = "LEMON",
-                2 => item = "ORANGE",
-                3 => item = "PLUM",
-                4 => item = "BELL",
-                5 => item = "BAR",
-                _ => panic!("Invalid random number generated: {}", rand),
-            }
-            return item.to_string()
+        fn spin_wheel() -> i32 {
+            let item = Uuid::generate() % NUMBER_OF_ITEMS;
+            assert!(item < NUMBER_OF_ITEMS);
+            dbg!("Generated number: {}", item);
+            return i32::try_from(item).unwrap();
         }
 
-        fn get_score(first_wheel: &String, second_wheel: &String, third_wheel: &String) -> i32 {
+        fn get_score(first_wheel: &i32, second_wheel: &i32, third_wheel: &i32) -> i32 {
 
             let score: i32;
+            let columns = (*first_wheel, *second_wheel, *third_wheel);
 
-            if (first_wheel == "CHERRY") && (second_wheel != "CHERRY") {
-                score = 2;
-            }
-            else if (first_wheel == "CHERRY") && (second_wheel == "CHERRY") && (third_wheel != "CHERRY") {
-                score = 5;
-            }
-            else if (first_wheel == "CHERRY") && (second_wheel == "CHERRY") && (third_wheel == "CHERRY") {
-                score = 7;
-            }
-            else if (first_wheel == "ORANGE") && (second_wheel == "ORANGE") && ((third_wheel == "ORANGE") || (third_wheel == "BAR")) {
-                score = 10;
-            }
-            else if (first_wheel == "PLUM") && (second_wheel == "PLUM") && ((third_wheel == "PLUM") || (third_wheel == "BAR")) {
-                score = 14;
-            }
-            else if (first_wheel == "BELL") && (second_wheel == "BELL") && ((third_wheel == "BELL") || (third_wheel == "BAR")) {
-                score = 20;
-            }
-            else if (first_wheel == "BAR") && (second_wheel == "BAR") && (third_wheel == "BAR") {
-                score = 250;
-            }
-            else {
-                score = 0;
+            match columns {
+                (BAR,    BAR,     BAR)     => score = 250,
+                (BELL,   BELL,    BELL)    => score = 20,
+                (PLUM,   PLUM,    PLUM)    => score = 14,
+                (LEMON,  LEMON,   LEMON)   => score = 12,
+                (ORANGE, ORANGE,  ORANGE)  => score = 10,
+                (CHERRY, CHERRY,  CHERRY)  => score = 7,
+                (CHERRY, CHERRY,  _)       => score = 5,
+                (CHERRY, _,       _)       => score = 2,
+                (_,      _,       _)       => score = 0,
             }
             return score;
         }
 
+        fn get_fruit_symbol(number: &i32) -> String {
+            let symbol: &str;
+            match *number {
+                CHERRY  => symbol = "CHERRY",
+                LEMON   => symbol = "LEMON",
+                ORANGE  => symbol = "ORANGE",
+                PLUM    => symbol = "PLUM",
+                BELL    => symbol = "BELL",
+                BAR     => symbol = "BAR",
+                _ => panic! ("Invalid item number: {}!", number)
+            }
+            return String::from(symbol)
+        }
+
     }
+
 }
