@@ -1,8 +1,8 @@
-use scrypto::prelude::*;
 use radix_engine::ledger::*;
+use scrypto::prelude::*;
 use scrypto_unit::*;
 
-fn setup_fixture<'a, L: Ledger>(env: &mut TestEnv<'a, L>) -> (User, User, ResourceDef) {
+fn setup_fixture<'a, L: SubstateStore>(env: &mut TestEnv<'a, L>) -> (User, User, ResourceDef) {
     let _root = env.create_user("root");
     env.acting_as("root");
 
@@ -16,10 +16,10 @@ fn setup_fixture<'a, L: Ledger>(env: &mut TestEnv<'a, L>) -> (User, User, Resour
     // transfer some reserve tokens to them to use in testing
     let receipt = env.transfer_resource(1_000_000.into(), &reserve_def, &owner);
     println!("transfer 100k to owner: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
     env.transfer_resource(1_000_000.into(), &reserve_def, &investor);
     println!("transfer 100k to investor: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // use a publisher to publish the package
     let _pubisher = env.create_user("publisher");
@@ -35,7 +35,7 @@ fn setup_fixture<'a, L: Ledger>(env: &mut TestEnv<'a, L>) -> (User, User, Resour
 
 #[test]
 fn test_1() {
-    let mut ledger = InMemoryLedger::with_bootstrap();
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
     let (owner, investor, reserve_def) = setup_fixture(&mut env);
 
@@ -52,7 +52,7 @@ fn test_1() {
 //        "".to_owned(), // hmm now do I pass 'None'
         ]);
     println!("new_default: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // save off addresses
     // this is brittle checking the defs based on order...
@@ -89,7 +89,7 @@ fn test_1() {
         format!("0"),
     ]);
     println!("buy: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // reserve
     let expected_reserve_in_account: Decimal = Decimal::from(1_000_000) - 300;
@@ -110,7 +110,7 @@ fn test_1() {
         format!("0"),
     ]);
     println!("sell: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
     // check balances
     // reserve
     let expected_reserve_in_account: Decimal = expected_reserve_in_account + 300;
@@ -126,7 +126,7 @@ fn test_1() {
 
 #[test]
 fn test_2_basic_curve() {
-    let mut ledger = InMemoryLedger::with_bootstrap();
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
     let (owner, investor, reserve_def) = setup_fixture(&mut env);
 
@@ -151,7 +151,7 @@ fn test_2_basic_curve() {
         format!("{}", basic_curve.address()),
         ]);
     println!("new_default: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // save off addresses
     // this is brittle checking the defs based on order...
@@ -188,7 +188,7 @@ fn test_2_basic_curve() {
         format!("0"),
     ]);
     println!("buy: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // check balances
     // reserve
@@ -209,7 +209,7 @@ fn test_2_basic_curve() {
         format!("0"),
     ]);
     println!("sell: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // check balances
     // reserve
@@ -226,7 +226,7 @@ fn test_2_basic_curve() {
 
 #[test]
 fn test_3_quotes() {
-    let mut ledger = InMemoryLedger::with_bootstrap();
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
     let (owner, investor, reserve_def) = setup_fixture(&mut env);
 
@@ -251,7 +251,7 @@ fn test_3_quotes() {
         format!("{}", basic_curve.address()),
         ]);
     println!("new_default: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // save off addresses
     // this is brittle checking the defs based on order...
@@ -270,7 +270,7 @@ fn test_3_quotes() {
         format!("300"),
     ]);
     println!("buy_quote: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
     let quote: Decimal = return_of_call_method(&mut receipt, "get_buy_quote_amount");
     assert_eq!(quote, 300.into());
 
@@ -279,7 +279,7 @@ fn test_3_quotes() {
         format!("300"),
     ]);
     println!("sell_quote_amount: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
     let quote: Decimal = return_of_call_method(&mut receipt, "get_sell_quote_amount");
     assert_eq!(quote, 300.into());
 
@@ -288,7 +288,7 @@ fn test_3_quotes() {
         format!("300"),
     ]);
     println!("sell_quote: receipt: {:?}", receipt);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // cant introspect the BucketRef, but at least the tx succeeded
 
