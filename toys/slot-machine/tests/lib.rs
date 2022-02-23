@@ -1,5 +1,4 @@
 use radix_engine::ledger::*;
-use radix_engine::model::*;
 use radix_engine::transaction::*;
 use scrypto::prelude::*;
 
@@ -36,15 +35,7 @@ fn test_slot_machine() {
     let transaction2 = TransactionBuilder::new(&executor)
         .call_method(casino, "free_token", vec![], Some(account))
         .assert_worktop_contains(amount.amount().unwrap(), amount.resource_address())
-        .take_from_worktop(&amount, |builder, bid| {
-            builder
-                .add_instruction(Instruction::CallMethod {
-                    component_address: account,
-                    method: "deposit".to_owned(),
-                    args: vec![scrypto_encode(&bid)],
-                })
-                .0
-        })
+        .call_method_with_all_resources(account, "deposit_batch")
         .build(vec![key])
         .unwrap();
     let receipt2 = executor.run(transaction2).unwrap();
@@ -53,7 +44,6 @@ fn test_slot_machine() {
 
     // Test the `play` method.
     let bet = Decimal::one();
-    let winnigs = fungible_amount(2, vegas_token_ref);
     let transaction3 = TransactionBuilder::new(&executor)
         .call_method(
             casino,
@@ -62,15 +52,7 @@ fn test_slot_machine() {
                 format!("{},{}", bet, vegas_token_ref).to_owned()
             ],
             Some(account))
-        .take_from_worktop(&winnigs, |builder, winnigs| {
-            builder
-                .add_instruction(Instruction::CallMethod {
-                    component_address: account,
-                    method: "deposit".to_owned(),
-                    args: vec![scrypto_encode(&winnigs)],
-                })
-                .0
-        })
+        .call_method_with_all_resources(account, "deposit_batch")
         .build(vec![key])
         .unwrap();
     let receipt3 = executor.run(transaction3).unwrap();
