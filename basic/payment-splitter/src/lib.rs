@@ -154,7 +154,6 @@ blueprint! {
                 let shareholder: ShareHolder = self.shareholder_def.get_non_fungible_data(&nft_id);
                 let xrd_owed_to_shareholder: Decimal = xrd_amount * shareholder.shares / self.total_quantity_of_shares;
 
-                // self.xrd_vaults[nft_id].put(xrd_bucket.take(xrd_owed_to_shareholder));
                 self.xrd_vaults.get_mut(&nft_id).unwrap().put(xrd_bucket.take(xrd_owed_to_shareholder));
             }
 
