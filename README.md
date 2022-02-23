@@ -1,4 +1,4 @@
-# community-scrypto
+# community-scrypto-examples
 A place for the community to upload example Scrypto code.
 
 Please fork from `main`, work out of a sub-directory of your choosing, and then open a PR when ready.  We're happy to accept pull requests of incomplete ideas that are still in progress.
