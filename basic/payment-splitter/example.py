@@ -62,12 +62,11 @@ def main() -> None:
     # Calling the new function on the package to instantiate it
     response: str = os_command('resim', 'call-function', package, 'PaymentSplitter', 'new')
     result: List[str] = re.findall(r'ResourceDef: (\w+)', response)
-    adm, iadm, shb = result
+    adm, shb = result
     component: str = re.findall(r'Component: (\w+)', response)[0]
     print('Instantiated the component:')
     print('\tComponent:', component)
     print('\tAdmin Badge:', adm)
-    print('\tInternal Admin Badge:', iadm)
     print('\tShareholders Badge:', shb)
 
     # Adding all four addresses as shareholders in this contract with a random amount of shares 
