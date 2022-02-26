@@ -214,11 +214,10 @@ blueprint! {
                 
                 let amount = CandyDex::candy_sum(self, candy_amnt, candy_addr, addr_in, dec!(1));
 
-                match self.candy_vaults.get_mut(&candy_addr) {
-                    Some(v) =>  v.put(candy),
-                    None => std::process::abort()                  
-                };
-                
+                let v = self.candy_vaults.get_mut(&candy_addr).unwrap();
+
+                v.put(candy);
+
                 (nmbr,amount)
             }
 
@@ -243,13 +242,11 @@ blueprint! {
                 }           
                 assert!( amnt_in <= amount, "Not enough input amount ");
 
-                let candy_output = match self.candy_vaults.get_mut(&candy_addr) {
-                    Some(v) => {
-                        v.put(candy);
-                        v.take(amount-amnt_in)
-                    }
-                    None => std::process::abort()                  
-                };  
+                let v = self.candy_vaults.get_mut(&candy_addr).unwrap();
+
+                v.put(candy);
+
+                let candy_output: Bucket = v.take(amount-amnt_in);
 
                 candy_output
             }
@@ -422,11 +419,10 @@ blueprint! {
                     std::process::abort()
                 }
             }
-            
-            match self.candy_vaults.get_mut(&candy_addr) {
-                Some(v) =>  v.put(candy),
-                None => std::process::abort()                  
-            };
+
+            let v = self.candy_vaults.get_mut(&candy_addr).unwrap();
+
+            v.put(candy);
                 
             let meta_candy: Bucket = CandyDex::meta_mint(self, amnt, candy_addr);
 
@@ -870,14 +866,12 @@ blueprint! {
             let amount = token_return.amount();
             let nmbr = (amnt_in+amnt_in*self.fee/100)*price_in/price_out;
             
-            if bckt_addr != self.collected_xrd.resource_address() {               
-                token_output = match self.candy_vaults.get_mut(&bckt_addr) {
-                    Some(v) => {
-                        v.put(token_return);
-                        v.take(amount-nmbr)
-                    }
-                    None => std::process::abort()                  
-                };                        
+            if bckt_addr != self.collected_xrd.resource_address() {   
+                let v = self.candy_vaults.get_mut(&bckt_addr).unwrap();
+
+                v.put(token_return);
+
+                token_output = v.take(amount-nmbr);    
             } else { 
                 self.collected_xrd.put(token_return);
                 token_output = self.collected_xrd.take(*&(amount-nmbr)); 
