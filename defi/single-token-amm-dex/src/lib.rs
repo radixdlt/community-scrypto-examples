@@ -75,12 +75,8 @@ blueprint! {
                 
                 let badge_address = meta_badge_res_def.address();               
                 self.badge_map.insert(badge_address.clone(),(entry_fee, meta_amnt, candy_addr));
-                
-                let meta_badge = self.minter_badge.authorize(|auth| {
-                    meta_badge_res_def.mint(1, auth)
-                });
 
-                meta_badge
+                self.minter_badge.authorize(|auth| {meta_badge_res_def.mint(1, auth)})
             }
 
             // Populate a hashmap relating a determinated metaBadge address to a metaCandy amount.
@@ -96,12 +92,10 @@ blueprint! {
                 let entry_fee = a;
                 let candy_addr = c;               
                 
-                let output_bucket: Bucket;
-                
                 if flag == dec!(0) {
                     m_candy_amnt = m_candy_amnt+meta_amount;
                     self.badge_map.insert(meta_badge_addr,(entry_fee,m_candy_amnt,candy_addr));
-                    output_bucket = meta_badge;
+                    meta_badge
                 } else if flag == dec!(1) {
                     assert!( meta_amount <= m_candy_amnt," Let's check passed amount ");
                     m_candy_amnt = m_candy_amnt-meta_amount;
@@ -109,16 +103,14 @@ blueprint! {
                     if m_candy_amnt == dec!(0) {
                         self.badge_map.remove(&meta_badge_addr);
                         CandyDex::badge_burn(self, meta_badge);
-                        output_bucket = Bucket::new(RADIX_TOKEN);
+                        Bucket::new(RADIX_TOKEN)
                     } else { 
                         self.badge_map.insert(meta_badge_addr,(entry_fee,m_candy_amnt,candy_addr));
-                        output_bucket = meta_badge; 
+                        meta_badge 
                     }
                 } else { 
-                    std::process::abort(); 
+                    std::process::abort() 
                 }
-
-                output_bucket
             }
 
             // Create a metaCandy resource relative to a kind of candy provided to protocol by end 
@@ -154,17 +146,14 @@ blueprint! {
             // Mint a metacandy amount relative to an amount of candy provided to protocol and 
             // update total metaCandy minted amount.
             fn meta_mint(&mut self, candy_amnt: Decimal, candy_address: Address) -> Bucket {             
-                let m_candy = self.meta.get_mut(&candy_address).unwrap();
-                let meta_candy = self.minter_badge.authorize(|auth| { 
-                    m_candy.meta_res_def.mint(candy_amnt, auth)
-                });
-
                 match self.meta_map.get_mut(&candy_address.clone()) {
                     Some((_a,minted_amnt,_c)) => *minted_amnt = *minted_amnt+candy_amnt,
                     None => std::process::abort()                  
                 };
+
+                let m_candy = self.meta.get_mut(&candy_address).unwrap();
                
-                meta_candy
+                self.minter_badge.authorize(|auth| {m_candy.meta_res_def.mint(candy_amnt, auth)})
             }
 
             // Burn a metacandy amount relative to amount of candy claimed by end user 
@@ -251,19 +240,17 @@ blueprint! {
 
             // Take buyed candy from candy vault and increment total accrued fee in relative hashmap.
             fn candytake(&mut self, candy_out_nbr: Decimal, candy_out_addr: Address) -> Bucket {
-                let candy_bucket: Bucket = match self.candy_vaults.get_mut(&candy_out_addr) {
-                    Some(vault) => vault.take(candy_out_nbr-(candy_out_nbr*self.fee/100)),
-                    None => { info!("Candy not in stock! ");
-                              std::process::abort()
-                    }
-                };
-
                 match self.meta_map.get_mut(&candy_out_addr.clone()) {
                     Some((amnt_fee,_b,_c)) => *amnt_fee = *amnt_fee+candy_out_nbr*self.fee/100,
                     None => std::process::abort()                  
                 };
-                
-                candy_bucket
+
+                match self.candy_vaults.get_mut(&candy_out_addr) {
+                    Some(vault) => vault.take(candy_out_nbr-(candy_out_nbr*self.fee/100)),
+                    None => { info!("Candy not in stock! ");
+                              std::process::abort()
+                    }
+                }
             }
 
             // Calculate new candy price.
@@ -275,17 +262,12 @@ blueprint! {
                 flag: Decimal
             ) -> Decimal {
                 let total_candy = self.candy_vaults.get(&address).unwrap().amount();
-
-                let candy_amnt = amount;
-                let new_price: Decimal;
-                
+            
                 if flag == dec!(1) { 
-                    new_price = total_candy*price/(total_candy-candy_amnt);
+                    total_candy*price/(total_candy-amount)
                 } else { 
-                    new_price = total_candy*price/(total_candy+candy_amnt);
+                    total_candy*price/(total_candy+amount)
                 }
-
-                new_price
             }
 
             // Calculate candy output amount.
@@ -326,10 +308,7 @@ blueprint! {
 
             // Adjust buying exact candy amount neutralizing protocol fee incidence on final amount.
             fn adjust_fee(&mut self, amount_in: Decimal ) -> Decimal {
-                let hundred = dec!(100);
-                let amount_out = amount_in*hundred/(hundred-self.fee);
-                
-                amount_out
+                amount_in*dec!(100)/(dec!(100)-self.fee)
             }
 
             // Set protocol fee function whom only protocol owner can succesfully call.
@@ -577,9 +556,7 @@ blueprint! {
             let new_price: Decimal = 
                 CandyDex::price_mod(self, xrd_amount/price, candy_addr, price, dec!(0));
             
-            let amount = xrd_amount/new_price;
-            
-            amount
+            xrd_amount/new_price
         }
 
             // Get XRD buy amount. Use with function "buy_xrd_sell_exact_candy" (bxsec)
@@ -593,10 +570,7 @@ blueprint! {
             let new_price: Decimal = 
                 CandyDex::price_mod(self, candy_amnt, candy_addr, price, dec!(0));
             
-            let amount = candy_amnt*new_price;
-            let amount_final = amount-amount*self.fee/100;
-            
-            amount_final
+            (candy_amnt*new_price)-(candy_amnt*new_price)*self.fee/100
         }
 
             // Get candy buy amount. Use with function "buy_candy_sell_exact_xrd" (bcsex)
@@ -610,10 +584,7 @@ blueprint! {
             let new_price: Decimal = 
                 CandyDex::price_mod(self, xrd_amnt/price, candy_addr, price, dec!(1));
             
-            let amount = xrd_amnt/new_price;
-            let amount_final = amount-amount*self.fee/100;
-            
-            amount_final
+            (xrd_amnt/new_price)-(xrd_amnt/new_price)*self.fee/100
         }
             
             // Get XRD sell amount. Use with function "buy_exact_candy_sell_xrd" (becsx)
@@ -629,9 +600,7 @@ blueprint! {
             let new_price: Decimal = 
                 CandyDex::price_mod(self,  candy_amount, candy_addr, price, dec!(1));
             
-            let amount = candy_amount*new_price;
-            
-            amount
+            candy_amount*new_price
         }
 
             // Get candy sell amount. Use with function "buy_exact_candy_sell_candy" (becsc)
@@ -643,9 +612,7 @@ blueprint! {
         ) -> Decimal {
             let amount_in = CandyDex::adjust_fee(self, amnt_in);
             
-            let amount_out = CandyDex::candy_sum(self, amount_in, addr_in, addr_out, 1);
-            
-            amount_out
+            CandyDex::candy_sum(self, amount_in, addr_in, addr_out, 1)
         }
 
             // Get candy buy amount. Use with function "buy_candy_sell_exact_candy"(bcsec)
@@ -659,9 +626,7 @@ blueprint! {
             
             let amount = CandyDex::candy_sum(self, amount_out, addr_out, addr_in, 1);
             
-            let amount_final = amount-amount*self.fee/100;
-            
-            amount_final
+            amount-amount*self.fee/100
         }
 
             // Obtain a minimum candy amount in exchange of an exact XRD amount. 
@@ -679,9 +644,7 @@ blueprint! {
             let amount_in = CandyDex::candy_sum(self, xrd_amnt, addr_in, addr_in, 2);
             assert!( amount_in >= min_in, "Not enough candies output amount");
             
-            let candy_bucket: Bucket = CandyDex::candytake(self, amount_in, addr_in);
-            
-            candy_bucket
+            CandyDex::candytake(self, amount_in, addr_in)
         }
 
             // Obtain a minimum candy amount in exchange of an exact candy amount. 
@@ -700,9 +663,7 @@ blueprint! {
 
             assert!( amount_in >= min_in, "Not enough candies output amount");
             
-            let candy_bucket: Bucket = CandyDex::candytake(self, amount_in, addr_in);
-            
-            candy_bucket
+            CandyDex::candytake(self, amount_in, addr_in)
         }
 
             // Obtain a minimum XRD amount in exchange of an exact candy amount. 
@@ -724,12 +685,10 @@ blueprint! {
             let (nmbr,_amount_in) = 
                 CandyDex::candyput_pri(self, new_price*new_price, new_price, addr, candy_out);
             assert!( nmbr >= xrd_min , "Not enough xrd output amount");
-            
-            let candy_bucket = self.collected_xrd.take(*&(nmbr-nmbr*self.fee/100));
-            
+             
             self.xrd_fee = self.xrd_fee+nmbr*self.fee/100;
-            
-            candy_bucket
+
+            self.collected_xrd.take(*&(nmbr-nmbr*self.fee/100))
         }
 
             // Obtain an exact candy amount in exchange of a maximum XRD amount. 
@@ -749,9 +708,7 @@ blueprint! {
             
             self.collected_xrd.put(xrd_out.take(xrd_amnt));
             
-            let candy_bucket: Bucket = CandyDex::candytake(self, amnt_in, addr_in);
-            
-            (candy_bucket,xrd_out)
+            (CandyDex::candytake(self, amnt_in, addr_in),xrd_out)
         }
 
             // Obtain an exact candy amount in exchange of a maximum candy amount. 
@@ -768,12 +725,10 @@ blueprint! {
             
             let amount_in = CandyDex::adjust_fee(self, amnt_in);
             
-            let candy_output = 
-                CandyDex::candyput_sec( self, amount_in, addr_in, dec!(0), dec!(1), candy_out);
-            
-            let candy_bucket = CandyDex::candytake(self, amount_in, addr_in);
-            
-            (candy_output,candy_bucket)
+            (
+                CandyDex::candyput_sec( self, amount_in, addr_in, dec!(0), dec!(1), candy_out),
+                CandyDex::candytake(self, amount_in, addr_in)
+            )
         }
         
             // Obtain an exact XRD amount in exchange of a maximum candy amount. 
@@ -799,14 +754,12 @@ blueprint! {
                 None => std::process::abort()                  
             };
 
-            let candy_output = 
-                CandyDex::candyput_sec(self, xrd_input, addr, dec!(1), new_price, candy_out);
-            
-            let candy_bucket = self.collected_xrd.take(*&(xrd_input-xrd_input*self.fee/100));
-            
             self.xrd_fee = self.xrd_fee+xrd_input*self.fee/100;
-            
-            (candy_output,candy_bucket)
+
+            (
+                CandyDex::candyput_sec(self, xrd_input, addr, dec!(1), new_price, candy_out),
+                self.collected_xrd.take(*&(xrd_input-xrd_input*self.fee/100))
+            )
         }
 
             // Request a flashswap performing a call to an external Component address.
