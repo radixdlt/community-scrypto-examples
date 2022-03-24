@@ -1,0 +1,3 @@
+CLONE_BUCKET_REF BucketRef(1u32) BucketRef("badge1");
+CALL_METHOD Address("0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a") "withdraw" Decimal("1000000") Address("03ad8ad4fa972bca8ee488458f0c67a1dc95e91ced95e3e0e70634") BucketRef("badge1");
+CALL_METHOD_WITH_ALL_RESOURCES Address("02a2a79aa613da237bcda37fd79af36e09eadd195976092cb24696") "deposit_batch";

@@ -1,0 +1,16 @@
+CLONE_BUCKET_REF BucketRef(1u32) BucketRef("badge1");
+CALL_METHOD Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") "withdraw" Decimal("3000") Address("030000000000000000000000000000000000000000000000000004") BucketRef("badge1");
+
+# Create an Ask limit order for 1000 XRD at a price of 100
+TAKE_FROM_WORKTOP Decimal("1000") Address("030000000000000000000000000000000000000000000000000004") Bucket("bucket1");
+CALL_METHOD Address("02b81699c913b9b5fb1887b498bca59e964f9f38c916faa585da32") "new_limit_order" Bucket("bucket1") Decimal("100");
+
+# Create an Ask limit order for 1000 XRD at a price of 200
+TAKE_FROM_WORKTOP Decimal("1000") Address("030000000000000000000000000000000000000000000000000004") Bucket("bucket2");
+CALL_METHOD Address("02b81699c913b9b5fb1887b498bca59e964f9f38c916faa585da32") "new_limit_order" Bucket("bucket2") Decimal("200");
+
+# Create an Ask limit order for 1000 XRD at a price of 1000
+TAKE_FROM_WORKTOP Decimal("1000") Address("030000000000000000000000000000000000000000000000000004") Bucket("bucket3");
+CALL_METHOD Address("02b81699c913b9b5fb1887b498bca59e964f9f38c916faa585da32") "new_limit_order" Bucket("bucket3") Decimal("1000");
+
+CALL_METHOD_WITH_ALL_RESOURCES Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") "deposit_batch";
