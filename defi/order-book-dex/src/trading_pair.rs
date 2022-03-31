@@ -47,7 +47,7 @@ blueprint! {
                     ),
                 )
                 .flags(MINTABLE | BURNABLE | INDIVIDUAL_METADATA_MUTABLE)
-                .badge(minter.resource_def(), ALL_PERMISSIONS)
+                .badge(minter.resource_def(), MAY_MINT | MAY_BURN | MAY_CHANGE_INDIVIDUAL_METADATA)
                 .no_initial_supply();
 
             Self {
