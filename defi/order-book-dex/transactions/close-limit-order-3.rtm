@@ -1,0 +1,5 @@
+CLONE_BUCKET_REF BucketRef(1u32) BucketRef("badge1");
+CALL_METHOD Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") "withdraw_non_fungibles" TreeSet<NonFungibleKey>(NonFungibleKey("065e65613d8cd6adfe0e342a72356ce7")) Address("0399831190d6da2f44d863596f4fbd8daacb9715575bb640259d8c") BucketRef("badge1");
+TAKE_NON_FUNGIBLES_FROM_WORKTOP TreeSet<NonFungibleKey>(NonFungibleKey("065e65613d8cd6adfe0e342a72356ce7")) Address("0399831190d6da2f44d863596f4fbd8daacb9715575bb640259d8c") Bucket("bucket1");
+CALL_METHOD Address("02b81699c913b9b5fb1887b498bca59e964f9f38c916faa585da32") "close_limit_order" Bucket("bucket1");
+CALL_METHOD_WITH_ALL_RESOURCES Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") "deposit_batch";

@@ -1,0 +1,6 @@
+CLONE_BUCKET_REF BucketRef(1u32) BucketRef("badge1");
+CALL_METHOD Address("02a2a79aa613da237bcda37fd79af36e09eadd195976092cb24696") "withdraw" Decimal("200000") Address("03ad8ad4fa972bca8ee488458f0c67a1dc95e91ced95e3e0e70634") BucketRef("badge1");
+TAKE_FROM_WORKTOP Decimal("200000") Address("03ad8ad4fa972bca8ee488458f0c67a1dc95e91ced95e3e0e70634") Bucket("bucket1");
+CALL_METHOD Address("02b81699c913b9b5fb1887b498bca59e964f9f38c916faa585da32") "new_market_order" Bucket("bucket1");
+ASSERT_WORKTOP_CONTAINS Decimal("800") Address("030000000000000000000000000000000000000000000000000004");
+CALL_METHOD_WITH_ALL_RESOURCES Address("02a2a79aa613da237bcda37fd79af36e09eadd195976092cb24696") "deposit_batch";
