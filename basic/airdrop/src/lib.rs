@@ -26,7 +26,7 @@ blueprint! {
         }
 
         #[auth(admin_badge)]
-        pub fn perform_airdrop(&self, tokens: Bucket) {
+        pub fn perform_airdrop(&self, mut tokens: Bucket) {
             let num_recipients = self.recipients.len();
             assert!(num_recipients > 0, "You must register at least one recipient before performing an airdrop");
 
@@ -36,14 +36,16 @@ blueprint! {
             // Send that amount to all but the last recipients
             for i in 0..(num_recipients - 1) {
                 let address = self.recipients.get(i).unwrap();
-                Account::from(*address).deposit(tokens.take(amount_per_recipient));
+                let bucket_to_send = tokens.take(amount_per_recipient);
+                Component::from(*address).call::<()>("deposit", vec![scrypto_encode(&bucket_to_send)]);
             }
 
             // Send the remaining tokens to the last recipient.
             // This should be almost exactly the calculated amount except for rounding errors. This way we can be sure
             // not to loose any tokens.
             let last_address = self.recipients.get(num_recipients-1).unwrap();
-            Account::from(*last_address).deposit(tokens);
+
+            Component::from(*last_address).call::<()>("deposit", vec![scrypto_encode(&tokens)]);
         }
     }
 }
