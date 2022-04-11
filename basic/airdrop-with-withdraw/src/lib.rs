@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 pub struct AirdropWithWithdrawData {
     amount: Decimal,
     token_type : Address, 
@@ -57,7 +57,7 @@ blueprint! {
 
             let recipient_badge_id = Uuid::generate();
             let recipient_badge = self.minter_badge_vault.authorize(|auth|
-                return self.recipient_badge_def.mint_nft(recipient_badge_id , 
+                return self.recipient_badge_def.mint_non_fungible(&NonFungibleKey::from(recipient_badge_id) , 
                                                          AirdropWithWithdrawData {  
                                                                                     amount : tokens.amount() , 
                                                                                     token_type : tokens.resource_address(),
@@ -66,16 +66,16 @@ blueprint! {
                                                          auth)
             );
             self.tokens.put(tokens);
-            Account::from(recipient).deposit(recipient_badge);
 
+            Component::from(recipient).call::<()>("deposit", vec![scrypto_encode(&recipient_badge)]);
         }
         
 
         #[auth(recipient_badge_def)]
         pub fn available_token(& self) -> Decimal
         {
-            let recipient_badge_id  = auth.get_nft_id();  
-            let  nft_data : AirdropWithWithdrawData = self.recipient_badge_def.get_nft_data(recipient_badge_id);
+            let recipient_badge_id  = auth.get_non_fungible_key();  
+            let  nft_data : AirdropWithWithdrawData = self.recipient_badge_def.get_non_fungible_data(&recipient_badge_id);
             let mut result : Decimal = Decimal::zero();
             if !nft_data.is_collected {
                 result = nft_data.amount; 
@@ -87,13 +87,13 @@ blueprint! {
         #[auth(recipient_badge_def)]
         pub fn withdraw_token(&mut self) -> Bucket
         {  
-            let recipient_badge_id  = auth.get_nft_id();  
-            let mut nft_data : AirdropWithWithdrawData = self.recipient_badge_def.get_nft_data(recipient_badge_id);
+            let recipient_badge_id  = auth.get_non_fungible_key();  
+            let mut nft_data : AirdropWithWithdrawData = self.recipient_badge_def.get_non_fungible_data(&recipient_badge_id);
             assert!(!nft_data.is_collected, "withdraw already done"); 
             nft_data.is_collected = true; 
             let amount = nft_data.amount; 
             self.minter_badge_vault.authorize({
-                |auth| self.recipient_badge_def.update_nft_data(recipient_badge_id, nft_data, auth)
+                |auth| self.recipient_badge_def.update_non_fungible_data(&recipient_badge_id, nft_data, auth)
             });
             info!("withdraw_token : {}", amount);
             return self.tokens.take(amount);
