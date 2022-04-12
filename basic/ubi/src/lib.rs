@@ -3,7 +3,7 @@ use sbor::*;
 use std::cmp;
 
 // Metadata associated with the badge that is assigned to a registered account.
-#[derive(TypeId, Decode, Encode, Describe, NftData)]
+#[derive(TypeId, Decode, Encode, Describe, NonFungibleData)]
 struct UbiStatus {
     #[scrypto(mutable)]
     expiration_epoch: u64,
@@ -74,35 +74,41 @@ blueprint! {
             // Create a badge for the person that will start minting this epoch.
             let new_expiration_epoch = Context::current_epoch() + self.epochs_until_expiration;
             let nft_id = Uuid::generate();
+            let non_fungible_key = NonFungibleKey::from(nft_id);
             let status = UbiStatus{expiration_epoch: new_expiration_epoch, last_mint_epoch: Context::current_epoch()};
             let person_badge = self.super_badge.authorize({
-                |auth| self.person_badge.mint_nft(nft_id, status, auth)
+                |auth| self.person_badge.mint_non_fungible(&non_fungible_key, status, auth)
             });
 
             // Send the badge to the account.
-            Account::from(person).deposit(person_badge);
+            Component::from(person).call::<()>("deposit", vec![scrypto_encode(&person_badge)]);
             info!("register: created badge for {}, nft id: {}", person, nft_id);
         }
 
         #[auth(admin_badge)]
         pub fn update_expiration(&mut self, nft_id: u128) {
+            // Converting the u128 nft_id to a NonFungibleKey
+            let non_fungible_key = NonFungibleKey::from(nft_id);
 
             // Find the status data for the person.
-            let mut status : UbiStatus = self.person_badge.get_nft_data(nft_id);
+            let mut status : UbiStatus = self.person_badge.get_non_fungible_data(&non_fungible_key);
 
             // Update the expiration epoch in their badge.
             let new_expiration_epoch = Context::current_epoch() + self.epochs_until_expiration;
             status.expiration_epoch = new_expiration_epoch;
             self.super_badge.authorize(
-                |auth| self.person_badge.update_nft_data(nft_id, status, auth)
+                |auth| self.person_badge.update_non_fungible_data(&non_fungible_key, status, auth)
             );
             info!("update_expiration: updated expiration for nft id: {}", nft_id);
         }
 
-        pub fn available_tokens(&mut self, nft_id: u128) -> u64 {
+        #[auth(person_badge)]
+        pub fn available_tokens(&mut self) -> u64 {
+            // Converting the u128 nft_id to a NonFungibleKey
+            let non_fungible_key = auth.get_non_fungible_key();
 
             // Find the status data for the person.
-            let status : UbiStatus = self.person_badge.get_nft_data(nft_id);
+            let status : UbiStatus = self.person_badge.get_non_fungible_data(&non_fungible_key);
 
             // Compute the available tokens based on the expiration epoch and the current epoch.
             let available = (cmp::min(status.expiration_epoch, Context::current_epoch())) - status.last_mint_epoch;
@@ -112,10 +118,10 @@ blueprint! {
 
         #[auth(person_badge)]
         pub fn collect_ubi(&mut self) -> Bucket {
-
             // Find the status data for the caller.
-            let nft_id = auth.get_nft_id();
-            let mut status : UbiStatus = self.person_badge.get_nft_data(nft_id);
+            let nft_id = auth.get_non_fungible_key();
+            let non_fungible_key = NonFungibleKey::from(nft_id);
+            let mut status : UbiStatus = self.person_badge.get_non_fungible_data(&non_fungible_key);
 
             // Mint the UBI tokens to give to the caller.
             let new_ubi = (cmp::min(status.expiration_epoch, Context::current_epoch())) - status.last_mint_epoch;
@@ -126,22 +132,22 @@ blueprint! {
             // Record the epoch of this UBI collection in the status data.
             status.last_mint_epoch = Context::current_epoch();
             self.super_badge.authorize({
-                |auth| self.person_badge.update_nft_data(nft_id, status, auth)
+                |auth| self.person_badge.update_non_fungible_data(&non_fungible_key, status, auth)
             });
             info!("collect_ubi: {}", new_tokens.amount());
             new_tokens
         }
 
         // TODO: Once RECALLABLE is implemented, disable transfer and force burning with updated version of this.
-        pub fn send_tokens(&mut self, to: Address, tokens: Bucket) {
+        pub fn send_tokens(&mut self, to: Address, mut tokens: Bucket) {
 
             // Burn 20% of the tokens being transfered.
-            let to_burn = (tokens.amount() * 20) / 100;
+            let to_burn = (tokens.amount() * dec!("20")) / dec!("100");
             tokens.take(to_burn).burn();
 
             // Deposit the remaining tokens in the recipient's account.
             info!("send_tokens: {} sent, burnt: {}", tokens.amount(), to_burn);
-            Account::from(to).deposit(tokens);
+            Component::from(to).call::<()>("deposit", vec![scrypto_encode(&tokens)]);
         }
     }
 }
