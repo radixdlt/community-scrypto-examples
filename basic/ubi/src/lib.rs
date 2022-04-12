@@ -50,7 +50,7 @@ blueprint! {
                 .metadata("name", "UBI Token")
                 .metadata("description", "One token per epoch per person, 20% burn for each transaction.")
                 .metadata("symbol", "UBI")
-                .flags(MINTABLE | FREELY_BURNABLE)
+                .flags(MINTABLE | BURNABLE | FREELY_BURNABLE)
                 .badge(super_badge.resource_address(), MAY_MINT | MAY_TRANSFER)
                 .no_initial_supply();
             info!("new: ubi token address: {}", ubi_token.address());
@@ -141,8 +141,10 @@ blueprint! {
         // TODO: Once RECALLABLE is implemented, disable transfer and force burning with updated version of this.
         pub fn send_tokens(&mut self, to: Address, mut tokens: Bucket) {
 
-            // Burn 20% of the tokens being transfered.
+            // Burn 20% of the tokens being transferred.
             let to_burn = (tokens.amount() * dec!("20")) / dec!("100");
+            info!("UBI Token RA: {}", self.ubi_token.address());
+            info!("Sent Token RA: {}", tokens.resource_address());
             tokens.take(to_burn).burn();
 
             // Deposit the remaining tokens in the recipient's account.
