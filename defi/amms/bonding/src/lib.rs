@@ -1,4 +1,4 @@
-//! srypto-bonding: A Scrypto package for creating and using bonding curves as an automated market maker on Radix
+//! scrypto-bonding: A Scrypto package for creating and using bonding curves as an automated market maker on Radix
 //!
 //! The main blueprint to interact with is `BondingAMM`.  It has buy/sell functionality against a single
 //! bonding curve defined by a plugable second component.  It will instantiate a component from the `RatioBondingCurve`
@@ -66,23 +66,43 @@ blueprint! {
 
     impl BondingAMM {
         // Convenient Constructor with default curve - also makes it easy to call from integratino tests -- passing the bonding_curve = None is not possible: FailedToBuildArgs(UnsupportedType(3, Option { value: Custom { name: "scrypto::core::Component", generics: [] } }))
-        pub fn new_default(initial_reserve: BucketOf<RESERVE>, continuous_name: String, continuous_symbol: String) -> (Component, BucketOf<CONTINUOUS>) {
+        pub fn new_default(
+            initial_reserve: BucketOf<RESERVE>,
+            continuous_name: String,
+            continuous_symbol: String,
+        ) -> (Component, BucketOf<CONTINUOUS>) {
             BondingAMM::new(initial_reserve, continuous_name, continuous_symbol, None)
         }
 
         // Convenient Constructor with specified curve - also makes it easy to call from integratino tests -- passing the bonding_curve = None is not possible: FailedToBuildArgs(UnsupportedType(3, Option { value: Custom { name: "scrypto::core::Component", generics: [] } }))
-        pub fn new_with_curve(initial_reserve: BucketOf<RESERVE>, continuous_name: String, continuous_symbol: String, bonding_curve: Address) -> (Component, BucketOf<CONTINUOUS>) {
-            BondingAMM::new(initial_reserve, continuous_name, continuous_symbol, Some(bonding_curve.into()))
+        pub fn new_with_curve(
+            initial_reserve: BucketOf<RESERVE>,
+            continuous_name: String,
+            continuous_symbol: String,
+            bonding_curve: Address,
+        ) -> (Component, BucketOf<CONTINUOUS>) {
+            BondingAMM::new(
+                initial_reserve,
+                continuous_name,
+                continuous_symbol,
+                Some(bonding_curve.into()),
+            )
         }
 
         // Main constructor easily called from other blueprints
-        pub fn new(initial_reserve: BucketOf<RESERVE>, continuous_name: String, continuous_symbol: String, bonding_curve: Option<Component>) -> (Component, BucketOf<CONTINUOUS>) {
+        pub fn new(
+            initial_reserve: BucketOf<RESERVE>,
+            continuous_name: String,
+            continuous_symbol: String,
+            bonding_curve: Option<Component>,
+        ) -> (Component, BucketOf<CONTINUOUS>) {
             // initial_reserve cannot be empty
             assert!(!initial_reserve.is_empty());
 
             // get the curve Component for the math, or create a default_curve with ratio 1:5 and 384 bit precision (which is plenty for the 1e-18 precision of a Decimal)
             // the 384 bit precision is not needed and ignored when built with feature=use_rationals
-            let bonding_curve = bonding_curve.unwrap_or_else(|| default_curve::RatioBondingCurve::new(1, 5, 384));
+            let bonding_curve =
+                bonding_curve.unwrap_or_else(|| default_curve::RatioBondingCurve::new(1, 5, 384));
 
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = bonding_curve.clone().into();
@@ -91,21 +111,23 @@ blueprint! {
             let initial_supply = curve.get_initial_supply(initial_reserve.amount());
 
             // setup auth/badges
-            let continuous_auth: BucketOf<AUTH> = ResourceBuilder::new_fungible(DIVISIBILITY_NONE).initial_supply_fungible(1).into(); // only this Component can mint/burn CONTINUOUS.  No failsafe for better or worse
+            let continuous_auth: BucketOf<AUTH> = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                .initial_supply_fungible(1)
+                .into(); // only this Component can mint/burn CONTINUOUS.  No failsafe for better or worse
 
             // setup continuous resource
-            let mut continuous_def: ResourceOf<CONTINUOUS> = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
-                .metadata("name", continuous_name)
-                .metadata("symbol", continuous_symbol)
-                .flags(MINTABLE | BURNABLE)
-                .badge(continuous_auth.resource_address(), MAY_MINT | MAY_BURN)
-                .no_initial_supply()
-                .into();
+            let mut continuous_def: ResourceOf<CONTINUOUS> =
+                ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+                    .metadata("name", continuous_name)
+                    .metadata("symbol", continuous_symbol)
+                    .flags(MINTABLE | BURNABLE)
+                    .badge(continuous_auth.resource_address(), MAY_MINT | MAY_BURN)
+                    .no_initial_supply()
+                    .into();
 
             // mint the initial supply
-            let mut continuous: BucketOf<CONTINUOUS> = continuous_auth.authorize(|minter|
-                continuous_def.mint(initial_supply, minter).into()
-            );
+            let mut continuous: BucketOf<CONTINUOUS> = continuous_auth
+                .authorize(|minter| continuous_def.mint(initial_supply, minter).into());
 
             // store and instantiate
             let component = Self {
@@ -113,22 +135,27 @@ blueprint! {
                 continuous: VaultOf::with_bucket(continuous.take(0)),
                 continuous_auth: VaultOf::with_bucket(continuous_auth),
                 bonding_curve,
-            }.instantiate();
+            }
+            .instantiate();
 
             (component, continuous)
         }
 
-        pub fn buy(&mut self, collateral: BucketOf<RESERVE>, minimum_to_receive: Decimal) -> (BucketOf<CONTINUOUS>, BucketOf<RESERVE>) {
+        pub fn buy(
+            &mut self,
+            collateral: BucketOf<RESERVE>,
+            minimum_to_receive: Decimal,
+        ) -> (BucketOf<CONTINUOUS>, BucketOf<RESERVE>) {
             // mint the right amount of CONTINOUS and return it
             assert!(!minimum_to_receive.is_negative());
 
             debug!("buy  with RESERVE    amount: {}", collateral.amount());
 
-            if collateral.is_empty() { // fast path, don't panic to allow better composability within a single transaction
+            if collateral.is_empty() {
+                // fast path, don't panic to allow better composability within a single transaction
                 debug!("returning CONTINOUS amount: {}", 0);
                 debug!("returning RESERVE amount: {}", collateral.amount());
-                return (self.continuous.take(0),
-                        collateral);
+                return (self.continuous.take(0), collateral);
             }
 
             // calculate the amount to mint
@@ -136,69 +163,76 @@ blueprint! {
 
             debug!("will mint CONTINOUS amount: {}", mint_amount);
 
-            if mint_amount.is_zero() || mint_amount < minimum_to_receive { // not enough for even a little CONTINUOUS
+            if mint_amount.is_zero() || mint_amount < minimum_to_receive {
+                // not enough for even a little CONTINUOUS
                 // return empty bucket of CONTINUOUS and the sent in RESERVE instead of failing the tx incase other instructions want to do something else with the RESERVE
                 debug!("returning CONTINOUS amount: {}", mint_amount);
                 debug!("returning RESERVE amount: {}", collateral.amount());
-                return (self.continuous.take(0),
-                        collateral);
+                return (self.continuous.take(0), collateral);
             }
 
             // keep the collateral
             self.reserve.put(collateral);
 
             // mint for return
-            let continuous: BucketOf<CONTINUOUS> = self.continuous_auth.authorize(|minter|
-                self.continuous.resource_def().mint(mint_amount, minter).into()
-            );
+            let continuous: BucketOf<CONTINUOUS> = self.continuous_auth.authorize(|minter| {
+                self.continuous
+                    .resource_def()
+                    .mint(mint_amount, minter)
+                    .into()
+            });
 
             debug!("returning CONTINOUS amount: {}", continuous.amount());
             debug!("returning RESERVE amount: {}", 0);
 
             // return the minted CONTINUOUS and empty RESERVE bucket
-            (continuous,
-             self.reserve.take(0))
+            (continuous, self.reserve.take(0))
         }
 
-        pub fn sell(&mut self, continuous: BucketOf<CONTINUOUS>, minimum_to_receive: Decimal) -> (BucketOf<RESERVE>, BucketOf<CONTINUOUS>) {
+        pub fn sell(
+            &mut self,
+            continuous: BucketOf<CONTINUOUS>,
+            minimum_to_receive: Decimal,
+        ) -> (BucketOf<RESERVE>, BucketOf<CONTINUOUS>) {
             // burn the CONTINUOUS and return the right amount of RESERVE
             assert!(!minimum_to_receive.is_negative());
 
             debug!("sell with CONTINUOUS amount: {}", continuous.amount());
 
-            if continuous.is_empty() { // fast path, don't panic to allow better composability within a single transaction
+            if continuous.is_empty() {
+                // fast path, don't panic to allow better composability within a single transaction
                 debug!("returning RESERVE    amount: {}", 0);
                 debug!("returning CONTINUOUS amount: {}", continuous.amount());
-                return (self.reserve.take(0),
-                        continuous);
+                return (self.reserve.take(0), continuous);
             }
             // calculate the amount to return
             let return_amount = self.get_sell_quote_amount(continuous.amount());
 
             debug!("will return RESERVE amount: {}", return_amount);
 
-            if return_amount.is_zero() || return_amount < minimum_to_receive { // not enough for even a little RESERVE
+            if return_amount.is_zero() || return_amount < minimum_to_receive {
+                // not enough for even a little RESERVE
                 // return empty bucket of RESERVE and the sent in CONTINUOUS instead of failing the tx incase other instructions want to do something else with the RESERVE
                 debug!("returning RESERVE amount: {}", 0);
                 debug!("returning CONTINOUS amount: {}", continuous.amount());
-                return (self.reserve.take(0),
-                        continuous);
+                return (self.reserve.take(0), continuous);
             }
 
             // burn the CONTINUOUS
-            self.continuous_auth.authorize(|burner|
-                continuous.burn_with_auth(burner)
-            );
+            self.continuous_auth
+                .authorize(|burner| continuous.burn_with_auth(burner));
 
             // return from reserve vault, and empty CONTINUOUS bucket
-            (self.reserve.take(return_amount),
-             self.continuous.take(0))
+            (self.reserve.take(return_amount), self.continuous.take(0))
         }
 
         pub fn get_price(&self) -> Decimal {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
-            curve.get_price(self.reserve.amount(), self.continuous.resource_def().total_supply())
+            curve.get_price(
+                self.reserve.amount(),
+                self.continuous.resource_def().total_supply(),
+            )
         }
 
         pub fn get_sell_quote(&mut self, continuous_amount: Decimal) -> BucketRefOf<RESERVE> {
@@ -208,7 +242,11 @@ blueprint! {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
             // calculate the amount that would be returned
-            let return_amount = curve.get_return_amount(continuous_amount, self.reserve.amount(), self.continuous.resource_def().total_supply());
+            let return_amount = curve.get_return_amount(
+                continuous_amount,
+                self.reserve.amount(),
+                self.continuous.resource_def().total_supply(),
+            );
             // return a placeholder for the amount as proof we have it in reserve
             let bucket = self.reserve.take(return_amount);
             bucket.present() // return proof of amount, but don't give it away
@@ -218,7 +256,11 @@ blueprint! {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
             // calculate amount that would be minted
-            curve.get_mint_amount(collateral_amount, self.reserve.amount(), self.continuous.resource_def().total_supply())
+            curve.get_mint_amount(
+                collateral_amount,
+                self.reserve.amount(),
+                self.continuous.resource_def().total_supply(),
+            )
         }
 
         pub fn get_sell_quote_amount(&self, continuous_amount: Decimal) -> Decimal {
@@ -227,8 +269,11 @@ blueprint! {
             // use the generated stubs for calling methods on the Component (kind of like a virtual call aka dynamic dispatch, but it happens via the kernel)
             let curve: crate::bonding_curve::BondingCurve = self.bonding_curve.clone().into();
             // calculate the amount that would be returned
-            curve.get_return_amount(continuous_amount, self.reserve.amount(), self.continuous.resource_def().total_supply())
+            curve.get_return_amount(
+                continuous_amount,
+                self.reserve.amount(),
+                self.continuous.resource_def().total_supply(),
+            )
         }
-
     }
 }
