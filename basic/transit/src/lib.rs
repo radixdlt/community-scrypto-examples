@@ -89,7 +89,7 @@ blueprint! {
         }
 
         /// Accounts can buy tickets with dollars and euros
-        pub fn buy_ticket(&self, payment: Bucket) -> (Bucket, Bucket) {
+        pub fn buy_ticket(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {
 
             let dollars = payment.resource_address() == self.collected_dollars.resource_address();
             let euros = payment.resource_address() == self.collected_euros.resource_address();
@@ -132,16 +132,7 @@ blueprint! {
                 payment.burn_with_auth(badge);
             });
 
-            // Keep track of riders public key/epoch
-            if self.riders.get(&Context::transaction_signers()) == None {
-                info!("Hi, this is your first ride on a transit, have fun!");
-                self.riders.insert(Context::transaction_signers(),Context::current_epoch());
-            } else if self.riders.get(&Context::transaction_signers()).unwrap() == Context::current_epoch() {
-                info!("Hi, you have already used the transit more than once during epoch: {}", Context::current_epoch())
-            } else {
-                info!("Hi, welcome back, you have not used the transit during epoch: {}", Context::current_epoch());
-                self.riders.insert(Context::transaction_signers(),Context::current_epoch());
-            }
+            info!("Welcome to the transit, have fun!")
         }
     }
 }
