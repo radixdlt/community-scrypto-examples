@@ -45,12 +45,16 @@ fn test_1() {
     let user = owner;
 
     //pub fn new(initial_reserve: BucketOf<RESERVE>, continuous_name: String, continuous_symbol: String, bonding_curve: Option<Component>) -> Component {
-    let mut receipt = env.call_function(BLUEPRINT, "new_default", vec![
-        format!("60000,{}", reserve_def.address()),
-        "Continuous".to_owned(),
-        "XC".to_owned(),
-//        "".to_owned(), // hmm now do I pass 'None'
-        ]);
+    let mut receipt = env.call_function(
+        BLUEPRINT,
+        "new_default",
+        vec![
+            format!("60000,{}", reserve_def.address()),
+            "Continuous".to_owned(),
+            "XC".to_owned(),
+            //        "".to_owned(), // hmm now do I pass 'None'
+        ],
+    );
     println!("new_default: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
 
@@ -61,8 +65,11 @@ fn test_1() {
 
     // reserve check
     let expected_reserve_in_account: Decimal = (1_000_000i128 - 60000i128).into();
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
-    println!("expected reserve after new: {}", expected_reserve_in_account);
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
+    println!(
+        "expected reserve after new: {}",
+        expected_reserve_in_account
+    );
     println!("actual reserve after new: {}", reserve_in_account);
     assert_eq!(reserve_in_account, expected_reserve_in_account);
 
@@ -71,7 +78,7 @@ fn test_1() {
     let continuous_in_account = env.get_amount_for_rd(user.account, continuous_addr);
     assert_eq!(continuous_in_account, expected_continuous_in_account);
 
-    // don't do this ... 
+    // don't do this ...
     // let component = receipt.component(0).unwrap();
     // since it is not the returned Component but just the one that is created first.
 
@@ -84,17 +91,21 @@ fn test_1() {
     let user = investor;
 
     // call buy w/ 300 reserve (just like in test_1) with no (0) minimum expected back
-    let receipt = env.call_method(&amm.address(), "buy", vec![
-        format!("300,{}", reserve_def.address()),
-        format!("0"),
-    ]);
+    let receipt = env.call_method(
+        &amm.address(),
+        "buy",
+        vec![format!("300,{}", reserve_def.address()), format!("0")],
+    );
     println!("buy: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
 
     // reserve
     let expected_reserve_in_account: Decimal = Decimal::from(1_000_000) - 300;
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
-    println!("expected reserve after buy: {}", expected_reserve_in_account);
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
+    println!(
+        "expected reserve after buy: {}",
+        expected_reserve_in_account
+    );
     println!("actual   reserve after buy: {}", reserve_in_account);
     assert_eq!(reserve_in_account, expected_reserve_in_account);
     // continuous
@@ -105,17 +116,24 @@ fn test_1() {
     // now sell it back
 
     // call sell w/ same 299... received with no minimum back
-    let receipt = env.call_method(&amm.address(), "sell", vec![
-        format!("299.401793723844635041,{}", continuous_addr),
-        format!("0"),
-    ]);
+    let receipt = env.call_method(
+        &amm.address(),
+        "sell",
+        vec![
+            format!("299.401793723844635041,{}", continuous_addr),
+            format!("0"),
+        ],
+    );
     println!("sell: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
     // check balances
     // reserve
     let expected_reserve_in_account: Decimal = expected_reserve_in_account + 300;
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
-    println!("expected reserve after sell: {}", expected_reserve_in_account);
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
+    println!(
+        "expected reserve after sell: {}",
+        expected_reserve_in_account
+    );
     println!("actual   reserve after sell: {}", reserve_in_account);
     assert_eq!(reserve_in_account, expected_reserve_in_account);
     // continuous
@@ -144,12 +162,16 @@ fn test_2_basic_curve() {
     let basic_curve = ret;
 
     // instantiate amm with basic curve
-    let mut receipt = env.call_function(BLUEPRINT, "new_with_curve", vec![
-        format!("60000,{}", reserve_def.address()),
-        "Continuous".to_owned(),
-        "XC".to_owned(),
-        format!("{}", basic_curve.address()),
-        ]);
+    let mut receipt = env.call_function(
+        BLUEPRINT,
+        "new_with_curve",
+        vec![
+            format!("60000,{}", reserve_def.address()),
+            "Continuous".to_owned(),
+            "XC".to_owned(),
+            format!("{}", basic_curve.address()),
+        ],
+    );
     println!("new_default: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
 
@@ -160,8 +182,11 @@ fn test_2_basic_curve() {
 
     // reserve check
     let expected_reserve_in_account: Decimal = (1_000_000i128 - 60000i128).into();
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
-    println!("expected reserve after new: {}", expected_reserve_in_account);
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
+    println!(
+        "expected reserve after new: {}",
+        expected_reserve_in_account
+    );
     println!("actual reserve after new: {}", reserve_in_account);
     assert_eq!(reserve_in_account, expected_reserve_in_account);
 
@@ -170,7 +195,7 @@ fn test_2_basic_curve() {
     let continuous_in_account = env.get_amount_for_rd(user.account, continuous_addr);
     assert_eq!(continuous_in_account, expected_continuous_in_account);
 
-    // don't do this ... 
+    // don't do this ...
     // let component = receipt.component(0).unwrap();
     // since it is not the returned Component but just the one that is created first.
 
@@ -183,18 +208,22 @@ fn test_2_basic_curve() {
     let user = investor;
 
     // call buy w/ 300 reserve (just like in test_1) with no (0) minimum expected back
-    let receipt = env.call_method(&amm.address(), "buy", vec![
-        format!("300,{}", reserve_def.address()),
-        format!("0"),
-    ]);
+    let receipt = env.call_method(
+        &amm.address(),
+        "buy",
+        vec![format!("300,{}", reserve_def.address()), format!("0")],
+    );
     println!("buy: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
 
     // check balances
     // reserve
     let expected_reserve_in_account: Decimal = (1_000_000i128 - 300i128).into();
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
-    println!("expected reserve after buy: {}", expected_reserve_in_account);
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
+    println!(
+        "expected reserve after buy: {}",
+        expected_reserve_in_account
+    );
     println!("actual   reserve after buy: {}", reserve_in_account);
     assert_eq!(reserve_in_account, expected_reserve_in_account);
     // continuous
@@ -204,18 +233,22 @@ fn test_2_basic_curve() {
 
     // now sell it back
 
-    let receipt = env.call_method(&amm.address(), "sell", vec![
-        format!("300,{}", continuous_addr),
-        format!("0"),
-    ]);
+    let receipt = env.call_method(
+        &amm.address(),
+        "sell",
+        vec![format!("300,{}", continuous_addr), format!("0")],
+    );
     println!("sell: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
 
     // check balances
     // reserve
     let expected_reserve_in_account: Decimal = expected_reserve_in_account + 300;
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
-    println!("expected reserve after sell: {}", expected_reserve_in_account);
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
+    println!(
+        "expected reserve after sell: {}",
+        expected_reserve_in_account
+    );
     println!("actual   reserve after sell: {}", reserve_in_account);
     assert_eq!(reserve_in_account, expected_reserve_in_account);
     // continuous
@@ -244,12 +277,16 @@ fn test_3_quotes() {
     let basic_curve = ret;
 
     // instantiate amm with basic curve
-    let mut receipt = env.call_function(BLUEPRINT, "new_with_curve", vec![
-        format!("60000,{}", reserve_def.address()),
-        "Continuous".to_owned(),
-        "XC".to_owned(),
-        format!("{}", basic_curve.address()),
-        ]);
+    let mut receipt = env.call_function(
+        BLUEPRINT,
+        "new_with_curve",
+        vec![
+            format!("60000,{}", reserve_def.address()),
+            "Continuous".to_owned(),
+            "XC".to_owned(),
+            format!("{}", basic_curve.address()),
+        ],
+    );
     println!("new_default: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
 
@@ -266,18 +303,18 @@ fn test_3_quotes() {
     let user = investor;
 
     // now try to get a buy quote amount and see if it's right
-    let mut receipt = env.call_method(&amm.address(), "get_buy_quote_amount", vec![
-        format!("300"),
-    ]);
+    let mut receipt = env.call_method(&amm.address(), "get_buy_quote_amount", vec![format!("300")]);
     println!("buy_quote: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
     let quote: Decimal = return_of_call_method(&mut receipt, "get_buy_quote_amount");
     assert_eq!(quote, 300.into());
 
     // now try to get a sell quote amount and see if it's right
-    let mut receipt = env.call_method(&amm.address(), "get_sell_quote_amount", vec![
-        format!("300"),
-    ]);
+    let mut receipt = env.call_method(
+        &amm.address(),
+        "get_sell_quote_amount",
+        vec![format!("300")],
+    );
     println!("sell_quote_amount: receipt: {:?}", receipt);
     assert!(receipt.result.is_ok());
     let quote: Decimal = return_of_call_method(&mut receipt, "get_sell_quote_amount");
@@ -300,6 +337,6 @@ fn test_3_quotes() {
 
     // verify we didn't somehow actually get any RESERVE back from the BucketRef stuff
     let expected_reserve_in_account: Decimal = 1_000_000.into();
-    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());  
+    let reserve_in_account = env.get_amount_for_rd(user.account, reserve_def.address());
     assert_eq!(reserve_in_account, expected_reserve_in_account);
 }

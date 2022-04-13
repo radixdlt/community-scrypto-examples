@@ -1,5 +1,5 @@
-use scrypto::prelude::{Decimal};
 use num_traits::{Signed, Zero};
+use scrypto::prelude::Decimal;
 
 #[cfg(not(feature = "use_rationals"))]
 mod details {
@@ -30,7 +30,6 @@ mod details {
     pub fn pow_nd(base: &Number, n: u32, d: u32) -> Number {
         base.pow(n).nth_root(d)
     }
-
 }
 
 #[cfg(feature = "use_rationals")]
@@ -59,15 +58,13 @@ mod details {
         // let's use 1e-10 ** x for both numerator and denominator
         // experimentally checked
         let multiple: num_bigint::BigInt = 1_000_000_000_000_000_000u128.into();
-        let multiple = multiple.pow(d+2); // extra bits 60 * (d + 2) enough precision
+        let multiple = multiple.pow(d + 2); // extra bits 60 * (d + 2) enough precision
         let numer = r.numer() * &multiple;
         let denom = r.denom() * multiple;
         let numer_root = numer.nth_root(d);
         let denom_root = denom.nth_root(d);
         BigRational::new(numer_root, denom_root)
     }
-
-
 }
 
 pub use details::Number;
@@ -85,11 +82,7 @@ pub fn decimal_from_number(b: Number, precision_bits: u16) -> Option<Decimal> {
     let non_padded_len = bytes.len();
     let padding = (16 - non_padded_len % 16) % 16;
     if padding > 0 {
-        let pad_byte = if b.is_negative() {
-            0xFF
-        } else {
-            0x00
-        };
+        let pad_byte = if b.is_negative() { 0xFF } else { 0x00 };
         bytes.resize(non_padded_len + padding, pad_byte);
     }
     Decimal::try_from(&bytes[..16]).ok()
@@ -105,7 +98,13 @@ pub fn number_from_decimal(d: Decimal, precision_bits: u16) -> Number {
     details::bigint_to_number(b, precision_bits)
 }
 
-pub fn scaled_power(scale: &Number, base_n: &Number, base_d: &Number, exp_n: u32, exp_d: u32) -> Number {
+pub fn scaled_power(
+    scale: &Number,
+    base_n: &Number,
+    base_d: &Number,
+    exp_n: u32,
+    exp_d: u32,
+) -> Number {
     let n = details::pow_nd(base_n, exp_n, exp_d);
     let d = details::pow_nd(base_d, exp_n, exp_d);
 
@@ -115,11 +114,11 @@ pub fn scaled_power(scale: &Number, base_n: &Number, base_d: &Number, exp_n: u32
 
 #[cfg(test)]
 mod test {
-    use scrypto::prelude::*;
-    use super::*;
-    use super::details::bigint_to_number;
     use super::details::bigint_from_number;
-    use num_traits::{ToPrimitive};
+    use super::details::bigint_to_number;
+    use super::*;
+    use num_traits::ToPrimitive;
+    use scrypto::prelude::*;
 
     #[test]
     fn test_decimal_from_bigint() {
@@ -147,5 +146,4 @@ mod test {
         let b = bigint_from_number(b, precision_bits);
         assert_eq!(b.to_i128().unwrap(), i);
     }
-
 }
