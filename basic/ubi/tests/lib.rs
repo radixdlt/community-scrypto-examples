@@ -106,7 +106,7 @@ struct TestEnv<'a> {
 
 impl<'a> TestEnv<'a> {
     pub fn new(ledger: &'a mut InMemorySubstateStore) -> Self {
-        let mut executor = TransactionExecutor::new(ledger, true);
+        let mut executor = TransactionExecutor::new(ledger, false);
 
         let package = executor.publish_package(include_code!("ubi")).unwrap();
         let admin_key = executor.new_public_key();
