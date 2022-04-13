@@ -22,7 +22,7 @@ blueprint! {
                 .initial_supply_fungible(1);
 
             // Create the LP token definition
-            let lp_token = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut lp_token = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "LP Token")
                 .metadata("symbol", "LP")
                 .flags(MINTABLE | BURNABLE)
@@ -43,12 +43,12 @@ blueprint! {
         }
 
         // Will be called by other components
-        pub fn add_fees(&self, fees: Bucket) {
+        pub fn add_fees(&mut self, fees: Bucket) {
             self.fees.put(fees);
         }
 
         // Contribute tokens to the pool in exchange of an LP token
-        pub fn add_liquidity(&self, liquidity: Bucket) -> Bucket {
+        pub fn add_liquidity(&mut self, liquidity: Bucket) -> Bucket {
             let pool_share = liquidity.amount() / self.pool.amount();
             self.pool.put(liquidity);
 
@@ -60,7 +60,7 @@ blueprint! {
         }
 
         // Give LP token back to get portion of the pool and fees
-        pub fn remove_liquidity(&self, lp_tokens: Bucket) -> Bucket {
+        pub fn remove_liquidity(&mut self, lp_tokens: Bucket) -> Bucket {
             assert!(lp_tokens.resource_def() == self.lp_token, "Wrong LP token !");
 
             let share = lp_tokens.amount() / self.lp_token.total_supply();
@@ -71,7 +71,7 @@ blueprint! {
             });
 
             // Return the share of fees and pool
-            let return_bucket = self.fees.take(self.fees.amount() * share);
+            let mut return_bucket = self.fees.take(self.fees.amount() * share);
             return_bucket.put(self.pool.take(self.pool.amount() * share));
             return_bucket
         }
