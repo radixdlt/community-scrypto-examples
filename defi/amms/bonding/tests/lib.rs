@@ -283,6 +283,10 @@ fn test_3_quotes() {
     let quote: Decimal = return_of_call_method(&mut receipt, "get_sell_quote_amount");
     assert_eq!(quote, 300.into());
 
+    /* this test no longer works in v0.3.0 because we can't return a BucketRef.
+     * The code is still a good example of something another blueprint might use
+     * but we just can't easily test it.  Leave here to update later
+
     // now try to get a seel quote (BucketRef) ...but can't check it easily outside of wasm
     let receipt = env.call_method(&amm.address(), "get_sell_quote", vec![
         format!("300"),
@@ -291,6 +295,8 @@ fn test_3_quotes() {
     assert!(receipt.result.is_ok());
 
     // cant introspect the BucketRef, but at least the tx succeeded
+
+    */
 
     // verify we didn't somehow actually get any RESERVE back from the BucketRef stuff
     let expected_reserve_in_account: Decimal = 1_000_000.into();
