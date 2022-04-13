@@ -21,13 +21,13 @@ blueprint! {
     impl UtilityTokenFactory {
 
         pub fn new( my_id: String, ut_name: String, ut_symbol: String, ut_description: String, price: u32, mint_size: u32, max_buy: u32 ) -> (Component, Bucket) {
-            let ut_minter_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut ut_minter_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", my_id)
                 .initial_supply_fungible(2);
             let ut_minter_resource_def = ut_minter_bucket.resource_def();
             let ut_minter_return_bucket: Bucket = ut_minter_bucket.take(1); // Return this badge to the caller
 
-            let ut_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut ut_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", ut_name)
                 .metadata("symbol", ut_symbol)
                 .metadata("description", ut_description)
@@ -65,9 +65,9 @@ blueprint! {
 
         // Purchase UT tokens
         //
-        pub fn purchase(&mut self, number: u32, payment: Bucket) -> (Bucket, Bucket) {
+        pub fn purchase(&mut self, number: u32, mut payment: Bucket) -> (Bucket, Bucket) {
             assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must purchase the utility tokens with Radix (XRD).");
-            let ut_bucket = Bucket::new(self.address());
+            let mut ut_bucket = Bucket::new(self.address());
             let mut num = number;
             if num > self.ut_max_buy {
                 num = self.ut_max_buy; // 1,000 is the max allowable purchase for now.
