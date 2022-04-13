@@ -49,7 +49,7 @@ blueprint! {
         /* 
         Get status of the campaign.
         */
-        pub fn status(&self) {
+        pub fn status(&mut self) {
             let mut pledged = Decimal::zero();
             for (_, value) in self.patron_entries.iter() {
                 pledged = pledged + *value;
@@ -72,7 +72,7 @@ blueprint! {
             assert!(Context::current_epoch() < self.last_epoch, "campaign has already ended.");
 
             // Create a burnable badge.
-            let patron_badge_resource = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut patron_badge_resource = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                                             .metadata("name", "patron_badge")
                                             .flags(MINTABLE | BURNABLE)
                                             .badge(self.patron_mint_badge.resource_def(), MAY_MINT | MAY_BURN)
@@ -96,7 +96,7 @@ blueprint! {
         pub fn recall_pledge(&mut self, patron_badge: Bucket) -> Bucket {
             assert!(!(Context::current_epoch() > self.last_epoch && self.collected_xrd.amount() > self.goal), "campaign was successful and has ended.");
             
-            let refund = Bucket::new(RADIX_TOKEN);
+            let mut refund = Bucket::new(RADIX_TOKEN);
             match self.patron_entries.get(&patron_badge.resource_address()) {
                 Some(&value) => {
                     // Put XRD into refund bucket.
@@ -119,7 +119,7 @@ blueprint! {
         As fundraiser, withdraw collected XRD if goal has passed, and the last_epoch has passed.
         */
         #[auth(fundraiser_badge_def)]
-        pub fn withdraw(&self) -> Bucket {
+        pub fn withdraw(&mut self) -> Bucket {
             assert!(Context::current_epoch() > self.last_epoch, "campaign has not ended yet.");
             assert!(self.collected_xrd.amount() >= self.goal, "campaign did not reach it's goal.");
 

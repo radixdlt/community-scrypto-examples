@@ -1,32 +1,32 @@
 //! srypto-bonding: A Scrypto package for creating and using bonding curves as an automated market maker on Radix
-//! 
+//!
 //! The main blueprint to interact with is `BondingAMM`.  It has buy/sell functionality against a single
 //! bonding curve defined by a plugable second component.  It will instantiate a component from the `RatioBondingCurve`
 //! blueprint if no other curve component is provided.
-//! 
+//!
 //! There is also an extrememly simple `BasicBondingCurve` blueprint (more like a flat line) which could be used to implement
 //! a simple "wrapped" or "virtual" token from another.  Or it's a a good template for making your own curve component.
-//! 
+//!
 //! Some useful utilities are included too.  An internal crate is used to provide the `blueprint_stub` macro which
 //! automates creating stub functions from a trait so calling another component is ergonomic.  Also included and
 //! used for the `RatioBondingCurve` is a reusable arbitrary precision number implmentation that converts to/from Decimal
 //! It is precise but not yet optimized.  Bounded (BigInt) or unbounded (BigRational) precision is configurable with a feature flag.
-//! 
+//!
 //! # Bonuses:
-//! 
+//!
 //! * This package is well tested (though not completely) with both unit and integration tests.  Integration
 //! testing is not as easy as it should be, but using the [`scrypto-unit`] library helps a whole lot
-//! 
+//!
 //! * Key portions of `BondingAMM` are implemented using [`scrypto_statictypes`] which provides compile-time resource
 //! checking and additional runtime checking for enhanced producitivity and safety.
-//! 
+//!
 //! [`scrypto-unit`]: https://github.com/plymth/scrypto-unit
 //! [`scrypto_statictypes`]: https://github.com/devmannic/scrypto_statictypes
-//! 
+//!
 //! # References:
-//! 
+//!
 //! If you want to read more about bonding curves here some things that might be useful:
-//! 
+//!
 //! Reading List
 //! * https://blog.relevant.community/bonding-curves-in-depth-intuition-parametrization-d3905a681e0a?gi=8df5128ab916
 //! * https://blog.relevant.community/how-to-make-bonding-curves-for-continuous-token-models-3784653f8b17
@@ -34,20 +34,20 @@
 //! * https://yos.io/2017/11/10/bonding-curves/
 //! * https://medium.com/linum-labs/intro-to-bonding-curves-and-shapes-bf326bc4e11a
 //! * https://discourse.sourcecred.io/t/bonding-curve-references/271
-//! 
+//!
 //! Code
 //! * https://github.com/oed/bonding-curves/blob/master/contracts/PolynomialCurvedToken.sol
 //! * https://github.com/OpenZeppelin/openzeppelin-contracts/blob/7b7ff729b82ea73ea168e495d9c94cb901ae95ce/contracts/math/Power.sol
-//! * https://github.com/bancorprotocol/contracts-solidity/blob/c9adc95e82fdfb3a0ada102514beb8ae00147f5d/solidity/contracts/converter/BancorFormula.sol 
-//! 
-//! # Notes: 
-//! 
+//! * https://github.com/bancorprotocol/contracts-solidity/blob/c9adc95e82fdfb3a0ada102514beb8ae00147f5d/solidity/contracts/converter/BancorFormula.sol
+//!
+//! # Notes:
+//!
 //! The initial release is pre-Alexandria with expected (minimal) API incompatabilities
-//! 
+//!
 mod basic_curve; // a simple flat "curve" 1:1 implementation as a reference
+mod bonding_curve;
 mod default_curve; // a complete non-production bonding curve implementation parametrizable by "curve weight" aka "reserve ratio".  Max precision within Decimal. (ie. precise, but unoptimized)
-mod number; // arbitrary precision math used in default_curve
-mod bonding_curve; // the trait for cross-blueprint calls for plugable curve math
+mod number; // arbitrary precision math used in default_curve // the trait for cross-blueprint calls for plugable curve math
 
 use scrypto::prelude::*;
 use scrypto_statictypes::prelude::*; // Use https://github.com/devmannic/scrypto_statictypes
@@ -94,15 +94,16 @@ blueprint! {
             let continuous_auth: BucketOf<AUTH> = ResourceBuilder::new_fungible(DIVISIBILITY_NONE).initial_supply_fungible(1).into(); // only this Component can mint/burn CONTINUOUS.  No failsafe for better or worse
 
             // setup continuous resource
-            let continuous_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut continuous_def: ResourceOf<CONTINUOUS> = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", continuous_name)
                 .metadata("symbol", continuous_symbol)
                 .flags(MINTABLE | BURNABLE)
                 .badge(continuous_auth.resource_address(), MAY_MINT | MAY_BURN)
-                .no_initial_supply();
+                .no_initial_supply()
+                .into();
 
             // mint the initial supply
-            let continuous: BucketOf<CONTINUOUS> = continuous_auth.authorize(|minter|
+            let mut continuous: BucketOf<CONTINUOUS> = continuous_auth.authorize(|minter|
                 continuous_def.mint(initial_supply, minter).into()
             );
 
@@ -200,7 +201,7 @@ blueprint! {
             curve.get_price(self.reserve.amount(), self.continuous.resource_def().total_supply())
         }
 
-        pub fn get_sell_quote(&self, continuous_amount: Decimal) -> BucketRef {
+        pub fn get_sell_quote(&mut self, continuous_amount: Decimal) -> BucketRefOf<RESERVE> {
             // This variant returns a BucketRef for proof.  Only possible with sell because
             // for buying, we can't return "proof" because the amount isn't minted yet
 
