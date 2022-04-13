@@ -53,7 +53,7 @@ blueprint! {
         }
 
         #[auth(admin_badge)]
-        pub fn create_tickets(&self, amount: i32) -> Bucket {
+        pub fn create_tickets(&mut self, amount: i32) -> Bucket {
             self.sale_ticket_minter
                 .authorize(|minter| self.sale_tickets.mint(amount, minter))
         }
@@ -72,7 +72,7 @@ blueprint! {
             self.tokens_for_sale.amount().is_positive()
         }
 
-        pub fn buy_tokens(&mut self, payment: Bucket, ticket: Bucket) -> (Bucket, Bucket) {
+        pub fn buy_tokens(&mut self, mut payment: Bucket, ticket: Bucket) -> (Bucket, Bucket) {
             // Check the sale has already started and is not over yet
             assert!(self.sale_started, "The sale has not started yet");
             assert!(self.has_tokens_left(), "The sale has ended already");

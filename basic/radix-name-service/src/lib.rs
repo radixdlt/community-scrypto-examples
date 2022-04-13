@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 use sha2::{Digest, Sha256};
 
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 struct DomainName {
     #[scrypto(mutable)]
     address: Address,
@@ -62,7 +62,8 @@ blueprint! {
         /// Panics if that name is not registered.
         pub fn lookup_address(&self, name: String) -> Address {
             let hash = Self::hash_name(name);
-            let name_data: DomainName = self.name_resource.get_nft_data(hash);
+            let non_fungible_key = NonFungibleKey::from(hash);
+            let name_data: DomainName = self.name_resource.get_non_fungible_data(&non_fungible_key);
             name_data.address
         }
 
@@ -71,11 +72,11 @@ blueprint! {
         ///
         /// This method returns an NFT that represents ownership of the registered name and any overpaid deposit.
         pub fn register_name(
-            &self,
+            &mut self,
             name: String,
             target_address: Address,
             reserve_years: u8,
-            deposit: Bucket,
+            mut deposit: Bucket,
         ) -> (Bucket, Bucket) {
             assert!(name.ends_with(".xrd"), "The domain name must end on '.xrd'");
             assert!(
@@ -88,6 +89,7 @@ blueprint! {
             );
 
             let hash = Self::hash_name(name);
+            let non_fungible_key = NonFungibleKey::from(hash);
             let deposit_amount = self.deposit_per_year * Decimal::from(reserve_years);
             let last_valid_epoch =
                 Context::current_epoch() + EPOCHS_PER_YEAR * u64::from(reserve_years);
@@ -106,7 +108,7 @@ blueprint! {
 
             let name_nft = self
                 .minter
-                .authorize(|auth| self.name_resource.mint_nft(hash, name_data, auth));
+                .authorize(|auth| self.name_resource.mint_non_fungible(&non_fungible_key, name_data, auth));
 
             self.deposits.put(deposit.take(deposit_amount));
 
@@ -116,7 +118,7 @@ blueprint! {
         /// Unregister the name(s) that is/are represented by the given `name_nft` bucket.
         /// Returns a bucket with the tokens that were initially deposited when the name(s) was/were registered.
         /// The supplied `name_nft` is burned.
-        pub fn unregister_name(&self, name_nft: Bucket) -> Bucket {
+        pub fn unregister_name(&mut self, name_nft: Bucket) -> Bucket {
             assert!(
                 name_nft.resource_address() == self.name_resource.address(),
                 "The supplied bucket does not represent a domain name NFT"
@@ -124,7 +126,7 @@ blueprint! {
             assert!(!name_nft.is_empty(), "The supplied bucket is empty");
 
             let mut total_deposit_amount = Decimal::zero();
-            for nft in name_nft.get_nfts::<DomainName>() {
+            for nft in name_nft.get_non_fungibles::<DomainName>() {
                 total_deposit_amount += nft.data().deposit_amount;
             }
 
@@ -136,10 +138,10 @@ blueprint! {
         /// The fee is not added to the initial deposit and is not returned when the name is unregistered.
         /// Returns any overpaid fees.
         pub fn update_address(
-            &self,
+            &mut self,
             name_nft: BucketRef,
             new_address: Address,
-            fee: Bucket,
+            mut fee: Bucket,
         ) -> Bucket {
             assert!(
                 name_nft.resource_address() == self.name_resource.address(),
@@ -161,15 +163,15 @@ blueprint! {
                 fee_amount
             );
 
-            let id = name_nft.get_nft_id();
-            let old_name_data = self.name_resource.get_nft_data::<DomainName>(id);
+            let id = name_nft.get_non_fungible_key();
+            let old_name_data = self.name_resource.get_non_fungible_data::<DomainName>(&id);
             let new_name_data = DomainName {
                 address: new_address,
                 last_valid_epoch: old_name_data.last_valid_epoch,
                 deposit_amount: old_name_data.deposit_amount,
             };
             self.minter
-                .authorize(|auth| self.name_resource.update_nft_data(id, new_name_data, auth));
+                .authorize(|auth| self.name_resource.update_non_fungible_data(&id, new_name_data, auth));
 
             self.fees.put(fee.take(fee_amount));
 
@@ -180,7 +182,7 @@ blueprint! {
         /// Renews the name identified by the given `name_nft` for `renew_years`.
         /// The fee is not added to the initial deposit and is not returned when the name is unregistered.
         /// Returns any overpaid fees.
-        pub fn renew_name(&self, name_nft: BucketRef, renew_years: u8, fee: Bucket) -> Bucket {
+        pub fn renew_name(&mut self, name_nft: BucketRef, renew_years: u8, mut fee: Bucket) -> Bucket {
             assert!(
                 name_nft.resource_address() == self.name_resource.address(),
                 "The supplied bucket does not represent a domain name NFT"
@@ -205,12 +207,12 @@ blueprint! {
                 fee_amount
             );
 
-            let id = name_nft.get_nft_id();
-            let mut name_data = self.name_resource.get_nft_data::<DomainName>(id);
+            let id = name_nft.get_non_fungible_key();
+            let mut name_data = self.name_resource.get_non_fungible_data::<DomainName>(&id);
             name_data.last_valid_epoch =
                 name_data.last_valid_epoch + EPOCHS_PER_YEAR * u64::from(renew_years);
             self.minter
-                .authorize(|auth| self.name_resource.update_nft_data(id, name_data, auth));
+                .authorize(|auth| self.name_resource.update_non_fungible_data(&id, name_data, auth));
 
             self.fees.put(fee.take(fee_amount));
 
