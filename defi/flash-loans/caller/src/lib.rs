@@ -30,7 +30,7 @@ blueprint! {
 
         pub fn call(&self, this_component_address: Address) -> Bucket {
             // Get a loan of 1000 XRD
-            let amount:Decimal = dec!("100");
+            let amount:Decimal = dec!("1000");
             let args = vec![
                 scrypto_encode(&amount),
                 scrypto_encode(&this_component_address)
