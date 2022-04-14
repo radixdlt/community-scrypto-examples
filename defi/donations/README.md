@@ -21,15 +21,15 @@
  - url
  - price 
  - supply - the amount of badges to be minted
- 1. `resim call-method $component make_badge $acct1 "Level#1" "Level 1 donator" "Opens first level color" "Some URL" 5 100`
+ 1. `resim call-method $component make_badge $acc1 "Level#1" "Level 1 donator" "Opens first level color" "Some URL" 5 100`
 
  ## Get available badges
- 1. `resim call-method $component get_badges $acct1` -> save the badge address into $badge1
+ 1. `resim call-method $component get_badges $acc1` -> save the badge address into $badge1
 
  ## Donate 
  Donator will pay for this badge according to the price
  The corresponding fee will be taken from the receiver bucket
- 1. `resim call-method $component donate $acct1 $badge 5,$xrd `
+ 1. `resim call-method $component donate $acc1 $badge 5,$xrd `
 
  ## Admin Supporting Methods
  Withdraw some free assets 

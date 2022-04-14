@@ -11,7 +11,7 @@ export account
 
 # Build app
 scrypto build
-package=$(resim publish . | grep Package | cut -d " " -f3)
+package=$(resim publish . | grep Package: | cut -d " " -f4)
 export package
 
 # Create instance of app

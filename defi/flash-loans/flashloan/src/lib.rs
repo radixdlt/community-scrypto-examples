@@ -18,7 +18,7 @@ blueprint! {
             .instantiate()
         }
 
-        pub fn request_loan(&self, amount: Decimal, component_address: Address) -> Bucket {
+        pub fn request_loan(&mut self, amount: Decimal, component_address: Address) -> Bucket {
             assert!(amount < self.vault.amount(), "Not enough funds to loan");
 
             // Call the execute method at the specified component's address with the requested funds
@@ -26,7 +26,7 @@ blueprint! {
                 scrypto_encode(&self.vault.take(amount))
             ];
 
-            let returned_bucket: Bucket = Component::from(component_address).call::<Bucket>("execute", args).into();
+            let mut returned_bucket: Bucket = Component::from(component_address).call::<Bucket>("execute", args).into();
 
             // Make sure they repaid in loan in full
             let amount_to_take = amount * ((self.interest / 100) + 1);

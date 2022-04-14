@@ -9,7 +9,7 @@ blueprint! {
         tokens: Vault,
         min_required_sig: usize,
         badges_approved: usize,
-        destination: Account
+        destination: Address
     }
 
     impl MultiSigMaker {
@@ -30,7 +30,7 @@ blueprint! {
 
             // This badge is used to authenticate the users so that only
             // people with this badge can approve the transaction
-            let badge_resourcedef = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut badge_resourcedef = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "MultiSig Signer Badge")
                 .flags(MINTABLE | BURNABLE)
                 .badge(badge_minter_badge.resource_def(), MAY_MINT | MAY_BURN)
@@ -45,7 +45,7 @@ blueprint! {
                 badge_minter_badge: Vault::with_bucket(badge_minter_badge),
                 signer_badge: badge_resourcedef,
                 badges_approved: 0,
-                destination: Account::from(destination)
+                destination: destination
             }
             .instantiate();
 
@@ -65,7 +65,7 @@ blueprint! {
             self.badges_approved += 1;
             if self.badges_approved >= self.min_required_sig {
                 // Send the transaction
-                self.destination.deposit(self.tokens.take_all());
+                Component::from(self.destination).call::<()>("deposit", vec![scrypto_encode(&self.tokens.take_all())]);
             }
         }
     }
