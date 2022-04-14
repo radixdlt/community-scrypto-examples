@@ -16,6 +16,9 @@ blueprint! {
         policies: HashMap<Address, Vault>,
         // HashMap of insurer and policy vaults HashMap
         purchases: HashMap<Address, HashMap<Address, Vault>>,
+
+        // A vector which we use to store all of the dead vaults
+        dead_vaults: Vec<Vault>
     }
 
     impl Insurance {
@@ -26,7 +29,7 @@ blueprint! {
             assert!(base_assets.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
 
             // Org/Minter badge
-            let org_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut org_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Org Mint Auth")
                 .initial_supply_fungible(2);
 
@@ -40,7 +43,8 @@ blueprint! {
                 assets_pool: Vault::with_bucket(base_assets),
                 locked_pool: Vault::new(assets_def),
                 policies:HashMap::new(),
-                purchases: HashMap::new()
+                purchases: HashMap::new(),
+                dead_vaults: Vec::new(),
             }
             .instantiate();
             (component,org_return_bucket)
@@ -57,7 +61,7 @@ blueprint! {
             assert!(self.assets_pool.amount() >= coverage * supply, "You don't have enough assets to cover this supply");
 
             // policy badge
-            let ip_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut ip_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                  .metadata("name", "Insurance Policy badge")
                  .metadata("symbol", policy_type)
                  .metadata("price", price.to_string())
@@ -83,7 +87,7 @@ blueprint! {
         }
 
         // Purchase specific policy by address
-        pub fn purchase(&mut self, policy_address: Address, insurer: Address, bucket: Bucket) -> Bucket {
+        pub fn purchase(&mut self, policy_address: Address, insurer: Address, mut bucket: Bucket) -> Bucket {
             assert!(self.policies.contains_key(&policy_address), "No policy found");
             assert!(bucket.resource_def() == RADIX_TOKEN.into(), "You must purchase policies with Radix (XRD).");
             
@@ -92,7 +96,7 @@ blueprint! {
             assert!(!purchases.contains_key(&policy_address), "The insurer already has this policy");
 
             // check if we have free policy in the supply
-            let policies = self.policies.get(&policy_address).unwrap();
+            let policies = self.policies.get_mut(&policy_address).unwrap();
             assert!(!policies.is_empty(), "No available policies");
 
             // take one policy from the supply
@@ -101,7 +105,7 @@ blueprint! {
             let metadata = policy.resource_def().metadata();
             // check price
             let price:Decimal = metadata["price"].parse().unwrap();
-            assert!(bucket.amount() > price, "Not enough amount to purchase this policy");
+            assert!(bucket.amount() >= price, "Not enough amount to purchase this policy");
 
             // check duration and setup the end epoch
             let duration:u64 = metadata["duration"].parse().unwrap();
@@ -111,7 +115,7 @@ blueprint! {
             let coverage:Decimal = metadata["coverage"].parse().unwrap();
 
             // build and mint policy badge with supply equals to coverage
-            let ip_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut ip_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "Insurance Purchase Badge")
                 .metadata("symbol", "IPB")
                 .metadata("expires", expires.to_string())
@@ -148,16 +152,16 @@ blueprint! {
         pub fn approve(&mut self, insurer: Address, policy_address: Address, amount: Decimal){
             assert!(self.purchases.contains_key(&insurer), "No vault found for this insurer");
 
-            let purchases = self.purchases.get(&insurer).unwrap();
+            let purchases = self.purchases.get_mut(&insurer).unwrap();
             assert!(purchases.contains_key(&policy_address), "No such policy found for this insurer");
 
-            let purchase = purchases.get(&policy_address).unwrap();
+            let purchase = purchases.get_mut(&policy_address).unwrap();
             let bucket = purchase.take(amount);
 
             // get metadata and check if policy is not expired
             let metadata = bucket.resource_def().metadata();
             let expires:u64 = metadata["expires"].parse().unwrap();
-            assert!(Context::current_epoch() < expires, "Policy is expired");
+            assert!(Context::current_epoch() <= expires, "Policy is expired");
 
             let supply = bucket.amount();
             // Burn purchase badges
@@ -166,7 +170,7 @@ blueprint! {
             });
         
             // send XRD from locked pool to the insurer
-            Account::from(insurer).deposit(self.locked_pool.take(supply));   
+            Component::from(insurer).call::<()>("deposit", vec![scrypto_encode(&self.locked_pool.take(supply))]);
         }
 
         // Burn expired purchases to release locked assets
@@ -178,7 +182,7 @@ blueprint! {
             assert!(purchases.contains_key(&policy_address), "No such policy found for this insurer");
 
             // get all free badges from supply
-            let purchase = purchases.get(&policy_address).unwrap();
+            let purchase = purchases.get_mut(&policy_address).unwrap();
             let bucket = purchase.take_all();
 
             // prevent burning non-expired badges
@@ -196,16 +200,18 @@ blueprint! {
             self.assets_pool.put(self.locked_pool.take(supply));
 
             // clear purchases
-            purchases.remove(&policy_address);
+            self.dead_vaults.push(purchases.remove(&policy_address).unwrap());
         }
 
         // Burn unused policies
         //#[auth(org_badge)]
         pub fn burn_policies(&mut self, policy_address: Address) {
+            info!("Policy Address: {}", policy_address);
+            info!("Policies: {:?}", self.policies);
             assert!(self.policies.contains_key(&policy_address), "No policy found");
 
             // take the rest supply of policy badges
-            let policies = self.policies.get(&policy_address).unwrap();
+            let policies = self.policies.get_mut(&policy_address).unwrap();
             let bucket = policies.take_all();
 
             // get coverage and calculate the volume of XRD that should be released
@@ -222,7 +228,7 @@ blueprint! {
             self.assets_pool.put(self.locked_pool.take(volume));
 
             // clear policies
-            self.policies.remove(&policy_address);
+            self.dead_vaults.push(self.policies.remove(&policy_address).unwrap());
         }
 
         /// Org assets methods
