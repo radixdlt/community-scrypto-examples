@@ -1,6 +1,9 @@
 # Visual studio code
 .vscode
 
+# IntelliJ Idea
+.idea
+
 # macOS folder attributes
 .DS_Store
 
