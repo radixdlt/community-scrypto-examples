@@ -5,45 +5,68 @@ use std::fmt::Formatter;
 use scrypto::prelude::*;
 use sbor::{Encode,Decode,TypeId, Describe};
 use serde::{Serialize, Deserialize};
-use serde_json::to_string;
 use unescape::unescape;
 
-#[derive(Debug, TypeId, Describe, Decode, Encode, Clone, Serialize, Deserialize)]
-pub struct Player {
-    guess: String,
-    secret: String,
-    bet: u32,
-    share_of_pot: u32,
+#[derive(Debug, Copy, Clone, TypeId, Encode, Decode, Describe, PartialEq, Eq, Deserialize, Serialize)]
+#[repr(u32)]
+pub enum State {
+    AcceptingChallenger = 0,
+    MakeGuess = 1,
+    SubmitSecret = 2,
+    WinnerSelection = 3,
+    Payout = 4,
+    Refunding = 5,
+    Destroyed = 6,
 }
-impl Player {
-    pub fn empty() -> Player {
-        return Self {
-            guess: "".into(),
-            secret: "".into(),
-            bet: 0,
-            share_of_pot: 0,
+impl FromStr for State {
+    type Err = String;
+
+    fn from_str(input: &str) -> Result<State, Self::Err> {
+        match input {
+            "AcceptingChallenger" => Ok(State::AcceptingChallenger),
+            "MakeGuess" => Ok(State::MakeGuess),
+            "SubmitSecret" => Ok(State::SubmitSecret),
+            "WinnerSelection" => Ok(State::WinnerSelection),
+            "Payout" => Ok(State::Payout),
+            "Refunding" => Ok(State::Refunding),
+            "Destroyed" => Ok(State::Destroyed),
+            _ => Err("Could not parse state".to_string()),
         }
     }
 }
+impl From<u32> for State {
 
-#[derive(TypeId, Decode, Encode, Clone, Deserialize, Serialize)]
-pub struct GameSerialized {
-    pub players: HashMap<String, Player>
-}
-impl fmt::Debug for GameSerialized {
-    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
-        let formatted = serde_json::to_string(&self).unwrap().replace("\\", "");
-        write!(f, "{}", formatted)
+    fn from(input: u32) -> State {
+        match input {
+            0 => State::AcceptingChallenger,
+            1 => State::MakeGuess,
+            2 => State::SubmitSecret,
+            3 => State::WinnerSelection,
+            4 => State::Payout,
+            5 => State::Refunding,
+            6 => State::Destroyed,
+            _ => State::Refunding,
+        }
     }
 }
-impl GameSerialized {
-    pub fn empty(players: Option<HashMap<String, Player>>) -> Self {
-        Self { players: players.unwrap_or(HashMap::new()) }
+impl fmt::Display for State {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let outcome = match *self {
+            State::AcceptingChallenger => "AcceptingChallenger",
+            State::MakeGuess => "MakeGuess",
+            State::SubmitSecret => "SubmitSecret",
+            State::WinnerSelection => "WinnerSelection",
+            State::Payout => "Payout",
+            State::Refunding => "Refunding",
+            State::Destroyed => "Destroyed",
+        };
+        write!(f, "{}", outcome)
     }
 }
 
 #[derive(TypeId, Decode, Encode)]
 pub struct Game {
+    state: State,
     pub players: HashMap<NonFungibleKey, Player>,
 }
 impl fmt::Debug for Game {
@@ -54,18 +77,65 @@ impl fmt::Debug for Game {
 }
 impl Game {
     pub fn new(players: Option<HashMap<NonFungibleKey, Player>>) -> Self {
-        Self { players: players.unwrap_or(HashMap::new()) }
+        Self {
+            state: State::AcceptingChallenger,
+            players: players.unwrap_or(HashMap::new())
+        }
     }
     pub fn serialize(game: &Self) -> String {
         let players: HashMap<String, Player> = game.players.clone().into_iter()
             .map(|(k, p)| (k.to_string(), p))
             .collect();
 
-        let serializable = GameSerialized { players };
+        let serializable = GameSerialized { state: game.state, players };
         unescape(serde_json::to_string(&serializable).unwrap_or("".to_string())
             .as_mut_str())
             .unwrap_or("".to_string())
     }
+}
+
+#[derive(TypeId, Decode, Encode, Clone, Deserialize, Serialize)]
+pub struct GameSerialized {
+    pub state: State,
+    pub players: HashMap<String, Player>
+}
+impl fmt::Debug for GameSerialized {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+        let formatted = serde_json::to_string(&self).unwrap().replace("\\", "");
+        write!(f, "{}", formatted)
+    }
+}
+impl GameSerialized {
+    pub fn empty(players: Option<HashMap<String, Player>>) -> Self {
+        Self {
+            state: State::AcceptingChallenger,
+            players: players.unwrap_or(HashMap::new())
+        }
+    }
+}
+
+#[derive(Debug, TypeId, Describe, Decode, Encode, Clone, Serialize, Deserialize)]
+pub struct Player {
+    guess: String,
+    secret: String,
+    bet: u32,
+    share_of_pot: u32,
+}
+
+impl Player {
+    pub fn empty() -> Player {
+        return Self {
+            guess: "".into(),
+            secret: "".into(),
+            bet: 0,
+            share_of_pot: 0,
+        }
+    }
+
+    pub fn get_guess(&self) -> String { self.guess.clone() }
+    pub fn make_guess(&mut self, guess: String) { self.guess = guess; }
+
+    pub fn get_secret(&self) -> String { self.secret.clone() }
 }
 
 #[derive(TypeId, Describe, Decode, Encode)]
@@ -106,6 +176,9 @@ blueprint! {
         }
 
         pub fn join(&mut self) -> Bucket {
+            assert_eq!(self.game.state, State::AcceptingChallenger, "Not accepting challengers!");
+            assert!(self.game.players.len() <= 2, "Too many players!");
+
             let badge = self.badges.take(1);
             let player = Player::empty();
             let auth = badge.present();
@@ -113,12 +186,64 @@ blueprint! {
             auth.drop();
 
             self.game.players.insert(key, player.clone());
-            // self.game.players.insert(NonFungibleKey::from(0), player.clone());
+            self.game.state = if self.game.players.len() == 2 { State::MakeGuess } else { State::AcceptingChallenger };
+
             return badge;
         }
 
         pub fn state(&mut self) -> String {
             Game::serialize(&self.game)
         }
+
+        #[auth(badge_ref)]
+        pub fn make_guess(&mut self, guess: String) -> Result<String, ()> {
+            assert_eq!(self.game.state, State::MakeGuess, "Not ready to make a guess!");
+
+            let key = auth.get_non_fungible_key();
+            let player = self.game.players.get_mut(&key).unwrap();
+            player.make_guess(guess.clone());
+
+            let guesses: Vec<String> = self.game.players.clone().into_iter()
+                .map(|(_key, player)| player.get_guess())
+                .filter(|guess| !guess.is_empty())
+                .collect();
+            self.game.state = if guesses.len() == 2 { State::SubmitSecret } else { State::MakeGuess };
+
+            Ok(format!("Your guess '{}' was accepted", guess))
+        }
+
+        #[auth(badge_ref)]
+        pub fn reveal_secret(&mut self, secret: String) -> Result<String, ()> {
+            assert_eq!(self.game.state, State::SubmitSecret, "Not ready to reveal secret!");
+
+            let key = auth.get_non_fungible_key();
+            let _player = self.game.players.get_mut(&key).unwrap();
+
+            // let weapon = Weapon::from_secret(player.choice.as_str(), secret.as_str());
+            // let encoded = encode(weapon.to_string().as_str(), secret.as_str());
+            //
+            // assert_ne!(
+            //     // Equality check
+            //     Weapon::from_secret(player.choice.as_str(),secret.as_str()),
+            //     Weapon::None,
+            //     // Error message
+            //     "Your secret and choice are not the same MD5 hash!, Encoded: {}, Choice: {}",
+            //     encoded, player.choice
+            // );
+            //
+            // player.set_secret(secret.clone());
+
+            if has_revealed(&self.game.players) { self.game.state = State::WinnerSelection; }
+            Ok(format!("Your secret was '{}'", secret.clone()).to_string())
+        }
     }
+}
+
+fn has_revealed(players_map: &HashMap<NonFungibleKey, Player>) -> bool {
+    let players: Vec<Player> = players_map.clone().into_values().collect();
+    if players.len() == 0 { return false; }
+    let p1: Player = players.get(0).unwrap().to_owned();
+    let p2: Player = players.get(1).unwrap().to_owned();
+
+    !p1.get_secret().is_empty() && !p2.get_secret().is_empty()
 }
