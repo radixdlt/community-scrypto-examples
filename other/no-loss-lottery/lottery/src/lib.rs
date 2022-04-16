@@ -72,7 +72,7 @@ import! { r#"
 "# }
 
 
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 pub struct LotteryTicketData {
     // holds lottery ID this ticket belongs to
     lottery_id: u128,
@@ -84,7 +84,7 @@ pub struct LotteryTicketData {
     winner: bool
 }
 
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 pub struct LotteryData {
     // fixed price per lottery ticket
     ticket_price: Decimal,
@@ -93,7 +93,7 @@ pub struct LotteryData {
     lottery_epoch: u64,
     // mutable minted tickets array
     #[scrypto(mutable)]
-    minted: Vec<u128>,
+    minted: Vec<NonFungibleKey>,
     // ended flag
     #[scrypto(mutable)]
     ended: bool,
@@ -102,7 +102,7 @@ pub struct LotteryData {
     reward: Decimal,
     // winner ticket id after lottery end
     #[scrypto(mutable)]
-    winner: Option<u128>
+    winner: Option<NonFungibleKey>
 }
 
 blueprint! {
@@ -203,7 +203,7 @@ blueprint! {
           };
 
           let lottery = self.lottery_minter.authorize(|auth| {
-              self.lottery_resource_def.mint_nft(self.lottery_id_counter, data, auth)
+              self.lottery_resource_def.mint_non_fungible(&NonFungibleKey::from(self.lottery_id_counter), data, auth)
           });
 
           // increase lottery count
@@ -217,7 +217,7 @@ blueprint! {
         pub fn end_lottery(&mut self, lottery_id: u128) {
 
             // find this lottery
-            let mut lottery_data: LotteryData = self.lottery_resource_def.get_nft_data(lottery_id);
+            let mut lottery_data: LotteryData = self.lottery_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
             assert!(Context::current_epoch() > lottery_data.lottery_epoch, "Lottery epoch is not ended yet");
 
             debug!("++++++Lottery Finished++++++");
@@ -232,11 +232,11 @@ blueprint! {
             // get winner index
             let index = result % lottery_data.minted.iter().count();
             // get winner ticket id
-            let winner = lottery_data.minted[index];
-            debug!("Winner ID: {}", winner);
+            let winner = lottery_data.minted.get(index).expect("Error while fetching winner");
+            debug!("Winner ID: {:?}", winner);
 
             // save winner
-            lottery_data.winner = Some(winner);
+            lottery_data.winner = Some(winner.clone());
             lottery_data.ended = true;
 
             // withdraw staking
@@ -259,7 +259,7 @@ blueprint! {
                         
             // update lottery NFT
             self.lottery_minter.authorize(|auth| {
-                self.lottery_resource_def.update_nft_data(lottery_id, lottery_data, auth);
+                self.lottery_resource_def.update_non_fungible_data(&NonFungibleKey::from(lottery_id), lottery_data, auth);
             });
 
             // clear current staking
@@ -267,9 +267,9 @@ blueprint! {
         }
 
         // Buy a ticket for a specific lottery
-        pub fn buy_ticket(&mut self, lottery_id: u128, payment: Bucket) -> (Bucket, Bucket) {
+        pub fn buy_ticket(&mut self, lottery_id: u128, mut payment: Bucket) -> (Bucket, Bucket) {
           // find this lottery
-          let mut lottery_data: LotteryData = self.lottery_resource_def.get_nft_data(lottery_id);
+          let mut lottery_data: LotteryData = self.lottery_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
           assert!(!lottery_data.ended, "Lottery is ended");
 
           assert!(payment.resource_address() == RADIX_TOKEN, "You can only use radix");
@@ -291,19 +291,19 @@ blueprint! {
           };
 
           let ticket = self.lottery_minter.authorize(|auth| {
-              self.tickets_resource_def.mint_nft(self.ticket_id_counter, data, auth)
+              self.tickets_resource_def.mint_non_fungible(&NonFungibleKey::from(self.ticket_id_counter), data, auth)
           });
 
           self.ticket_id_counter += 1;
 
           // save minted ticket id for the lottery
-          let id = ticket.get_nft_id();
-          lottery_data.minted.push(id);
+          let id = ticket.get_non_fungible_key();
           debug!("Minted new ticket: {}", id);
+          lottery_data.minted.push(id);
 
           // update lottery NFT
           self.lottery_minter.authorize(|auth| {
-            self.lottery_resource_def.update_nft_data(lottery_id, lottery_data, auth);
+            self.lottery_resource_def.update_non_fungible_data(&NonFungibleKey::from(lottery_id), lottery_data, auth);
           });
 
           (payment, ticket)
@@ -315,12 +315,12 @@ blueprint! {
           assert!(auth.amount() == Decimal::one(), "Only one ticket withdraw at the time");
 
           // check lottery
-          let lottery_data: LotteryData = self.lottery_resource_def.get_nft_data(lottery_id);
+          let lottery_data: LotteryData = self.lottery_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
           assert!(lottery_data.ended, "Lottery is not ended yet");
 
           // check the ticket
-          let ticket_id = auth.get_nft_id();
-          let mut ticket_data: LotteryTicketData = self.tickets_resource_def.get_nft_data(ticket_id);
+          let ticket_id = auth.get_non_fungible_key();
+          let mut ticket_data: LotteryTicketData = self.tickets_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
           assert!(ticket_data.lottery_id == lottery_id, "The ticket doesn't belong to the specified lottery");
           assert!(!ticket_data.checked, "This ticket was already checked for the withdraw");
 
@@ -328,7 +328,7 @@ blueprint! {
           ticket_data.checked = true;
 
           // get the staking amount
-          let withdraw = self.assets_vault.take(lottery_data.ticket_price);
+          let mut withdraw = self.assets_vault.take(lottery_data.ticket_price);
 
           // check if this ticket is winner
           match lottery_data.winner {
@@ -347,7 +347,7 @@ blueprint! {
 
           // update ticket data
           self.lottery_minter.authorize(|minter_auth| {
-            self.tickets_resource_def.update_nft_data(ticket_id, ticket_data, minter_auth);
+            self.tickets_resource_def.update_non_fungible_data(&NonFungibleKey::from(lottery_id), ticket_data, minter_auth);
           });
 
           withdraw

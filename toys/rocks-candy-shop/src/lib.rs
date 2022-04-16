@@ -59,23 +59,16 @@ blueprint! {
             .instantiate()
         }
 
-        fn take_from_vault(&self, symbol: String, quantity: Decimal) -> Bucket {
-            // private function returns a bucket with the specified number and type of candy (or an empty bucket)
-            for c in &self.candy_vaults[..] {
-                if c.0 == symbol {
-                    let v = &c.1;
-                    if v.amount() >= quantity {
-                        return v.take(quantity)
-                    } else {
-                        break;
-                    }
-                }
+        fn take_from_vault(&mut self, symbol: String, quantity: Decimal) -> Bucket {
+            let vault_index = self.candy_vaults.iter().position(|entry| entry.0 == symbol);
+
+            match vault_index {
+                Some(index) => self.candy_vaults.get_mut(index).unwrap().1.take(quantity),
+                None => Bucket::new(RADIX_TOKEN)
             }
-            let empty_bucket: Bucket = Bucket::new(RADIX_TOKEN); // canonical way to make an empty_bucket
-            return empty_bucket
         }
 
-        pub fn free_gum(&self) -> Bucket {
+        pub fn free_gum(&mut self) -> Bucket {
             // Return a gumball if we have at least one available.
             // If there is no GUM vault or the GUM vaut is empty, this method will fail.
             self.take_from_vault("GUM".to_string(), 1.into())
@@ -83,7 +76,7 @@ blueprint! {
 
         pub fn free_samples(&mut self) -> Vec<Bucket> {
             let mut buckets = Vec::new();
-            for c in &self.candy_vaults[..] {
+            for c in self.candy_vaults.iter_mut() {
                 if c.1.amount() > 0.into() {
                     buckets.push(c.1.take(1));
                 }

@@ -72,8 +72,6 @@ resim call-method $component buy_ticket 10,$eur
 ```
 resim call-method $component ride 1,$ticket "European"
 resim call-method $component ride 1,$ticket "American"
-```
-- You should notice info messages in the console stating that is it your first ride, or you have already used the transit before.
 ## Set current epoch
 ```
 resim set-current-epoch 5
@@ -82,8 +80,6 @@ resim set-current-epoch 5
 ```
 resim call-method $component ride 1,$ticket "American"
 ```
-- You should be greeted with a welcome back message in the console, stating that this is not your first ride.
-- The transit is keeping track of your public key along with the epoch time in which you took a ride.
 ## Time to shutdown the transit and collect payments
 ```
 resim call-method $component withdraw_euros false 1,$european_badge

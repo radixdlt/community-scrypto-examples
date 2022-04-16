@@ -1,6 +1,6 @@
 # scrypto-bonding
 
-srypto-bonding: A Scrypto package for creating and using bonding curves as an automated market maker on Radix
+scrypto-bonding: A Scrypto package for creating and using bonding curves as an automated market maker on Radix
 
 The main blueprint to interact with is `BondingAMM`.  It has buy/sell functionality against a single
 bonding curve defined by a plugable second component.  It will instantiate a component from the `RatioBondingCurve`
