@@ -1,10 +1,13 @@
 extern crate radix_engine;
+extern crate unescape;
 
 use radix_engine::ledger::*;
 use radix_engine::model::Receipt;
 use scrypto::prelude::{Address, Bucket};
 use scrypto_unit::*;
 use serde_json::Value::Null;
+use guess_it::GameSerialized;
+use unescape::unescape;
 
 #[test]
 fn test_create_user() {
@@ -54,6 +57,22 @@ fn test_create() {
 }
 
 #[test]
+fn test_check_state() {
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
+    let mut env = TestEnv::new(&mut ledger);
+
+    env.create_user("creator");
+    env.publish_package("package", scrypto::include_code!("guess_it"));
+    assert_eq!(env.packages.len(), 1);
+    let (component, _def, _) = create_game(&mut env);
+
+    // Check state
+    let (state, _receipt) = check_state(&mut env, component);
+    let parsed: serde_json::Value = serde_json::from_str(state.as_str()).unwrap();
+    println!("State: {}\nReceipt: {:#?}", parsed, _receipt.logs);
+    assert_ne!(parsed["players"], Null);
+}
+#[test]
 fn test_join() {
     let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
@@ -63,12 +82,22 @@ fn test_join() {
     assert_eq!(env.packages.len(), 1);
     let (component, _def, _) = create_game(&mut env);
 
-    join_game(&mut env, component);
+    let (_badge, _receipt) = join_game(&mut env, component);
+    // println!("info {:?}", _receipt.logs);
     let (_response, _receipt) = check_state(&mut env, component);
     // Check state
-    let state = check_state(&mut env, component).0;
-    let parsed: serde_json::Value = serde_json::from_str(state.as_str()).unwrap();
-    assert_ne!(parsed["players"], Null);
+    let (_state, _receipt) = check_state(&mut env, component);
+    let _match_string1 = r#"{"players":{"42d588c2ac04d7257a77e586a9c600b5":{"guess":"","secret":"","bet":0,"share_of_pot":0}}}"#;
+    let mut _unescaped = unescape(_state.as_str()).unwrap();
+    // unescaped.pop();
+    // unescaped.remove(0);
+    // println!("info {:#}", _match_string1);
+    assert_eq!(_unescaped, _state);
+    println!("\nLeft: {}\nRight: {}\nOuter: {}", _unescaped, _state, _match_string1);
+    // let _parsed: GameSerialized = serde_json::from_str(_unescaped.as_str()).unwrap();
+    let _parsed: GameSerialized = serde_json::from_str(_state.as_str()).unwrap();
+    assert_ne!(_parsed.players.len(), 0);
+    // println!("match string: {:#?}", _parsed.players);
 
     // env.create_user("player_1");
     // env.acting_as("player_1");
