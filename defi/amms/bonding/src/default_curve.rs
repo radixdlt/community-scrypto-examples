@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 
-use num_traits::{Zero};
+use num_traits::Zero;
 
 use crate::number::*;
 
@@ -11,15 +11,28 @@ fn calculate_price(r: Number, s: Number, reserve_ratio_n: u32, reserve_ratio_d: 
     r / s / n * d
 }
 
-fn calculate_initial_supply(collateral_amount: Number, reserve_ratio_n: u32, reserve_ratio_d: u32) -> Number {
+fn calculate_initial_supply(
+    collateral_amount: Number,
+    reserve_ratio_n: u32,
+    reserve_ratio_d: u32,
+) -> Number {
     //collateral_amount * reserve_ratio_d / reserve_ratio_n
-    scaled_power(&collateral_amount,
+    scaled_power(
+        &collateral_amount,
         &number_from_decimal(Decimal::try_from(reserve_ratio_d).unwrap(), 0),
-        &number_from_decimal(Decimal::try_from(reserve_ratio_n).unwrap(), 0)
-        , 1, 1)
+        &number_from_decimal(Decimal::try_from(reserve_ratio_n).unwrap(), 0),
+        1,
+        1,
+    )
 }
 
-fn calculate_curve_mint(c: Number, r: Number, s: Number, reserve_ratio_n: u32, reserve_ratio_d: u32) -> Number {
+fn calculate_curve_mint(
+    c: Number,
+    r: Number,
+    s: Number,
+    reserve_ratio_n: u32,
+    reserve_ratio_d: u32,
+) -> Number {
     // PurchaseReturn = ContinuousTokenSupply * ((1 + ReserveTokensReceived / ReserveTokenBalance) ^ (ReserveRatio) - 1)
     // = s * (((1 + c / r) ^ rr) - 1)
 
@@ -31,7 +44,13 @@ fn calculate_curve_mint(c: Number, r: Number, s: Number, reserve_ratio_n: u32, r
     result
 }
 
-fn calculate_curve_return(c: Number, r: Number, s: Number, reserve_ratio_n: u32, reserve_ratio_d: u32) -> Number {
+fn calculate_curve_return(
+    c: Number,
+    r: Number,
+    s: Number,
+    reserve_ratio_n: u32,
+    reserve_ratio_d: u32,
+) -> Number {
     // SaleReturn = ReserveTokenBalance * (1 - (1 - ContinuousTokensReceived / ContinuousTokenSupply) ^ (1 / (ReserveRatio)))
     // = r * (1 - (1 - c / s) ^ (1/rr))
     // = r * (1 - ([s - c] / s)^rri) = r * (1-(n/d))
@@ -45,7 +64,12 @@ fn calculate_curve_return(c: Number, r: Number, s: Number, reserve_ratio_n: u32,
     result
 }
 
-fn get_initial_supply(collateral_amount: Decimal, reserve_ratio_n: u32, reserve_ratio_d: u32, precision_bits: u16) -> Decimal {
+fn get_initial_supply(
+    collateral_amount: Decimal,
+    reserve_ratio_n: u32,
+    reserve_ratio_d: u32,
+    precision_bits: u16,
+) -> Decimal {
     assert!(!collateral_amount.is_negative());
     assert!(reserve_ratio_d != 0);
 
@@ -60,7 +84,14 @@ fn get_initial_supply(collateral_amount: Decimal, reserve_ratio_n: u32, reserve_
     decimal_from_number(result, precision_bits).unwrap()
 }
 
-fn get_mint_amount(collateral_amount: Decimal, reserve_amount: Decimal, supply_amount: Decimal, reserve_ratio_n: u32, reserve_ratio_d: u32, precision_bits: u16) -> Decimal {
+fn get_mint_amount(
+    collateral_amount: Decimal,
+    reserve_amount: Decimal,
+    supply_amount: Decimal,
+    reserve_ratio_n: u32,
+    reserve_ratio_d: u32,
+    precision_bits: u16,
+) -> Decimal {
     assert!(!collateral_amount.is_negative());
     assert!(!reserve_amount.is_negative());
     assert!(!supply_amount.is_negative());
@@ -81,7 +112,14 @@ fn get_mint_amount(collateral_amount: Decimal, reserve_amount: Decimal, supply_a
     decimal_from_number(result, precision_bits).unwrap()
 }
 
-fn get_return_amount(continuous_amount: Decimal, reserve_amount: Decimal, supply_amount: Decimal, reserve_ratio_n: u32, reserve_ratio_d: u32, precision_bits: u16) -> Decimal {
+fn get_return_amount(
+    continuous_amount: Decimal,
+    reserve_amount: Decimal,
+    supply_amount: Decimal,
+    reserve_ratio_n: u32,
+    reserve_ratio_d: u32,
+    precision_bits: u16,
+) -> Decimal {
     assert!(!continuous_amount.is_negative());
     assert!(!reserve_amount.is_negative());
     assert!(!supply_amount.is_negative());
@@ -96,12 +134,14 @@ fn get_return_amount(continuous_amount: Decimal, reserve_amount: Decimal, supply
     let s = number_from_decimal(supply_amount, precision_bits);
 
     let result = calculate_curve_return(c, r, s, reserve_ratio_n, reserve_ratio_d);
-    
-    assert!(result >= Number::zero(), "Calculated negative return amount");
+
+    assert!(
+        result >= Number::zero(),
+        "Calculated negative return amount"
+    );
 
     decimal_from_number(result, precision_bits).unwrap()
 }
-
 
 blueprint! {
     struct RatioBondingCurve {
@@ -112,8 +152,14 @@ blueprint! {
 
     impl RatioBondingCurve {
         pub fn new(reserve_ratio_n: u32, reserve_ratio_d: u32, precision_bits: u16) -> Component {
-            debug!("RatioBondingCurve::new called with {} / {} @ {} bits", reserve_ratio_n, reserve_ratio_d, precision_bits);
-            assert_ne!(reserve_ratio_d, 0, "reserve radio denominator cannot be zero");
+            debug!(
+                "RatioBondingCurve::new called with {} / {} @ {} bits",
+                reserve_ratio_n, reserve_ratio_d, precision_bits
+            );
+            assert_ne!(
+                reserve_ratio_d, 0,
+                "reserve radio denominator cannot be zero"
+            );
             // simplify and verify simple case of rr = 0 or 1
             let reserve_ratio_d = if reserve_ratio_n == 0 {
                 1
@@ -124,26 +170,56 @@ blueprint! {
                 reserve_ratio_n,
                 reserve_ratio_d,
                 precision_bits,
-            }.instantiate()
+            }
+            .instantiate()
         }
-   
-    // can't do trait impl's within the blueprint.  Would be ncie to get those compile time checks...
-    // impl BondingCurve for blueprint::RatioBondingCurve {
+
+        // can't do trait impl's within the blueprint.  Would be ncie to get those compile time checks...
+        // impl BondingCurve for blueprint::RatioBondingCurve {
 
         pub fn get_initial_supply(&self, collateral_amount: Decimal) -> Decimal {
-            get_initial_supply(collateral_amount, self.reserve_ratio_n, self.reserve_ratio_d, self.precision_bits)
+            get_initial_supply(
+                collateral_amount,
+                self.reserve_ratio_n,
+                self.reserve_ratio_d,
+                self.precision_bits,
+            )
         }
 
-        pub fn get_mint_amount(&self, collateral_amount: Decimal, reserve_amount: Decimal, supply_amount: Decimal) -> Decimal {
+        pub fn get_mint_amount(
+            &self,
+            collateral_amount: Decimal,
+            reserve_amount: Decimal,
+            supply_amount: Decimal,
+        ) -> Decimal {
             debug!("RatioBondingCurve::get_mint_amount called with:\ncollateral_amount: {}\nreserve_amount: {}\nsupply_amount: {}", 
                 collateral_amount, reserve_amount, supply_amount);
-            get_mint_amount(collateral_amount, reserve_amount, supply_amount, self.reserve_ratio_n, self.reserve_ratio_d, self.precision_bits)
+            get_mint_amount(
+                collateral_amount,
+                reserve_amount,
+                supply_amount,
+                self.reserve_ratio_n,
+                self.reserve_ratio_d,
+                self.precision_bits,
+            )
         }
 
-        pub fn get_return_amount(&self, continuous_amount: Decimal, reserve_amount: Decimal, supply_amount: Decimal) -> Decimal {
+        pub fn get_return_amount(
+            &self,
+            continuous_amount: Decimal,
+            reserve_amount: Decimal,
+            supply_amount: Decimal,
+        ) -> Decimal {
             debug!("RatioBondingCurve::get_return_amount called with:\ncontinuous_amount: {}\nreserve_amount: {}\nsupply_amount: {}", 
                 continuous_amount, reserve_amount, supply_amount);
-            get_return_amount(continuous_amount, reserve_amount, supply_amount, self.reserve_ratio_n, self.reserve_ratio_d, self.precision_bits)
+            get_return_amount(
+                continuous_amount,
+                reserve_amount,
+                supply_amount,
+                self.reserve_ratio_n,
+                self.reserve_ratio_d,
+                self.precision_bits,
+            )
         }
 
         pub fn get_price(&self, reserve_amount: Decimal, supply_amount: Decimal) -> Decimal {
@@ -153,9 +229,8 @@ blueprint! {
             decimal_from_number(p, self.precision_bits).unwrap()
         }
 
-    // }
+        // }
     }
-
 }
 
 // -------- Testing
@@ -171,7 +246,14 @@ mod test {
         let supply_amount = 300000.into();
         let reserve_ratio_n = 1;
         let reserve_ratio_d = 5;
-        let to_mint = get_mint_amount(collateral_amount, reserve_amount, supply_amount, reserve_ratio_n, reserve_ratio_d, precision_bits);
+        let to_mint = get_mint_amount(
+            collateral_amount,
+            reserve_amount,
+            supply_amount,
+            reserve_ratio_n,
+            reserve_ratio_d,
+            precision_bits,
+        );
         let expected: i128 = 299401793723844635041; // 299.401793723844635041 // the right answer to 18 decimal places (the default for Decimal)
         let expected: Decimal = Decimal(expected);
         assert_eq!(to_mint, expected);
@@ -182,7 +264,14 @@ mod test {
         let supply_amount = Decimal(300000000000000000000000i128 + 299401793723844635041i128);
         let reserve_ratio_n = 1;
         let reserve_ratio_d = 5;
-        let to_mint = get_mint_amount(collateral_amount, reserve_amount, supply_amount, reserve_ratio_n, reserve_ratio_d, precision_bits);
+        let to_mint = get_mint_amount(
+            collateral_amount,
+            reserve_amount,
+            supply_amount,
+            reserve_ratio_n,
+            reserve_ratio_d,
+            precision_bits,
+        );
         let expected: i128 = 693997438220660073726; // 693.997438220660073726  // the right answer to 18 decimal places (the default for Decimal
         let expected: Decimal = Decimal(expected);
         assert_eq!(to_mint, expected);
@@ -196,7 +285,14 @@ mod test {
         let supply_amount = 300000.into();
         let reserve_ratio_n = 1;
         let reserve_ratio_d = 5;
-        let to_mint = get_mint_amount(collateral_amount, reserve_amount, supply_amount, reserve_ratio_n, reserve_ratio_d, precision_bits);
+        let to_mint = get_mint_amount(
+            collateral_amount,
+            reserve_amount,
+            supply_amount,
+            reserve_ratio_n,
+            reserve_ratio_d,
+            precision_bits,
+        );
         let expected: i128 = 299401793723844635041; // 299.401793723844635041 // the right answer to 18 decimal places (the default for Decimal)
         let expected: Decimal = Decimal(expected); // TODO use decimal_from_bigint instead
         assert_eq!(to_mint, expected);
@@ -207,7 +303,14 @@ mod test {
         let supply_amount = Decimal(300000000000000000000000i128 + 299401793723844635041i128);
         let reserve_ratio_n = 1;
         let reserve_ratio_d = 5;
-        let to_return = get_return_amount(continuous_amount, reserve_amount, supply_amount, reserve_ratio_n, reserve_ratio_d, precision_bits);
+        let to_return = get_return_amount(
+            continuous_amount,
+            reserve_amount,
+            supply_amount,
+            reserve_ratio_n,
+            reserve_ratio_d,
+            precision_bits,
+        );
         let expected: i128 = 300000000000000000000; // 300.0  // the right answer to 18 decimal places (the default for Decimal
         let expected: Decimal = Decimal(expected); // TODO use decimal_from_bigint instead
         assert_eq!(to_return, expected);
@@ -219,13 +322,21 @@ mod test {
         let precision_bits = 384;
         let continuous_amount = 100.into();
         let reserve_amount = 61000.into();
-        let supply_amount = Decimal(300000000000000000000000i128 + 299401793723844635041i128 + 693997438220660073726i128); // amount after test_1
+        let supply_amount = Decimal(
+            300000000000000000000000i128 + 299401793723844635041i128 + 693997438220660073726i128,
+        ); // amount after test_1
         let reserve_ratio_n = 1;
         let reserve_ratio_d = 5;
-        let to_return = get_return_amount(continuous_amount, reserve_amount, supply_amount, reserve_ratio_n, reserve_ratio_d, precision_bits);
+        let to_return = get_return_amount(
+            continuous_amount,
+            reserve_amount,
+            supply_amount,
+            reserve_ratio_n,
+            reserve_ratio_d,
+            precision_bits,
+        );
         let expected: i128 = 101263817029251588263; // 101.263817029251588263 // the right answer to 18 decimal places (the default for Decimal
         let expected: Decimal = Decimal(expected); // TODO use decimal_from_bigint instead
         assert_eq!(to_return, expected);
     }
-
 }

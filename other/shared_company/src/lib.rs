@@ -53,7 +53,7 @@ impl SharedCompany {
     }
 
     /// buys an amount of shares and returns change
-    pub fn buy_shares(&mut self, payment: Bucket) -> (Bucket, Bucket, Bucket) {
+    pub fn buy_shares(&mut self, mut payment: Bucket) -> (Bucket, Bucket, Bucket) {
         let max_share_buy_power = payment.amount() / self.price_share;
         // Increase the share_counter so the amount of shares that are outstanding is tracked
         self.share_counter += max_share_buy_power;

@@ -12,7 +12,7 @@ blueprint! {
     impl Donations {
         
         pub fn new(fee_percent: Decimal) -> (Component, Bucket) {
-            let admin_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut admin_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Donations Badge Mint Auth")
                 .initial_supply_fungible(2);
 
@@ -39,7 +39,7 @@ blueprint! {
             // get existing badges for owner
             let badges = self.badges.entry(owner).or_insert(Vec::new());
 
-            let badge_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut badge_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "Donations Badge")
                 .metadata("identifier", identifier)
                 .metadata("title", title)
@@ -73,15 +73,13 @@ blueprint! {
             return resource_defs
         }
 
-        pub fn donate(&mut self, owner: Address, badge_address: Address, payment: Bucket) -> (Bucket, Bucket){
+        pub fn donate(&mut self, owner: Address, badge_address: Address, mut payment: Bucket) -> (Bucket, Bucket){
             assert!(self.badges.contains_key(&owner), "No badges found for this owner");
             assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
 
-            let badges = self.badges.get(&owner).unwrap();
+            let badges = self.badges.get_mut(&owner).unwrap();
 
-            let mut iter = badges.iter();
-
-            let badge = match iter.find(|&b| b.resource_address() == badge_address) {
+            let badge = match badges.iter_mut().find(|b| b.resource_address() == badge_address) {
                 Some(value) => value,
                 None => {
                     info!("No such badge found");
@@ -97,10 +95,10 @@ blueprint! {
             assert!(payment.amount() >= price, "Not enough amount");
 
             // Take fee
-            let price_bucket = payment.take(price);
+            let mut price_bucket = payment.take(price);
             let fee = price * self.fee / 100;
             self.collected_fees.put(price_bucket.take(fee));
-            Account::from(owner).deposit(price_bucket);
+            Component::from(owner).call::<()>("deposit", vec![scrypto_encode(&price_bucket)]);
 
             (badge.take(1), payment)
         }

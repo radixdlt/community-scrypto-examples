@@ -4,20 +4,20 @@ use scrypto::prelude::*;
 
 #[derive(Copy, Clone)]
 struct User {
-    pub_key: Address,
+    pub_key: EcdsaPublicKey,
     address: Address
 }
 
-struct TestUtils<'a, L: Ledger> {
+struct TestUtils<'a, L: SubstateStore> {
     current_user: Option<User>,
     executor: TransactionExecutor<'a, L>,
     package: Address
 }
 
-impl<'a, L: Ledger> TestUtils<'a, L> {
+impl<'a, L: SubstateStore> TestUtils<'a, L> {
     fn new(ledger: &'a mut L) -> Self {
-        let mut executor = TransactionExecutor::new(ledger, 0, 0);
-        let package = executor.publish_package(include_code!("escrow"));
+        let mut executor = TransactionExecutor::new(ledger, false);
+        let package = executor.publish_package(include_code!("escrow")).unwrap();
 
         Self {
             current_user: None,
@@ -35,7 +35,7 @@ impl<'a, L: Ledger> TestUtils<'a, L> {
         }
     }
 
-    pub fn get_call_results(&self, receipt: Receipt) -> (Vec<Address>, Vec<Address>, Vec<Address>) {
+    pub fn get_call_results(&self, receipt: radix_engine::model::Receipt) -> (Vec<Address>, Vec<Address>, Vec<Address>) {
         let packages = receipt.new_entities
             .iter()
             .filter(|a| matches!(a, Address::Package(_)))
@@ -77,11 +77,10 @@ impl<'a, L: Ledger> TestUtils<'a, L> {
         self.executor
                 .run(
                     TransactionBuilder::new(&self.executor)
-                        .call_method(user.address, "withdraw", vec![format!("{}", amount), token_address], None)
-                        .deposit_all_buckets(account)
+                        .withdraw_from_account(&Resource::from_str(&format!("{},{}", amount, token_address)).unwrap(), user.address)
+                        .call_method_with_all_resources(account, "deposit_batch")
                         .build(vec![user.pub_key])
-                        .unwrap(),
-                    false,
+                        .unwrap()
                 )
                 .unwrap();
     }
@@ -92,31 +91,29 @@ impl<'a, L: Ledger> TestUtils<'a, L> {
                 .run(
                     TransactionBuilder::new(&self.executor)
                         .new_token_fixed(HashMap::new(), max_supply.into())
-                        .deposit_all_buckets(user.address)
+                        .call_method_with_all_resources(user.address, "deposit_batch")
                         .build(vec![user.pub_key])
-                        .unwrap(),
-                    false,
+                        .unwrap()
                 )
                 .unwrap();
 
         return receipt.resource_def(0).unwrap().into();
     }
 
-    pub fn call_method(&mut self, component: &Address, method_name: &str, params: Vec<String>) -> Receipt {
+    pub fn call_method(&mut self, component: &Address, method_name: &str, params: Vec<String>) -> radix_engine::model::Receipt {
         let user = self.get_user_or_fail();
 
         self.executor
             .run(
                 TransactionBuilder::new(&self.executor)
                     .call_method(*component, method_name, params, Some(user.address))
-                    .deposit_all_buckets(user.address)
+                    .call_method_with_all_resources(user.address, "deposit_batch")
                     .build(vec![user.pub_key])
-                    .unwrap(),
-                false,
+                    .unwrap()
             ).unwrap()
     }
 
-    pub fn call_function(&mut self, package_name: &str, function_name: &str, params: Vec<String>) -> Receipt {
+    pub fn call_function(&mut self, package_name: &str, function_name: &str, params: Vec<String>) -> radix_engine::model::Receipt {
         let user = self.get_user_or_fail();
 
         self.executor
@@ -129,23 +126,22 @@ impl<'a, L: Ledger> TestUtils<'a, L> {
                         params,
                         Some(user.address),
                     )
-                    .deposit_all_buckets(user.address)
+                    .call_method_with_all_resources(user.address, "deposit_batch")
                     .build(vec![user.pub_key])
-                    .unwrap(),
-                false,
+                    .unwrap()
             ).unwrap()
     }
 }
 
 #[test]
 fn test_simple_trade() {
-    let mut ledger = InMemoryLedger::with_bootstrap();
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut utils = TestUtils::new(&mut ledger);
     let account1 = utils.create_account();
     let account2 = utils.create_account();
 
-    let token1 = utils.act_as(account1).create_token(8_000.into());
-    let token2 = utils.act_as(account2).create_token(8_000_000.into());
+    let token1 = utils.act_as(account1).create_token(dec!(8_000));
+    let token2 = utils.act_as(account2).create_token(dec!(8_000_000));
 
     let receipt = utils.act_as(account1)
             .call_function(
@@ -153,7 +149,7 @@ fn test_simple_trade() {
                 "new", 
                 vec![token1.address().to_string(), token2.address().to_string(), account1.address.to_string(), account2.address.to_string()]
             );
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
     let (resources, components, _) = utils.get_call_results(receipt);
 
     let badge1 = resources.get(0).unwrap();
@@ -165,35 +161,35 @@ fn test_simple_trade() {
 
     let receipt = utils.act_as(account1)
             .call_method(component, "put_tokens", vec![format!("500,{}", token1.address()), format!("1,{}", badge1)]);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // Second call should not fail
     let receipt = utils.act_as(account1)
             .call_method(component, "put_tokens", vec![format!("500,{}", token1.address()), format!("1,{}", badge1)]);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // Second user tries with wrong badge, should fail
     let receipt = utils.act_as(account2)
             .call_method(component, "put_tokens", vec![format!("500,{}", token2.address()), format!("1,{}", badge1)]);
-    assert!(!receipt.success);
+    assert!(receipt.result.is_err());
 
     // Second user tries with good badge
     let receipt = utils.act_as(account2)
             .call_method(component, "put_tokens", vec![format!("500,{}", token2.address()), format!("1,{}", badge2)]);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // Second user tries to put tokens again, should not fail
     let receipt = utils.act_as(account2)
             .call_method(component, "put_tokens", vec![format!("500,{}", token2.address()), format!("1,{}", badge2)]);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // First user accepts the trade
     let receipt = utils.act_as(account1)
             .call_method(component, "accept", vec![format!("1,{}", badge1)]);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 
     // Second user accepts the trade
     let receipt = utils.act_as(account2)
             .call_method(component, "accept", vec![format!("1,{}", badge2)]);
-    assert!(receipt.success);
+    assert!(receipt.result.is_ok());
 }

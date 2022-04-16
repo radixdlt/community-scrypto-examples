@@ -54,7 +54,7 @@ blueprint! {
             self.price = price;
         }
 
-        pub fn capture(&mut self, player: Address, depth: Decimal, payment: Bucket) -> Bucket {
+        pub fn capture(&mut self, player: Address, depth: Decimal, mut payment: Bucket) -> Bucket {
             assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
             assert!(self.is_ready, "Current game is not ready yet");
             assert!(!self.players.contains_key(&player.to_string()), "You are already in the game");
@@ -129,10 +129,10 @@ blueprint! {
 
             if weight > Decimal::zero() {
                 // send money to winner minus fee
-                let fee = self.prize_pool.amount() * self.fee / 100;
+                let fee = self.prize_pool.amount() * self.fee / dec!("100");
                 self.collected_fees.put(self.prize_pool.take(fee));
                 let address = Address::from_str(winner).unwrap();
-                Account::from(address).deposit(self.prize_pool.take_all());
+                Component::from(address).call::<()>("deposit", vec![scrypto_encode(&self.prize_pool.take_all())]);
             }else{
                 info!("Ooops, we have no winner. The prize pool will be used in the next game");
             }

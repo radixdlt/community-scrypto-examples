@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 pub struct Baker {
     
     #[scrypto(mutable)]
@@ -110,7 +110,7 @@ blueprint! {
         }
 
 
-        pub fn mint_nft(&mut self, payment: Bucket) -> (Bucket, Bucket, Bucket) {
+        pub fn mint_nft(&mut self, mut payment: Bucket) -> (Bucket, Bucket, Bucket) {
             // Take NFT price out of the payment bucket and place in XRD vault 
             self.collected_xrd.put(payment.take(self.baker_nft_price));
 
@@ -121,7 +121,7 @@ blueprint! {
 
             let nft_bucket = self.baker_nft_minter.authorize(|auth| {
                 self.baker_nft_def
-                    .mint_nft(self.baker_card_id_counter, new_card, auth)
+                    .mint_non_fungible(&NonFungibleKey::from(self.baker_card_id_counter), new_card, auth)
             });
             self.baker_card_id_counter += 1;
 
@@ -135,7 +135,7 @@ blueprint! {
         //Need NFT to purchase flour
         #[auth(baker_nft_def)]
         //Buy some organic whole wheat flour
-        pub fn buy_flour(&self, payment:Bucket) -> (Bucket,Bucket) {
+        pub fn buy_flour(&mut self, mut payment:Bucket) -> (Bucket,Bucket) {
             //take payment in zombo
             self.zombo.put(payment.take(self.material_price));
             info!("Enjoy the flour!");
@@ -146,7 +146,7 @@ blueprint! {
         //Need NFT to purchase water
         #[auth(baker_nft_def)]
         //Buy some distilled water
-        pub fn buy_water(&self, payment:Bucket) -> (Bucket,Bucket) {
+        pub fn buy_water(&mut self, mut payment:Bucket) -> (Bucket,Bucket) {
             //take payment in zombo
             self.zombo.put(payment.take(self.material_price));
             info!("Enjoy the water!");
@@ -157,7 +157,7 @@ blueprint! {
         //Need NFT to purchase yeast
         #[auth(baker_nft_def)]
         //Buy some Fleischmann's bakers yeast
-        pub fn buy_yeast(&self, payment:Bucket) -> (Bucket, Bucket) {
+        pub fn buy_yeast(&mut self, mut payment:Bucket) -> (Bucket, Bucket) {
             //take payment in zombo
             self.zombo.put(payment.take(self.material_price));
             info!("Enjoy the yeast!");
@@ -167,7 +167,7 @@ blueprint! {
 
         //Combine all ingredients in bread maker
         //Need flour water and yest to make bread
-        pub fn make_bread(&self, flour:Bucket, water:Bucket, yeast:Bucket) -> Bucket {
+        pub fn make_bread(&mut self, flour:Bucket, water:Bucket, yeast:Bucket) -> Bucket {
             assert!(water.resource_def() == self.water, "That aint water!");
             assert!(water.amount() > Decimal::zero(), "No water provided!");
             assert!(flour.resource_def() == self.flour, "That aint flour!");
@@ -186,29 +186,29 @@ blueprint! {
         //Breads always better with butter
         //Need bread to purchase butter
         #[auth(bread)]
-        pub fn buy_butter(&self,payment:Bucket)->(Bucket,Bucket){
+        pub fn buy_butter(&mut self,payment:Bucket)->(Bucket,Bucket){
             info!("Bread and butter is the best!");
             (self.material_minter.authorize(|auth| self.butter.mint(1, auth)),payment)
         }
 
         //Enjoy your bread
         //Need bread butter and NFT to eat bread
-        pub fn eat_bread(&self, bread:Bucket, butter:Bucket, baker_nft:BucketRef) {
+        pub fn eat_bread(&mut self, bread:Bucket, butter:Bucket, baker_nft:BucketRef) {
             assert!(bread.resource_def() == self.bread, "That aint bread!");
             assert!(bread.amount() > Decimal::zero(), "No bread provided!");
             assert!(butter.resource_def() == self.butter, "That aint butter!");
             assert!(butter.amount() > Decimal::zero(), "No butter provided!");
             assert!(
-                baker_nft.amount() == 1.into(),
+                baker_nft.amount() == Decimal::one(),
                 "You can only feed Qty. 1 NFT at a time!"
             );
-            let nft_id = baker_nft.get_nft_id();
+            let nft_id = baker_nft.get_non_fungible_key();
 
-            let mut nft_data: Baker = self.baker_nft_def.get_nft_data(nft_id);
+            let mut nft_data: Baker = self.baker_nft_def.get_non_fungible_data(&nft_id);
             nft_data.weight += 1;
 
             self.baker_nft_minter
-                .authorize(|auth| self.baker_nft_def.update_nft_data(nft_id, nft_data, auth));
+                .authorize(|auth| self.baker_nft_def.update_non_fungible_data(&nft_id, nft_data, auth));
 
             self.material_minter.authorize(|auth| self.bread.burn_with_auth(bread, auth));
             self.material_minter.authorize(|auth| self.butter.burn_with_auth(butter, auth));
@@ -219,9 +219,9 @@ blueprint! {
         }
         //Now that you are sick of bread, lets make somthing else
         //Need NFT weight >= 3 
-        pub fn next_level(&self, baker_nft:BucketRef) ->  Bucket {
-            let nft_id = baker_nft.get_nft_id();
-            let nft_data: Baker = self.baker_nft_def.get_nft_data(nft_id);
+        pub fn next_level(&mut self, baker_nft:BucketRef) ->  Bucket {
+            let nft_id = baker_nft.get_non_fungible_key();
+            let nft_data: Baker = self.baker_nft_def.get_non_fungible_data(&nft_id);
              //check NFT weight
             assert!(nft_data.weight >= 3, "Eat more bread, your too skinny");
             info!("We will now be making cake, here is your free cake pan!");

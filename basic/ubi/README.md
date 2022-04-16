@@ -29,7 +29,7 @@ resim call-method <ubi_component> register <admin_account_address> 1,<admin_badg
 
 ```
 resim set-current-epoch 10
-resim call-method <ubi_component> available_tokens 1,<person_badge_address>
+resim call-method <ubi_component> available_tokens <person_badge_non_fungible_key>
 resim call-method <ubi_component> collect_ubi 1,<person_badge_address>
 resim call-method <ubi_component> available_tokens 1,<person_badge_address>
 resim show <admin_account_address>

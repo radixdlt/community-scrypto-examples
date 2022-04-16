@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 
-#[derive(NftData)]
+#[derive(NonFungibleData)]
 pub struct StakingData {
     #[scrypto(mutable)]
     reward: Decimal,
@@ -135,7 +135,7 @@ blueprint! {
 
             let bucket = self.token_minter.authorize(|auth| {
                 self.token_resource_def
-                    .mint_nft(self.token_id_counter, token_data, auth)
+                    .mint_non_fungible(&NonFungibleKey::from(self.token_id_counter), token_data, auth)
             });
             self.token_id_counter += 1;
             
@@ -148,8 +148,8 @@ blueprint! {
             // let user_id = Self::get_user_id(user_auth);
 
              // get nft data from bucket
-            let id = auth.get_nft_id();
-            let mut data: StakingData = self.token_resource_def.get_nft_data(id);
+            let id = auth.get_non_fungible_key();
+            let mut data: StakingData = self.token_resource_def.get_non_fungible_data(&id);
 
             // update the reward
             let earned = self.update_reward(&data);
@@ -164,7 +164,7 @@ blueprint! {
             debug!("Account staking balance: {}", data.balance);
 
             self.token_minter
-            .authorize(|auth| self.token_resource_def.update_nft_data(id, data, auth));
+            .authorize(|auth| self.token_resource_def.update_non_fungible_data(&id, data, auth));
 
             self.staking_pool.put(staking);
         }
@@ -172,14 +172,14 @@ blueprint! {
         // withdraw the staking amount and the reward
         #[auth(token_resource_def)]
         pub fn withdraw(&mut self) -> Bucket {
-            let id = auth.get_nft_id();
-            let mut data: StakingData = self.token_resource_def.get_nft_data(id);
+            let id = auth.get_non_fungible_key();
+            let mut data: StakingData = self.token_resource_def.get_non_fungible_data(&id);
 
             let earned = self.update_reward(&data);
             data.reward = earned;
             data.paid = self.reward_value;
             // take staking amount
-            let bucket = self.staking_pool.take(data.balance);
+            let mut bucket = self.staking_pool.take(data.balance);
             // add reward from the reward pool
             bucket.put(self.rewards_pool.take(data.reward));
             // reset balance and reward
@@ -188,7 +188,7 @@ blueprint! {
             
             // update NFT
             self.token_minter
-            .authorize(|auth| self.token_resource_def.update_nft_data(id, data, auth));
+            .authorize(|auth| self.token_resource_def.update_non_fungible_data(&id, data, auth));
             
             bucket
         }

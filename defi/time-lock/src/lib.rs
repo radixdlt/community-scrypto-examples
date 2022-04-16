@@ -23,7 +23,7 @@ blueprint! {
        
         pub fn new(fee: Decimal) -> (Component, Bucket) {
 
-            let tl_minter_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut tl_minter_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
                 .metadata("name", "TL Badge Mint Auth")
                 .initial_supply_fungible(2);
 
@@ -45,7 +45,7 @@ blueprint! {
 
         
         /// Lock XRD for a certain time.
-        pub fn lock(&mut self, lock_tokens: Bucket, duration: u64) -> Bucket{
+        pub fn lock(&mut self, mut lock_tokens: Bucket, duration: u64) -> Bucket{
 
             let amount = lock_tokens.amount();
 
@@ -67,7 +67,7 @@ blueprint! {
             self.collected_fees.put(fee_tokens);
 
             // Mint TL badge with locked amount and end epoch as metadata
-            let tl_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut tl_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "Time lock badge")
                 .metadata("amount", available.to_string())
                 .metadata("ends", end_time.to_string())
@@ -91,7 +91,7 @@ blueprint! {
         pub fn release(&mut self, tl_badge: Bucket) -> Bucket {
             let resource_def = tl_badge.resource_def();
     
-            let returns = Bucket::new(RADIX_TOKEN);
+            let mut returns = Bucket::new(RADIX_TOKEN);
             match self.minted.get(&resource_def.address()) {
                 Some(&value) => {
                 info!("current epoch {}", Context::current_epoch());
