@@ -1,45 +1,13 @@
 extern crate radix_engine;
 
+use std::borrow::{Borrow, BorrowMut};
+use std::str::FromStr;
 use radix_engine::ledger::*;
 use radix_engine::model::{Receipt};
-use scrypto::prelude::{Address, Bucket};
+use scrypto::core::Uuid;
+use scrypto::prelude::{Actor, Address, Bucket, Context, H256};
 use scrypto_unit::*;
 use guess_it::{GameSerialized, State};
-
-#[test]
-fn test_create_user() {
-    let mut ledger = InMemorySubstateStore::with_bootstrap();
-    let mut test_env = TestEnv::new(&mut ledger);
-
-    test_env.create_user("alice");
-    test_env.create_user("bob");
-    test_env.create_user("carol");
-
-    assert!(test_env.users.contains_key("alice"));
-    assert!(test_env.users.contains_key("bob"));
-    assert!(test_env.users.contains_key("carol"));
-    assert_eq!(test_env.users.len(), 3);
-}
-
-#[test]
-fn test_get_user() {
-    let mut ledger = InMemorySubstateStore::with_bootstrap();
-    let mut test_env = TestEnv::new(&mut ledger);
-    test_env.create_user("alice");
-    test_env.get_user("alice");
-}
-
-#[test]
-fn test_acting_as() {
-    let mut ledger = InMemorySubstateStore::with_bootstrap();
-    let mut test_env = TestEnv::new(&mut ledger);
-
-    let user = test_env.create_user("alice");
-    test_env.acting_as("alice");
-
-    assert_eq!(user.account, test_env.current_user.unwrap().account);
-    assert_eq!(user.key, test_env.current_user.unwrap().key);
-}
 
 #[test]
 fn test_create() {
@@ -140,11 +108,11 @@ fn test_make_guess() {
         .filter(|guess| !guess.is_empty())
         .collect();
     assert_eq!(guesses.len(), 2);
-    assert_eq!(game.state, State::SubmitSecret);
+    assert_eq!(game.state, State::WinnerSelection);
 }
 
 #[test]
-fn test_reveal_secret() {
+fn test_check_winner() {
     let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
 
@@ -162,22 +130,32 @@ fn test_reveal_secret() {
 
     // Player 1 guesses
     let (_response, _receipt) = make_guess(&mut env, component, "my-guess".to_string(), &badge);
-
     // Creator guesses
     env.acting_as("creator");
     let (_response, _receipt) = make_guess(&mut env, component, "my-guess".to_string(), &badge);
 
     // SUT
-    // Submit secret
-    let (_response, _receipt) = reveal_secret(&mut env, component, "my-secret".to_string(), &badge);
+    // Check Winner
+    let (_response, _receipt) = withdraw(&mut env, component, &badge);
     // Assert against state
     let (state, _) = check_state(&mut env, component);
-    let game: GameSerialized = serde_json::from_str(state.as_str()).unwrap();
-    let secrets: Vec<String> = game.players.into_iter()
-        .map(|(_key, player)| player.get_secret())
-        .filter(|guess| !guess.is_empty())
-        .collect();
-    assert_eq!(secrets.len(), 1);
+    let _game: GameSerialized = serde_json::from_str(state.as_str()).unwrap();
+    println!("Game Winner: {:#?}", _game.winner)
+}
+
+#[test]
+fn test() {
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
+    let mut env = TestEnv::new(&mut ledger);
+
+    env.create_user("creator");
+    env.publish_package("package", scrypto::include_code!("guess_it"));
+    let (component, def, _) = create_game(&mut env);
+
+    // Test context and random number generation
+    ledger.set_epoch(10);
+    let (response, _receipt): ((Actor, Address, H256, u64, u128), Receipt) = get_context(&mut env, component);
+    println!("ID: {} - Epoch: {}", response.4 % 5, response.3);
 }
 
 fn create_game<'a, L: SubstateStore>(
@@ -220,11 +198,20 @@ fn make_guess(env: &mut TestEnv<InMemorySubstateStore>, component: Address, gues
     return (response.unwrap_or("Failed to get response from 'make_guess'".to_string()), receipt);
 }
 
-fn reveal_secret(env: &mut TestEnv<InMemorySubstateStore>, component: Address, secret: String, badge: &String) -> (String, Receipt) {
-    let mut receipt = env.call_method(&component, "reveal_secret", vec![secret, badge.to_string()]);
+fn withdraw(env: &mut TestEnv<InMemorySubstateStore>, component: Address, badge: &String) -> (String, Receipt) {
+    let mut receipt = env.call_method(&component, "withdraw", vec![badge.to_string()]);
     println!("Receipt from join_game: {:?}", receipt.outputs);
     assert!(receipt.result.is_ok());
 
-    let response: Result<String, ()> = return_of_call_method(&mut receipt, "reveal_secret");
+    let response: Result<String, ()> = return_of_call_method(&mut receipt, "withdraw");
     return (response.unwrap_or("Failed to get response from 'reveal_secret'".to_string()), receipt);
+}
+
+fn get_context(env: &mut TestEnv<InMemorySubstateStore>, component: Address) -> ((Actor, Address, H256, u64, u128), Receipt) {
+    let mut receipt = env.call_method(&component, "get_context", vec![]);
+    // println!("Receipt from join_game: {:?}", receipt.outputs);
+    assert!(receipt.result.is_ok());
+
+    let tuple: (Actor, Address, H256, u64, u128) = return_of_call_method(&mut receipt, "get_context");
+    return ((tuple), receipt);
 }

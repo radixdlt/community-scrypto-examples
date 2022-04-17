@@ -1,11 +1,11 @@
 extern crate unescape;
-
 use std::fmt;
 use std::fmt::Formatter;
 use scrypto::prelude::*;
 use sbor::{Encode,Decode,TypeId, Describe};
 use serde::{Serialize, Deserialize};
 use unescape::unescape;
+mod context;
 
 #[derive(Debug, Copy, Clone, TypeId, Encode, Decode, Describe, PartialEq, Eq, Deserialize, Serialize)]
 #[repr(u32)]
@@ -68,6 +68,7 @@ impl fmt::Display for State {
 pub struct Game {
     state: State,
     pub players: HashMap<NonFungibleKey, Player>,
+    winner: Player,
 }
 impl fmt::Debug for Game {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -79,7 +80,8 @@ impl Game {
     pub fn new(players: Option<HashMap<NonFungibleKey, Player>>) -> Self {
         Self {
             state: State::AcceptingChallenger,
-            players: players.unwrap_or(HashMap::new())
+            players: players.unwrap_or(HashMap::new()),
+            winner: Player::empty(),
         }
     }
     pub fn serialize(game: &Self) -> String {
@@ -87,7 +89,7 @@ impl Game {
             .map(|(k, p)| (k.to_string(), p))
             .collect();
 
-        let serializable = GameSerialized { state: game.state, players };
+        let serializable = GameSerialized { state: game.state.clone(), players, winner: game.winner.clone() };
         unescape(serde_json::to_string(&serializable).unwrap_or("".to_string())
             .as_mut_str())
             .unwrap_or("".to_string())
@@ -97,7 +99,8 @@ impl Game {
 #[derive(TypeId, Decode, Encode, Clone, Deserialize, Serialize)]
 pub struct GameSerialized {
     pub state: State,
-    pub players: HashMap<String, Player>
+    pub players: HashMap<String, Player>,
+    pub winner: Player,
 }
 impl fmt::Debug for GameSerialized {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -109,7 +112,8 @@ impl GameSerialized {
     pub fn empty(players: Option<HashMap<String, Player>>) -> Self {
         Self {
             state: State::AcceptingChallenger,
-            players: players.unwrap_or(HashMap::new())
+            players: players.unwrap_or(HashMap::new()),
+            winner: Player::empty(),
         }
     }
 }
@@ -121,7 +125,6 @@ pub struct Player {
     bet: u32,
     share_of_pot: u32,
 }
-
 impl Player {
     pub fn empty() -> Player {
         return Self {
@@ -207,39 +210,41 @@ blueprint! {
                 .map(|(_key, player)| player.get_guess())
                 .filter(|guess| !guess.is_empty())
                 .collect();
-            self.game.state = if guesses.len() == 2 { State::SubmitSecret } else { State::MakeGuess };
+            self.game.state = if guesses.len() == 2 { State::WinnerSelection } else { State::MakeGuess };
+            if self.game.state == State::WinnerSelection { self.check_winner(); }
+            // if self.game.state == State::Payout { self.payout()?; }
 
             Ok(format!("Your guess '{}' was accepted", guess))
         }
 
+        pub fn check_winner(&mut self) -> String {
+            // Pick random number and store it
+
+            // determine who was closest without going over
+
+            // update player's share of pot
+
+            format!("Winner is '{:#?}'", self.game.winner).to_string()
+        }
+
+        fn _payout(&mut self) -> Result<String, ()> {
+            todo!()
+            // Ok(format!("Doing Payout'").to_string())
+        }
+
         #[auth(badge_ref)]
-        pub fn reveal_secret(&mut self, secret: String) -> Result<String, ()> {
-            assert_eq!(self.game.state, State::SubmitSecret, "Not ready to reveal secret!");
+        fn withdraw(&mut self) -> Result<String, ()> {
+            todo!()
+            // Ok(format!("Doing Payout'").to_string())
+        }
 
-            let key = auth.get_non_fungible_key();
-            let _player = self.game.players.get_mut(&key).unwrap();
-
-            // let weapon = Weapon::from_secret(player.choice.as_str(), secret.as_str());
-            // let encoded = encode(weapon.to_string().as_str(), secret.as_str());
-            //
-            // assert_ne!(
-            //     // Equality check
-            //     Weapon::from_secret(player.choice.as_str(),secret.as_str()),
-            //     Weapon::None,
-            //     // Error message
-            //     "Your secret and choice are not the same MD5 hash!, Encoded: {}, Choice: {}",
-            //     encoded, player.choice
-            // );
-            //
-            // player.set_secret(secret.clone());
-
-            if has_revealed(&self.game.players) { self.game.state = State::WinnerSelection; }
-            Ok(format!("Your secret was '{}'", secret.clone()).to_string())
+        pub fn get_context(&self) -> (Actor, Address, H256, u64, u128) {
+            context::ContextTest::query()
         }
     }
 }
 
-fn has_revealed(players_map: &HashMap<NonFungibleKey, Player>) -> bool {
+fn _has_revealed(players_map: &HashMap<NonFungibleKey, Player>) -> bool {
     let players: Vec<Player> = players_map.clone().into_values().collect();
     if players.len() == 0 { return false; }
     let p1: Player = players.get(0).unwrap().to_owned();

@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title><%= title %></title>
+    <link rel='stylesheet' href='/stylesheets/style.css' />
+  </head>
+  <body>
+    <h1><%= title %></h1>
+    <p>Welcome to <%= title %></p>
+    <ul>
+      <% for(let game of games) {%>
+        <li>
+          <div>
+            Contract<br/>
+            Component: <%= game[0].component %><br/>
+            Resource Def: <%= game[0].resourceDef %><br/>
+          </div>
+        </li>
+      <% } %>
+    </ul>
+  </body>
+</html>
