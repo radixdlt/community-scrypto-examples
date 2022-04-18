@@ -1,0 +1,22 @@
+# This rtm file showcases how we can terminate the vesting schedule of the beneficiary and seize the tokens which they
+# still have not claimed. This is something that an administrator might need to do for various reasons and is something
+# that happens in non-DeFI vesting contracts.
+
+# The `terminate_beneficiary` method is an authenticated method that uses the auth zone for authentication. Therefore,
+# we can begin by withdrawing the admin badge from the account and into the auth zone. The `create_proof` method returns
+# a `Proof` and whenever a `Proof` is returned to the transaction worktop, it gets sent to the auth zone automatically.
+CALL_METHOD 
+    ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
+    "create_proof" 
+    ResourceAddress("03b0be493a6d493bbb8cf07c09a18f716115c9a053b4ab46a9dbc8");
+
+# Calling the terminate_beneficiary method on the vesting component to perform the termination
+CALL_METHOD 
+    ComponentAddress("0216115359ea36b3ab840ae126c4cc5118905273adab7b39727287") 
+    "terminate_beneficiary" 
+    NonFungibleId("0000000000000001");
+
+# Depositing all the funds back into the admin's account
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
+    "deposit_batch";
