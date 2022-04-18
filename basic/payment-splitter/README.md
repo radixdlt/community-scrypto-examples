@@ -15,9 +15,70 @@ The `PaymentSplitter` blueprint comes with quite a number of features. Such as:
 * Allows shareholders to withdraw their owed funds in full or in part.
 * Allows shareholders to give up their shares if they choose to.
 
+## Design Details
+
+The `PaymentSplitter` blueprint allows multiple parties to split their shares of funds securely and in a trustless manner. It allows anybody to deposit funds into its components but only allows shareholders to withdraw these funds. As soon as funds are deposited into a `PaymentSplitter` they are split into a number of vaults which are controlled by the `PaymentSplitter`. Each shareholder has their own vault which is associated with the ID of their non-fungible badge and where their tokens are stored. The decision of making each shareholder have their own vault comes from the fact that this brings added security as the funds will be segregated; meaning that given the math is correct, it would be impossible for one shareholder to take the funds of another shareholder. A payment splitter may be instantiated to allow for the deposit and splitting of any fungible token. 
+
+There are two main parties in a typical payment splitter:
+* An Admin: The admin is whoever holds the admin badge. This is typically the instantiator of the splitter but could also be a different person. The admin is given the right to add shareholders to the splitter in the way that they see fit. Once a shareholder has been added to the splitter, they may never be removed again.
+* Shareholders: These are people who have shareholder badges and are the entities we want to split the received funds across. Each shareholder is given a non-fungible token which stores information on the amount of shares owned by the shareholder.
+
+While removing a shareholder is not possible in the payment splitter blueprint, an admin could later add an disproportionate amount of shares for themselves leading to other shareholders have shares that equate to almost zero. Therefore, the payment splitter allows for a locking mechanism which is a mechanism by which the splitter is locked and no more shareholders may be added. This mechanism protects the shareholders from such attacks (provided that the admin agrees to lock the splitter).
+
+The core functionality of the splitter is implemented in the [lib.rs](./src/lib.rs) file in the `PaymentSplitter` struct. This implementation of the payment splitter utilizes the new authentication system introduced with v0.4.0 of Scrypto which is a fantastic new system that allows for authentication to be automatically handled when the right badges are present in the auth zone. Despite that, some methods in the `PaymentSplitter` blueprint use the v0.3.0-style authentication system for reasons that will be explained later.
+
+The `PaymentSplitter` component has the following methods and functions:
+
+| Function / Method Name      | Authenticated | Auth Type | Intended User    | Description |
+| --------------------------- | ------------- | --------- | ---------------- | ----------- |
+| `new`                       | `false`       |           |                  | This function instantiates a new `PaymentSplitter` component as well as all of the badges and resources required for it to function correctly. 
+| `deposit`                   | `false`       |           |                  | This method allows for any entity to deposit funds into the payment splitter which would be split among the shareholders.
+| `add_shareholder`           | `true`        | Auth Zone | Admin            | This is an authenticated method which allows the `PaymentSplitter`'s admin to add a shareholder with a given amount of shares to the splitter. 
+| `lock_splitter`             | `true`        | Auth Zone | Admin            | This is an authenticated method which allows the `PaymentSplitter`'s admin to lock the splitter which would allow normal operation of the splitter minus the adding of additional shareholders.
+| `withdraw`                  | `true`        | Pass By Intent | Shareholder | This is an authenticated method which allows the `PaymentSplitter`'s shareholders to withdraw all of the funds owed to them from the splitter.
+| `withdraw_by_amount`        | `true`        | Pass By Intent | Shareholder | This is an authenticated method which allows the `PaymentSplitter`'s shareholders to withdraw a portion of the funds owed to them from the splitter.
+| `withdraw_and_giveup_shares`| `true`        | Pass By Intent | Shareholder | This is an authenticated method which allows the `PaymentSplitter`'s shareholders to withdraw all of the funds owed to them from the splitter and give up their shares so that they go no share in any future deposit.
+
+
+Version 0.3.0 of Scrypto introduced the concept of transaction manifests and the transaction worktop which is used to store resources (tokens), buckets, and badges (in the form of `BucketRef`s). Version 0.4.0 introduces an extension to the transaction worktop which is called the "Auth Zone". Similar to how the transaction worktop stores tokens and buckets, the Auth Zone in the main area where `Proof`s (formerly called `BucketRef`s) live to be used in transactions which require them. 
+
+A method which is configured to use the new authorization system would determine whether a call to it is authorized or not depending on whether the badge required in the configuration is present in the Auth Zone or not<sup>*</sup>. If the badge is present then the call to the method is allowed, and vice-versa. 
+
+The `PaymentSplitter` blueprint utilizes this new concept of the Auth Zone for the authorization of a number of its methods. As an example: `add_shareholder`, `lock_splitter` all require an admin badge to work; however, the admin badge is not passed as a proof in the method calls. Instead, if the Auth Zone of the transaction has the admin badge then the caller would be authorized to make the calls. The admin can get their admin badge into their auth zone by calling the `create_proof` method on their account component which returns a proof and stores it in the Auth Zone.
+
+Similar to v0.3.0 of Scrypto where buckets and tokens returned from methods or functions would be automatically put onto the transaction worktop, in v0.4.0 all Proofs returned from function or method calls are put in the Auth Zone automatically.
+
+This approach to authorization makes component authorization very clear and transparent to the caller. As an example, let's say that I'm a potential shareholder and I wish to see who has the power to lock this splitter. In the current version of resim, I can `show` the component state to understand who is allowed to lock the splitter:
+```
+$ resim show 02729d2037a333cee1734718de58a51c95c1caa52bd1a6e0cb0999
+Component: 02729d2037a333cee1734718de58a51c95c1caa52bd1a6e0cb0999
+Blueprint: { package_address: 018a10614b7d516906593a01b4cb611e5d47f7804f8d66e6af509c, blueprint_name: "PaymentSplitter" }
+Authorization
+├─ "lock_splitter" => Protected(ProofRule(Require(StaticResource(03fe2138055411553eb32641ce73e4a436164938745a083f6aa104))))
+└─ "add_shareholder" => Protected(ProofRule(Require(StaticResource(03fe2138055411553eb32641ce73e4a436164938745a083f6aa104))))
+```
+
+Looking at the above output makes it very clear for a `lock_splitter` method call to succeed, then it is required that a badge with the resource address `03fe2138055411553eb32641ce73e4a436164938745a083f6aa104` is present in the auth zone. Therefore, without needing to read the source code or anything, I now know some information about this splitter. If I wanted do, I can do some more sleuthing to find out if the resource `03fe2138055411553eb32641ce73e4a436164938745a083f6aa104` is mintable or not to determine if more admins may be added to the splitter or not in the future.
+
+In addition to the clarity and transparency of handling auth through the Auth Zone, this method of handling auth allows for complex auth to be set on methods and functions such that they may only be called when a number of conditions are satisfied. As an example, let's say that we have some organization where some method or function requires the approval of a number of people on different levels. This auth system allows us to set an auth rule similar to the following on that method:
+```
+supervisor_badge & manager_badge & admin_badge & super_admin_badge
+```
+
+This would mean that this function or method would only be callable when all of the four required badges are present in the auth zone. The power of this auth system does not stop here; this system also allows us to set rules which dynamically change depending on the state of the component, as an example, we can set the auth system up so that it always requires 50% or more admins to approve an action before it can be taken.
+
+While v0.3.0 of Scrypto required multiple transaction manifest instructions for operations that required badge reuse, this version drastically reduce the amount of instructions needed as for operations handled by the Auth Zone, there is no longer a need to clone the Proof multiple times to preserve a copy of it to use for subsequent operations.
+
+The benefits that this system of auth provides are numerous and are very clear. However, sometimes we need to use the other system of auth which was present in v0.3.0 which is the system where we need to provide a `Proof` (formerly called `BucketRef` in v0.3.0) a method or a function. This is typically the case when the method or function being called does not only require the presence of a certain badge, but it also needs to read the data of the badge to make some kind of determination. 
+
+As an example, for the methods `add_shareholder` and `lock_splitter` the presence of an admin badge in the auth zone is enough to authorize these operations to take place; therefore, auth for these methods is handled through the Auth Zone. However, when it comes to the withdraw methods the presence of a shareholder badge is not enough to withdraw the funds. This is because these methods know that you are a shareholder but they would like to know also know *which* shareholder you are to determine how much funds are owed to you. Therefore, these methods take a `Proof` (formerly called a `BucketRef`) as an argument and based on the resources in that `Proof` they determine your eligibility to withdraw as well as the amount of funds currently available for you.
+
+The two methods of auth that are currently available are not meant to compete with one another in terms of who is best. They're meant to coexist where each of the two methods does its intended job exceptionally well. The `PaymentSplitter` blueprint is a good example of how these two ways of handling authentication can work side by side in a single blueprint and this example helps shine a light on how the decision to use one kind of auth over the other cam about.
+
+
 ## Getting Started
 
-If you wand to try out this blueprint there are three main ways to do that, the first is by using a new feature with Scrypto v0.3.0 which is the new transaction model and the transaction manifests, the second is by using an `script.sh` file which runs all of the needed CLI commands for the example, and the third and final method is by typing in the commands manually. 
+If you wand to try out this blueprint there are three main ways to do that, the first is by using the new transaction model and the transaction manifests, the second is by using an `script.sh` file which runs all of the needed CLI commands for the example, and the third and final method is by typing in the commands manually. 
 
 ### Method 1: Using transaction manifest files
 
@@ -122,4 +183,9 @@ You do not need to install any additional packages to run this `script.sh` file.
 
 This is certainly a simple example of what a payment splitter might look like if built on Radix using Scrypto where NFTs are used for authentication and tracking of data. Of course, there are a number of improvements that can be made to this blueprint to make it function even better:
 
+* Investigate the upside and downside of introducing a voting mechanism whereby a majority vote from the shareholders is needed before adding an additional shareholder.
 * Allowing for a voting mechanism whereby the admin would regain the to add shareholders if a majority of the shareholders agree that the admin should be given this power back.
+
+## Footnotes:
+
+\* -  This is a simplified example of the use of the Auth Zone for the handling of authorization. There are many more things available such as authorization based on the amount of resource, authorization based on multiple Proofs being present, as well as other kinds of authorization supported directly by this system.
