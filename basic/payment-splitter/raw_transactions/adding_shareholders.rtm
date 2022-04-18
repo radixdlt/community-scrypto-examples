@@ -1,58 +1,58 @@
 # We need to withdraw the admin badge from the admin's account and put it in the auth zone. Once its there, we do not 
 # need to worry about about auth in any way as everything will be handeled for us. 
 CALL_METHOD 
-    ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
+    ComponentAddress("<<<account1_address>>>") 
     "create_proof" 
-    ResourceAddress("0343dad66cf84f2259250f4250f1b6cf975245137d453cce058115");
+    ResourceAddress("<<<admin_badge>>>");
 
 # Adding the first shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("<<<splitter_component_address>>>") 
     "add_shareholder" 
     Decimal("148.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("<<<shareholder_badge>>>") 
     Bucket("shareholder_badge1");
 CALL_METHOD 
-    ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
+    ComponentAddress("<<<account1_address>>>") 
     "deposit" 
     Bucket("shareholder_badge1");
 
 # Adding the second shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("<<<splitter_component_address>>>") 
     "add_shareholder" 
     Decimal("200.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("<<<shareholder_badge>>>") 
     Bucket("shareholder_badge2");
 CALL_METHOD 
-    ComponentAddress("02322ade870afd26c843a8f1e699d9e5d71a763bbfb8b4f95255a3") 
+    ComponentAddress("<<<account2_address>>>") 
     "deposit" 
     Bucket("shareholder_badge2");
 
 # Adding the third shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("<<<splitter_component_address>>>") 
     "add_shareholder" 
     Decimal("32.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("<<<shareholder_badge>>>") 
     Bucket("shareholder_badge3");
 CALL_METHOD 
-    ComponentAddress("02b52cddb8597dfc0ee72c2ba5717a2fb451e18f11b627ba075065") 
+    ComponentAddress("<<<account3_address>>>") 
     "deposit" 
     Bucket("shareholder_badge3");
 
 # Adding the fourth shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("<<<splitter_component_address>>>") 
     "add_shareholder" 
     Decimal("90.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("<<<shareholder_badge>>>") 
     Bucket("shareholder_badge4");
 CALL_METHOD 
-    ComponentAddress("02b52cddb8597dfc0ee72c2ba5717a2fb451e18f11b627ba075065") 
+    ComponentAddress("<<<account3_address>>>") 
     "deposit" 
     Bucket("shareholder_badge4");
