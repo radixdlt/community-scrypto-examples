@@ -29,3 +29,6 @@ fn test_create_user() {
     assert_eq!(test_env.users.len(), 3);
 }
 ```
+
+### Resources
+- [Unescape: Rust helper](https://lib.rs/install/unescape)
