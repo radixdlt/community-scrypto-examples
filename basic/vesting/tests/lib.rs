@@ -1062,13 +1062,13 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
     let _adding_beneficiary_receipt: Receipt = executor.validate_and_execute(&adding_beneficiary_tx).unwrap();
 
     // Giving up the termination rights
-    let giveup_admin_rights_tx: SignedTransaction = TransactionBuilder::new()
+    let disable_termination_tx: SignedTransaction = TransactionBuilder::new()
         .create_proof_from_account(admin_badge, admin_address)
-        .call_method(vesting_component, "giveup_termination_rights", vec![])
+        .call_method(vesting_component, "disable_termination", vec![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
-    let giveup_admin_rights_receipt: Receipt = executor.validate_and_execute(&giveup_admin_rights_tx).unwrap();
+    let disable_termination_receipt: Receipt = executor.validate_and_execute(&disable_termination_tx).unwrap();
 
     // Terminating the beneficiary
     let terminating_beneficiary_tx: SignedTransaction = TransactionBuilder::new()
@@ -1087,7 +1087,7 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
 }
 
 #[test]
-fn non_admin_cant_giveup_termination_rights() {
+fn non_admin_cant_disable_termination() {
     // Setting up the environment
     let mut ledger: InMemorySubstateStore = InMemorySubstateStore::with_bootstrap();
     let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, false);
@@ -1164,14 +1164,14 @@ fn non_admin_cant_giveup_termination_rights() {
     let _adding_beneficiary_receipt: Receipt = executor.validate_and_execute(&adding_beneficiary_tx).unwrap();
 
     // Giving up the termination rights
-    let giveup_admin_rights_tx: SignedTransaction = TransactionBuilder::new()
-        .call_method(vesting_component, "giveup_termination_rights", vec![])
+    let disable_termination_tx: SignedTransaction = TransactionBuilder::new()
+        .call_method(vesting_component, "disable_termination", vec![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
-    let giveup_admin_rights_receipt: Receipt = executor.validate_and_execute(&giveup_admin_rights_tx).unwrap();
+    let disable_termination_receipt: Receipt = executor.validate_and_execute(&disable_termination_tx).unwrap();
 
-    match giveup_admin_rights_receipt.result.expect_err("Should have failed") {
+    match disable_termination_receipt.result.expect_err("Should have failed") {
         RuntimeError::AuthorizationError(_, _) => {}
         _ => {
             assert!(false)
@@ -1180,7 +1180,7 @@ fn non_admin_cant_giveup_termination_rights() {
 }
 
 #[test]
-fn not_enough_admins_cant_giveup_termination_rights() {
+fn not_enough_admins_cant_disable_termination() {
     // Setting up the environment
     let mut ledger: InMemorySubstateStore = InMemorySubstateStore::with_bootstrap();
     let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, false);
@@ -1292,15 +1292,14 @@ fn not_enough_admins_cant_giveup_termination_rights() {
         .build(executor.get_nonce([admin_public_keys[0]]))
         .sign([&admin_private_keys[0]]);
     let additional_admins_receipt: Receipt = executor.validate_and_execute(&additional_admins_tx).unwrap();
-    println!("{:?}", additional_admins_receipt);
 
     // Attempting to giveup the admin rights with only 4 admin badges
-    let giveup_termination_rights_tx: SignedTransaction = TransactionBuilder::new()
+    let disable_termination_tx: SignedTransaction = TransactionBuilder::new()
         .create_proof_from_account(admin_badge, admin_addresses[0])
         .create_proof_from_account(admin_badge, admin_addresses[1])
         .create_proof_from_account(admin_badge, admin_addresses[2])
         .create_proof_from_account(admin_badge, admin_addresses[3])
-        .call_method(vesting_component, "giveup_termination_rights", vec![])
+        .call_method(vesting_component, "disable_termination", vec![])
         .build(executor.get_nonce([
             admin_public_keys[0],
             admin_public_keys[1],
@@ -1308,11 +1307,10 @@ fn not_enough_admins_cant_giveup_termination_rights() {
             admin_public_keys[3],
         ]))
         .sign([&admin_private_keys[0], &admin_private_keys[1], &admin_private_keys[2], &admin_private_keys[3]]);
-    let giveup_termination_rights_receipt: Receipt =
-        executor.validate_and_execute(&giveup_termination_rights_tx).unwrap();
-    println!("{:?}", giveup_termination_rights_receipt);
+    let disable_termination_receipt: Receipt =
+        executor.validate_and_execute(&disable_termination_tx).unwrap();
 
-    match giveup_termination_rights_receipt
+    match disable_termination_receipt
         .result
         .expect_err("Should have failed")
     {
@@ -1324,7 +1322,7 @@ fn not_enough_admins_cant_giveup_termination_rights() {
 }
 
 #[test]
-fn enough_admins_can_giveup_termination_rights() {
+fn enough_admins_can_disable_termination() {
     // Setting up the environment
     let mut ledger: InMemorySubstateStore = InMemorySubstateStore::with_bootstrap();
     let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, false);
@@ -1436,10 +1434,9 @@ fn enough_admins_can_giveup_termination_rights() {
         .build(executor.get_nonce([admin_public_keys[0]]))
         .sign([&admin_private_keys[0]]);
     let additional_admins_receipt: Receipt = executor.validate_and_execute(&additional_admins_tx).unwrap();
-    println!("{:?}", additional_admins_receipt);
 
     // Attempting to giveup the admin rights with only 4 admin badges
-    let giveup_termination_rights_tx: SignedTransaction = TransactionBuilder::new()
+    let disable_termination_tx: SignedTransaction = TransactionBuilder::new()
         .withdraw_from_account(admin_badge, admin_addresses[0])
         .withdraw_from_account(admin_badge, admin_addresses[1])
         .withdraw_from_account(admin_badge, admin_addresses[2])
@@ -1454,7 +1451,7 @@ fn enough_admins_can_giveup_termination_rights() {
             )
         })
         .create_proof_from_account(admin_badge, admin_addresses[0])
-        .call_method(vesting_component, "giveup_termination_rights", vec![])
+        .call_method(vesting_component, "disable_termination", vec![])
         .clear_auth_zone()
         .build(executor.get_nonce([
             admin_public_keys[0],
@@ -1470,8 +1467,8 @@ fn enough_admins_can_giveup_termination_rights() {
             &admin_private_keys[3],
             &admin_private_keys[4],
         ]);
-    let giveup_termination_rights_receipt: Receipt =
-        executor.validate_and_execute(&giveup_termination_rights_tx).unwrap();
+    let disable_termination_receipt: Receipt =
+        executor.validate_and_execute(&disable_termination_tx).unwrap();
 
-    assert!(giveup_termination_rights_receipt.result.is_ok());
+    assert!(disable_termination_receipt.result.is_ok());
 }

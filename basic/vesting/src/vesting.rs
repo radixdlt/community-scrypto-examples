@@ -127,7 +127,7 @@ blueprint! {
                     auth!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
                 )
                 .method(
-                    "giveup_termination_rights",
+                    "disable_termination",
                     auth!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
                 )
                 
@@ -340,12 +340,11 @@ blueprint! {
             return beneficiary_vault.take(claim_amount);
         }
 
-        /// Allows an admin to give-up their admin termination right.
+        /// Disables the termination of vesting schedules globally across all admins.
         ///
-        /// This is an authenticated method which may only be called by the holder of the admin badge. This method takes
-        /// away the admin's right of terminating beneficiary's and only allows the admin to adds beneficiaries in the
-        /// future.
-        pub fn giveup_termination_rights(&mut self) {
+        /// This is an authenticated method which may only be called by admins. When this method is called, termination
+        /// of vesting schedules is disabled for all admins. 
+        pub fn disable_termination(&mut self) {
             self.admin_may_terminate = false;
         }
     }
