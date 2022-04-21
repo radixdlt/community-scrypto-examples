@@ -1068,7 +1068,7 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
-    let disable_termination_receipt: Receipt = executor.validate_and_execute(&disable_termination_tx).unwrap();
+    let _disable_termination_receipt: Receipt = executor.validate_and_execute(&disable_termination_tx).unwrap();
 
     // Terminating the beneficiary
     let terminating_beneficiary_tx: SignedTransaction = TransactionBuilder::new()
@@ -1325,7 +1325,7 @@ fn not_enough_admins_cant_disable_termination() {
 fn enough_admins_can_disable_termination() {
     // Setting up the environment
     let mut ledger: InMemorySubstateStore = InMemorySubstateStore::with_bootstrap();
-    let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, false);
+    let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, true);
 
     // Publishing the package to the ledger
     let package: PackageAddress = executor.publish_package(compile_package!()).unwrap();
@@ -1434,6 +1434,7 @@ fn enough_admins_can_disable_termination() {
         .build(executor.get_nonce([admin_public_keys[0]]))
         .sign([&admin_private_keys[0]]);
     let additional_admins_receipt: Receipt = executor.validate_and_execute(&additional_admins_tx).unwrap();
+    println!("OUR TX{:?}", additional_admins_receipt);
 
     // Attempting to giveup the admin rights with only 4 admin badges
     let disable_termination_tx: SignedTransaction = TransactionBuilder::new()

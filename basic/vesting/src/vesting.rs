@@ -111,7 +111,7 @@ blueprint! {
             // Setting up the auth for the vesting component. With v0.4.0 of Scrypto we can now make the authentication
             // and authorization to happen automatically without us needing to care about them. We can use this to
             // impose quite a number of rules on who is authorized to access what.
-            let auth: Authorization = Authorization::new()
+            let auth: AccessRules = AccessRules::new()
                 // Only people who have at least 1 admin badge in their auth zone may make calls to these methods.
                 .method("add_beneficiary", auth!(require(admin_badge.resource_address())))
                 
@@ -145,7 +145,7 @@ blueprint! {
                 min_admins_required_for_multi_admin: dec!("1"),
             }
             .instantiate()
-            .auth(auth)
+            .add_access_check(auth)
             .globalize();
 
             return (vesting_component_address, admin_badge);
@@ -181,7 +181,7 @@ blueprint! {
         ) -> Bucket {
             // Performing checks to ensure that the beneficiary may be added.
             assert!(
-                resource_manager!(funds.resource_address()).resource_type() != ResourceType::NonFungible,
+                borrow_resource_manager!(funds.resource_address()).resource_type() != ResourceType::NonFungible,
                 "[Add Beneficiary]: Can't vest non-fungible tokens for the beneficiary."
             );
             assert!(
@@ -194,7 +194,7 @@ blueprint! {
             let beneficiary_id: NonFungibleId =
                 NonFungibleId::from_u64((self.funds.len() + self.dead_vaults.len()) as u64 + 1u64);
             let beneficiary_badge: Bucket = self.internal_admin_badge.authorize(|| {
-                resource_manager!(self.beneficiary_vesting_badge).mint_non_fungible(
+                borrow_resource_manager!(self.beneficiary_vesting_badge).mint_non_fungible(
                     &beneficiary_id,
                     BeneficiaryVestingSchedule::new(
                         relative_cliff_epoch,
@@ -262,7 +262,7 @@ blueprint! {
         /// * `Bucket` - A bucket of admin badges.
         pub fn add_admin(&mut self, admin_badges_to_mint: Decimal) -> Bucket {
             // Getting the resource manager of the admin badge
-            let admin_resource_manager: &ResourceManager = resource_manager!(self.admin_badge);
+            let admin_resource_manager: &ResourceManager = borrow_resource_manager!(self.admin_badge);
 
             // Minting a new admin badge for the caller
             let admin_badge: Bucket = self
@@ -276,6 +276,7 @@ blueprint! {
             } else {
                 (admin_resource_manager.total_supply() / dec!("2")).ceiling()
             };
+            info!("[Add Admin]: Minimum required admins is: {}", self.min_admins_required_for_multi_admin);
 
             // Returning the newly created admin badge back to the caller
             return admin_badge;
@@ -325,7 +326,7 @@ blueprint! {
 
             // At this point we're sure that the withdraw may go through
             let beneficiary_vesting_schedule: BeneficiaryVestingSchedule =
-                resource_manager!(self.beneficiary_vesting_badge)
+                borrow_resource_manager!(self.beneficiary_vesting_badge)
                     .get_non_fungible_data::<BeneficiaryVestingSchedule>(&beneficiary_id);
 
             // The amount that we should return back is the difference between the amount of funds in the vault right

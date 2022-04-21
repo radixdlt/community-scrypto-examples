@@ -13,7 +13,7 @@ CALL_METHOD
 # Calling the `giveup_termination_rights` method on the vesting component to give up our termination rights
 CALL_METHOD 
     ComponentAddress("<<<vesting_component_address>>>") 
-    "giveup_termination_rights";
+    "disable_termination";
 
 # Depositing everything back into the admin's account
 CALL_METHOD_WITH_ALL_RESOURCES 

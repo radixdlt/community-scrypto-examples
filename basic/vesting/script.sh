@@ -67,4 +67,4 @@ resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
 resim run "$SCRIPT_DIR/transactions/terminate_beneficiary.rtm"
 
 # Giving-up admin rights to vesting termination
-resim run "$SCRIPT_DIR/transactions/giveup_termination_rights.rtm"
+resim run "$SCRIPT_DIR/transactions/disable_termination.rtm"
