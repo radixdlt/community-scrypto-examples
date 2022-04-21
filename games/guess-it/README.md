@@ -1,34 +1,51 @@
-## Scrypto Unit: A lightweight testing framework for Scrypto
-Contribute to plymth/scrypto-unit development by creating an account on GitHub.
-[Scrypto Unit Github](https://github.com/plymth/scrypto-unit)
+# Guess It: A dice roll game 
 
-##3 Getting Started
-Add scrypto-unit as a depenency in your `Cargo.toml`
-```toml
-[dependencies]
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
-```
-Import scrypto-unit into your `tests/lib.rs` integration test
-```rust
-use scrypto_unit::*;
-```
-Create users for your test environment
-```rust
-#[test]
-fn test_create_user() {
-    let mut ledger = InMemorySubstateStore::with_bootstrap();
-    let mut test_env = TestEnv::new(&mut ledger);
+### Objective: Guess the closest number from a dice roll
+Two players will enter a game and a dice is rolled. The player with the closest guess to the actual dice roll is the winner!
 
-    test_env.create_user("alice");
-    test_env.create_user("bob");
-    test_env.create_user("carol");
+### Prerequisites:
+- Having fundamental knowledge of working with shell (all shell commands are prefaced with `$ [COMMAND]`)
+- You should be familiar with the [Scrypto](https://docs.radixdlt.com/main/scrypto/introduction.html) coding language and the anatomy of a Radix dApp
+- [Install the required toolchain](https://docs.radixdlt.com/main/scrypto/getting-started/install-scrypto.html) which will get Rust and the Radix Engine Simulator going
+- Download and install an IDE of your choice with the recommended extensions:
+  - VSCode: Install [Rust](https://github.com/rust-lang/vscode-rust) and the [Rust Analyzer](https://github.com/rust-lang/rust-analyzer) extensions
+  - IntelliJ Idea: Install [Rust](https://plugins.jetbrains.com/plugin/8182-rust) plugin
+- Install NodeJS which comes with the Node Package Manager (NPM)
+  - This is only for the front end app 
+  - It is recommended to install [NVM](https://github.com/nvm-sh/nvm) first and pull Node in through it
+  - [Yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable) is the recommended package manager as it is async and builds a better dependency tree than NPM
+- Install Insomnia and import the `insomnia-gameplay.json` collection file for use with testing
+- Install [Revup](https://github.com/RadGuild/revup) from RadGuild to run the most basic gameplay scenario 
 
-    assert!(test_env.users.contains_key("alice"));
-    assert!(test_env.users.contains_key("bob"));
-    assert!(test_env.users.contains_key("carol"));
-    assert_eq!(test_env.users.len(), 3);
-}
-```
+### Backend Setup:
+- Make sure we can build and run tests successfully `$ scrypto test`
+- Use `revup -r gameplay.rev` and make sure the final line is a success and the game's state is `"state": "Payout"`
+
+### Frontend Setup:
+- enter the `$ cd server/` folder and install the dependencies using `$ yarn`
+- spin up the server using `$ yarn start:dev` or just `$ yarn start`
+
+### Gameplay:
+- If you've done the frontend setup, open your browser to `http://localhost:3000`
+- You will need 2 browser windows/tabs open to simulate 2 players
+- One player will create a game by clicking the "Create A Game" button
+  - A prompt will appear asking you for the game name and a XRD amount you're expecting players to bet
+- Both players should be able to see this newly created game and can click on it to join
+- Once you join, the "Active Game Area" will update with the contract details
+- Once both players have joined, the state will move to "MakeGuess" and a new button will appear
+- Press the MakeGuess button and enter your guess in the following prompt
+- Once both players have guessed, the dice will roll and show up in the "last roll" section of the Active Game Area and a winner will be determined
+- The player who won can then "Claim Funds" by clicking the new button that appears
+  - The loser will still see the button (WIP) but cannot withdraw funds and will get an error in the console
+
+### To Do:
+- There is no refund mechanism in case players choose to exit the game
+- Currently, Player 1 has the advantage and will win the pot in the event of a tie
+- Only one round can be played per contract and the state moves to "Destroyed" and no other actions are available
+- There is no error messaging to the client other than what is in the dev console
+- Scrypto 0.4 is set to release and have better frontend integration
 
 ### Resources
-- [Unescape: Rust helper](https://lib.rs/install/unescape)
+- [Rust Lang](https://doc.rust-lang.org/book)
+- [Introduction to Scrypto](https://docs.radixdlt.com/main/scrypto/introduction.html)
+- [Scrypto Examples](https://github.com/radixdlt/community-scrypto-examples)

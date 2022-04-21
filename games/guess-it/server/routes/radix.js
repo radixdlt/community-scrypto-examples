@@ -17,7 +17,6 @@ let USERS = {};
 function getIo(req) { return req.app.get('socketio'); }
 
 function ioMiddleWare(io) {
-
     io.on('connection', async (socket) => {
         await delay(1000);
         const account = await new_account();

@@ -13,11 +13,10 @@ mod context;
 pub enum State {
     AcceptingChallenger = 0,
     MakeGuess = 1,
-    SubmitSecret = 2,
-    WinnerSelection = 3,
-    Payout = 4,
-    Refunding = 5,
-    Destroyed = 6,
+    WinnerSelection = 2,
+    Payout = 3,
+    Refunding = 4,
+    Destroyed = 5,
 }
 impl FromStr for State {
     type Err = String;
@@ -26,7 +25,6 @@ impl FromStr for State {
         match input {
             "AcceptingChallenger" => Ok(State::AcceptingChallenger),
             "MakeGuess" => Ok(State::MakeGuess),
-            "SubmitSecret" => Ok(State::SubmitSecret),
             "WinnerSelection" => Ok(State::WinnerSelection),
             "Payout" => Ok(State::Payout),
             "Refunding" => Ok(State::Refunding),
@@ -41,11 +39,10 @@ impl From<u32> for State {
         match input {
             0 => State::AcceptingChallenger,
             1 => State::MakeGuess,
-            2 => State::SubmitSecret,
-            3 => State::WinnerSelection,
-            4 => State::Payout,
-            5 => State::Refunding,
-            6 => State::Destroyed,
+            2 => State::WinnerSelection,
+            3 => State::Payout,
+            4 => State::Refunding,
+            5 => State::Destroyed,
             _ => State::Refunding,
         }
     }
@@ -55,7 +52,6 @@ impl fmt::Display for State {
         let outcome = match *self {
             State::AcceptingChallenger => "AcceptingChallenger",
             State::MakeGuess => "MakeGuess",
-            State::SubmitSecret => "SubmitSecret",
             State::WinnerSelection => "WinnerSelection",
             State::Payout => "Payout",
             State::Refunding => "Refunding",
@@ -71,8 +67,8 @@ pub struct Game {
     state: State,
     bet: String,
     players: HashMap<NonFungibleKey, Player>,
-    winner: String,
-    last_roll: String,
+    winner: NonFungibleKey,
+    last_roll: u128,
 }
 impl fmt::Debug for Game {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -87,10 +83,29 @@ impl Game {
             state: State::AcceptingChallenger,
             bet,
             players: players.unwrap_or(HashMap::new()),
-            winner: NonFungibleKey::from(0).to_string(),
-            last_roll: 0.to_string(),
+            winner: NonFungibleKey::from(0),
+            last_roll: 0u128,
         }
     }
+
+    pub fn get_random(&self) -> u128 {
+        let multiplier = self.players.clone().into_iter()
+            .map(|(_,p)| p.guess)
+            .reduce(|a,b| a * b).unwrap_or(1);
+
+        Uuid::generate() * multiplier
+    }
+
+    fn get_winner(&self, random_number: u128) -> NonFungibleKey {
+        let player_ids: Vec<NonFungibleKey> = self.players.clone().into_iter().map(|(k,_)| k).collect();
+        let p1 = random_number - self.players.get(&player_ids[0]).unwrap_or(&Player::empty()).guess;
+        let p2 = random_number - self.players.get(&player_ids[1]).unwrap_or(&Player::empty()).guess;
+        let closest_guess = cmp::min(p1, p2);
+        let winner = if p1 == closest_guess { &player_ids[0] } else { &player_ids[1] };
+
+        return winner.to_owned();
+    }
+
     pub fn serialize(game: &Self) -> String {
         let players: HashMap<String, Player> = game.players.clone().into_iter()
             .map(|(k, p)| (k.to_string(), p))
@@ -100,7 +115,7 @@ impl Game {
             name: game.name.clone(),
             state: game.state.clone(),
             players,
-            winner: game.winner.clone(),
+            winner: game.winner.to_string(),
             bet: game.bet.clone(),
             last_roll: game.last_roll.clone(),
         };
@@ -117,7 +132,7 @@ pub struct GameSerialized {
     pub bet: String,
     pub players: HashMap<String, Player>,
     pub winner: String,
-    pub last_roll: String,
+    pub last_roll: u128,
 }
 impl fmt::Debug for GameSerialized {
     fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
@@ -133,24 +148,23 @@ impl GameSerialized {
             bet: 0.to_string(),
             players: players.unwrap_or(HashMap::new()),
             winner: NonFungibleKey::from(0).to_string(),
-            last_roll: 0.to_string(),
+            last_roll: 0u128,
         }
     }
 }
 
 #[derive(Debug, TypeId, Describe, Decode, Encode, Clone, Serialize, Deserialize)]
 pub struct Player {
-    guess: String,
+    guess: u128,
 }
 impl Player {
     pub fn empty() -> Player {
         return Self {
-            guess: "".into(),
+            guess: 0u128,
         }
     }
 
-    pub fn get_guess(&self) -> String { self.guess.clone() }
-    pub fn make_guess(&mut self, guess: String) { self.guess = guess; }
+    pub fn get_guess(&self) -> u128 { self.guess }
 }
 
 #[derive(TypeId, Describe, Decode, Encode)]
@@ -196,13 +210,11 @@ blueprint! {
             assert_eq!(self.game.state, State::AcceptingChallenger, "Not accepting challengers!");
             assert!(self.game.players.len() <= 2, "Too many players!");
 
-            let badge = self.badges.take(1.to_string());
-            let player = Player::empty();
-            let auth = badge.present();
-            let nft_id = auth.get_non_fungible_key().clone();
-            auth.drop();
+            let player: Player = Player::empty();
+            let badge: Bucket = self.badges.take(Decimal::one());
+            let nft_id: NonFungibleKey = badge.get_non_fungible_key();
             // Secure the funds
-            self.bank.put(payment.take(Decimal::from(self.game.bet.to_string())));
+            self.bank.put(payment.take(Decimal::from(self.game.bet.clone())));
             // Add the player's details
             self.game.players.insert(nft_id.clone(), player.clone());
             self.game.state = if self.game.players.len() == 2 { State::MakeGuess } else { State::AcceptingChallenger };
@@ -215,21 +227,21 @@ blueprint! {
         }
 
         #[auth(badge_ref)]
-        pub fn make_guess(&mut self, guess: String) -> String {
+        pub fn make_guess(&mut self, guess: u128) -> String {
             assert_eq!(self.game.state, State::MakeGuess, "Not ready to make a guess!");
 
             let key = auth.get_non_fungible_key();
             let player = self.game.players.get_mut(&key).unwrap();
-            player.make_guess(guess.clone());
+            player.guess = guess;
 
-            let guesses: Vec<String> = self.game.players.clone().into_iter()
-                .map(|(_key, player)| player.get_guess())
-                .filter(|guess| !guess.is_empty())
+            let guesses: Vec<u128> = self.game.players.clone().into_iter()
+                .map(|(_key, player)| player.guess)
+                .filter(|guess| guess > &0u128)
                 .collect();
             self.game.state = if guesses.len() == 2 { State::WinnerSelection } else { State::MakeGuess };
             if self.game.state == State::WinnerSelection {
                 let response = self.check_winner();
-                if self.game.winner != NonFungibleKey::from(0).to_string() {
+                if self.game.winner != NonFungibleKey::from(0) {
                     self.game.state = State::Payout;
                 }
                 format!("Your guess '{}' was accepted\nResponse: {}", guess, response)
@@ -241,11 +253,11 @@ blueprint! {
 
         pub fn check_winner(&mut self) -> String {
             // Pick random number and store it
-            let random_number = (get_random(&self.game) % 6) + 1;
+            let random_number = (self.game.get_random() % 6) + 1;
             // determine who was closest without going over
-            self.game.winner = get_winner(&self.game, random_number);
-            self.game.last_roll = random_number.to_string();
-            // update player's share of pot
+            self.game.winner = self.game.get_winner(random_number);
+            self.game.last_roll = random_number;
+
             format!("Dice roll was: '{}' .... winner is: {}",random_number, self.game.winner)
         }
 
@@ -254,7 +266,7 @@ blueprint! {
             assert_eq!(self.game.state, State::Payout, "It's not time to get paid!");
             let nft_id: NonFungibleKey = auth.get_non_fungible_key();
 
-            if nft_id.to_string() == self.game.winner {
+            if nft_id == self.game.winner {
                 let amt = self.bank.amount();
                 let payout = self.bank.take(amt);
 
@@ -267,22 +279,4 @@ blueprint! {
             context::ContextTest::query()
         }
     }
-}
-
-fn get_random(game: &Game) -> u128 {
-    let multiplier = game.players.clone().into_iter()
-        .map(|(_,p)| u128::from_str(p.guess.as_str()).unwrap_or(0))
-        .reduce(|a,b| a * b).unwrap_or(1);
-
-    Uuid::generate() * multiplier
-}
-
-fn get_winner(game: &Game, random_number: u128) -> String {
-    let player_ids: Vec<NonFungibleKey> = game.players.clone().into_iter().map(|(k,_)| k).collect();
-    let p1 = random_number - u128::from_str(game.players.get(&player_ids[0]).unwrap().guess.as_str()).unwrap_or(0);
-    let p2 = random_number - u128::from_str(game.players.get(&player_ids[1]).unwrap().guess.as_str()).unwrap_or(0);
-    let closest_guess = cmp::min(p1, p2);
-    let winner = if p1 == closest_guess { &player_ids[0] } else { &player_ids[1] };
-
-    return winner.to_string();
 }

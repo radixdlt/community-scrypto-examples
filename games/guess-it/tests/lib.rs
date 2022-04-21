@@ -2,7 +2,7 @@ extern crate radix_engine;
 
 use radix_engine::ledger::*;
 use radix_engine::model::{Receipt};
-use scrypto::prelude::{Actor, Address, Bucket, H256};
+use scrypto::prelude::{Actor, Address, Bucket, Decimal, H256};
 use scrypto::types::RADIX_TOKEN;
 use scrypto_unit::*;
 use guess_it::{GameSerialized, State};
@@ -93,9 +93,9 @@ fn test_make_guess() {
     // Assert against state
     let (state, _) = check_state(&mut env, component);
     let game: GameSerialized = serde_json::from_str(state.as_str()).unwrap();
-    let guesses: Vec<String> = game.players.into_iter()
+    let guesses: Vec<u128> = game.players.into_iter()
         .map(|(_key, player)| player.get_guess())
-        .filter(|guess| !guess.is_empty())
+        .filter(|guess| guess > &0u128)
         .collect();
     assert_eq!(guesses.len(), 1);
 
@@ -105,9 +105,9 @@ fn test_make_guess() {
     // Assert against state
     let (state, _) = check_state(&mut env, component);
     let game: GameSerialized = serde_json::from_str(state.as_str()).unwrap();
-    let guesses: Vec<String> = game.players.into_iter()
+    let guesses: Vec<u128> = game.players.into_iter()
         .map(|(_key, player)| player.get_guess())
-        .filter(|guess| !guess.is_empty())
+        .filter(|guess| guess > &0u128)
         .collect();
     assert_eq!(guesses.len(), 2);
     assert_eq!(game.state, State::Payout);
@@ -151,6 +151,12 @@ fn test_check_winner() {
     let game: GameSerialized = serde_json::from_str(state.as_str()).unwrap();
     // SUT
     assert_eq!(game.winner, _creator_nft_id);
+}
+
+#[test]
+fn test_decimals() {
+    let solution: Decimal = Decimal::from(100);
+    assert_eq!(Decimal::from("100.00"), solution);
 }
 
 #[test]
@@ -199,7 +205,7 @@ fn test_withdraw() {
 }
 
 #[test]
-fn test() {
+fn test_context() {
     let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
 
@@ -208,9 +214,9 @@ fn test() {
     let (component, _def, _) = create_game(&mut env);
 
     // Test context and random number generation
-    // ledger.set_epoch(10);
+    env.executor.ledger_mut().set_epoch(15);
     let (_response, _receipt): ((Actor, Address, H256, u64, u128), Receipt) = _get_context(&mut env, component);
-    // println!("Uuid: {} - Epoch: {}", _response.4 % 5, _response.3);
+    println!("Uuid: {} - Epoch: {}", _response.4 % 5, _response.3);
 }
 
 fn create_game<'a, L: SubstateStore>(

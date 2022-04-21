@@ -1,0 +1,43 @@
+/////////////////////////////////////////////////////////////////
+// Setup
+/////////////////////////////////////////////////////////////////
+reset
+
+new-account -> cr8_acct cr8_key
+new-account -> p1a p1p
+new-account -> p2a p2p
+
+publish . -> package
+
+// Create Package
+call-function $package GuessIt create "my cool game" 1 -> badge component
+
+/////////////////////////////////////////////////////////////////
+// Gameplay
+/////////////////////////////////////////////////////////////////
+// Player 1 joins game
+set-default-account $p1a $p1p
+call-method $component join 1,030000000000000000000000000000000000000000000000000004
+
+// Player 2 joins game
+set-default-account $p2a $p2p
+call-method $component join 1,030000000000000000000000000000000000000000000000000004
+
+// Player 1 guesses 3
+set-default-account $p1a $p1p
+call-method $component make_guess 3 1,$badge
+
+// Player 2 guesses 5
+set-default-account $p2a $p2p
+call-method $component make_guess 5 1,$badge
+
+// Player ! withdraws -> Loser!
+set-default-account $p1a $p1p
+call-method $component withdraw_funds 1,$badge
+
+// Player 2 withdraws -> Winner!
+set-default-account $p2a $p2p
+call-method $component withdraw_funds 1,$badge
+
+// Output the state
+call-method $component state

@@ -2,7 +2,7 @@
 name = "guess-it"
 version = "0.1.0"
 edition = "2021"
-description = "A simple guessing game. 2 round submission. 1st round is a hash of the answer, 2nd is to reveal the secret."
+description = "A simple guessing game. A die is rolled and players can guess the closest number to win the pot!"
 
 [dependencies]
 sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }

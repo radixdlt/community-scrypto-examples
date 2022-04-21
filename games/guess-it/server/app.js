@@ -9,8 +9,6 @@ const http = require('http');
 const server = http.createServer(app);
 const io = new Server(server);
 
-const indexRouter = require('./routes/index');
-const usersRouter = require('./routes/users');
 const {radixRouter, ioMiddleWare} = require('./routes/radix');
 
 // view engine setup
@@ -24,9 +22,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-app.use('/', indexRouter);
-app.use('/users', usersRouter);
-app.use('/radix', ioMiddleWare(io), radixRouter);
+app.use('/', ioMiddleWare(io), radixRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
