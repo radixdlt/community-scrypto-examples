@@ -78,7 +78,7 @@ blueprint! {
             accepted_token_resource_address: ResourceAddress
         ) -> (ComponentAddress, Bucket) {
             // Loading in the resource manager for the provided resource address
-            let accepted_token_resource_manager: &ResourceManager = resource_manager!(accepted_token_resource_address);
+            let accepted_token_resource_manager: &ResourceManager = borrow_resource_manager!(accepted_token_resource_address);
             assert!(
                 accepted_token_resource_manager.resource_type() != ResourceType::NonFungible, 
                 "[Instantiation]: PaymentSplitters can't be made to split payments of NFTs."
@@ -109,7 +109,7 @@ blueprint! {
                 .no_initial_supply();
 
             // Creating the PaymentSplitter component and setting the auth on the methods
-            let auth: Authorization = Authorization::new()
+            let auth: AccessRules = AccessRules::new()
                 .method("add_shareholder", auth!(require(admin_badge.resource_address())))
                 .method("lock_splitter", auth!(require(admin_badge.resource_address())))
                             
@@ -129,7 +129,7 @@ blueprint! {
                 total_amount_of_shares: dec!("0"),
             }
             .instantiate()
-            .auth(auth)            
+            .add_access_check(auth)            
             .globalize();
 
             return (payment_splitter, admin_badge);
@@ -168,7 +168,7 @@ blueprint! {
             let non_fungible_id: NonFungibleId = NonFungibleId::random();
 
             let shareholder_badge: Bucket = self.internal_admin_badge.authorize(||
-                resource_manager!(self.shareholder_badge_resource_address)
+                borrow_resource_manager!(self.shareholder_badge_resource_address)
                     .mint_non_fungible(
                         &non_fungible_id, 
                         Shareholder {
@@ -335,7 +335,7 @@ blueprint! {
             let shareholder_token_share: Bucket = self.vaults.get_mut(&non_fungible_id).unwrap().take_all();
 
             // Loading up the resource manager of the shareholders NFT
-            let shareholder_resource_manager: &ResourceManager = resource_manager!(self.shareholder_badge_resource_address);
+            let shareholder_resource_manager: &ResourceManager = borrow_resource_manager!(self.shareholder_badge_resource_address);
             
             // Loading up the shareholder object from the non_fungible_id and subtracting its share from the total 
             // amount of shares
@@ -383,7 +383,7 @@ blueprint! {
 
             // Iterating over the shareholder NonFungibleIds, determining how much they're owed, and putting that into
             // their vault.
-            let shareholder_resource_manager: &ResourceManager = resource_manager!(self.shareholder_badge_resource_address);
+            let shareholder_resource_manager: &ResourceManager = borrow_resource_manager!(self.shareholder_badge_resource_address);
             for (non_fungible_id, vault) in &mut self.vaults {
                 let shareholder: Shareholder = shareholder_resource_manager.get_non_fungible_data(&non_fungible_id);
                 let amount_owed: Decimal = shareholder.amount_of_shares * bucket.amount() / self.total_amount_of_shares;

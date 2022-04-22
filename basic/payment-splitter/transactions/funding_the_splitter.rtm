@@ -9,7 +9,7 @@ TAKE_FROM_WORKTOP
 
 # Depositing the funds into the payment splitter
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("026bad062689efedcd7bbb2436bc28509857c381ded6deb047a6c0") 
     "deposit" 
     Bucket("xrd_bucket");
 

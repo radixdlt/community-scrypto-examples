@@ -1,5 +1,5 @@
 CALL_FUNCTION 
-    PackageAddress("012b112d43c6afd18cec1127d1acbdc0781e402bac2ccb7f062106") 
+    PackageAddress("01c0d42ad7a210e75c3ab96ea8c1a96cfa63f679baaa8d91d80208") 
     "PaymentSplitter" 
     "instantiate_payment_splitter"
     ResourceAddress("030000000000000000000000000000000000000000000000000004");

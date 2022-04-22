@@ -3,15 +3,15 @@
 CALL_METHOD 
     ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
     "create_proof" 
-    ResourceAddress("0343dad66cf84f2259250f4250f1b6cf975245137d453cce058115");
+    ResourceAddress("03de6d8ec766a4511bfd2ecd54d8d40520e1c6c990504224cff9d9");
 
 # Adding the first shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("026bad062689efedcd7bbb2436bc28509857c381ded6deb047a6c0") 
     "add_shareholder" 
     Decimal("148.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("03f7ba6f7f61737487c94e5af41fd67d17a6fa513bea6d6cc12d70") 
     Bucket("shareholder_badge1");
 CALL_METHOD 
     ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
@@ -20,11 +20,11 @@ CALL_METHOD
 
 # Adding the second shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("026bad062689efedcd7bbb2436bc28509857c381ded6deb047a6c0") 
     "add_shareholder" 
     Decimal("200.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("03f7ba6f7f61737487c94e5af41fd67d17a6fa513bea6d6cc12d70") 
     Bucket("shareholder_badge2");
 CALL_METHOD 
     ComponentAddress("02322ade870afd26c843a8f1e699d9e5d71a763bbfb8b4f95255a3") 
@@ -33,11 +33,11 @@ CALL_METHOD
 
 # Adding the third shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("026bad062689efedcd7bbb2436bc28509857c381ded6deb047a6c0") 
     "add_shareholder" 
     Decimal("32.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("03f7ba6f7f61737487c94e5af41fd67d17a6fa513bea6d6cc12d70") 
     Bucket("shareholder_badge3");
 CALL_METHOD 
     ComponentAddress("02b52cddb8597dfc0ee72c2ba5717a2fb451e18f11b627ba075065") 
@@ -46,11 +46,11 @@ CALL_METHOD
 
 # Adding the fourth shareholder to the payment splitter component
 CALL_METHOD 
-    ComponentAddress("023c44dd0984be0868fbf2a03384f1e5caa7136eda52a43d0089ff") 
+    ComponentAddress("026bad062689efedcd7bbb2436bc28509857c381ded6deb047a6c0") 
     "add_shareholder" 
     Decimal("90.00");
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0318fdb3bf1f14e40aa7c030c5647c5c098e082b4ebcc4aef5ecde") 
+    ResourceAddress("03f7ba6f7f61737487c94e5af41fd67d17a6fa513bea6d6cc12d70") 
     Bucket("shareholder_badge4");
 CALL_METHOD 
     ComponentAddress("02b52cddb8597dfc0ee72c2ba5717a2fb451e18f11b627ba075065") 
