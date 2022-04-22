@@ -1,11 +1,12 @@
 extern crate radix_engine;
 
+use std::collections::HashMap;
 use radix_engine::ledger::*;
 use radix_engine::model::{Receipt};
-use scrypto::prelude::{Actor, Address, Bucket, Decimal, H256};
+use scrypto::prelude::{Actor, Address, Bucket, H256};
 use scrypto::types::RADIX_TOKEN;
 use scrypto_unit::*;
-use guess_it::{GameSerialized, State};
+use guess_it::{GameSerialized, Player, State};
 
 #[test]
 fn test_create() {
@@ -154,12 +155,6 @@ fn test_check_winner() {
 }
 
 #[test]
-fn test_decimals() {
-    let solution: Decimal = Decimal::from(100);
-    assert_eq!(Decimal::from("100.00"), solution);
-}
-
-#[test]
 fn test_withdraw() {
     let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut env = TestEnv::new(&mut ledger);
@@ -213,10 +208,34 @@ fn test_context() {
     env.publish_package("package", scrypto::include_code!("guess_it"));
     let (component, _def, _) = create_game(&mut env);
 
-    // Test context and random number generation
+    // Test context for random number generation
     env.executor.ledger_mut().set_epoch(15);
     let (_response, _receipt): ((Actor, Address, H256, u64, u128), Receipt) = _get_context(&mut env, component);
-    println!("Uuid: {} - Epoch: {}", _response.4 % 5, _response.3);
+    // println!("Uuid: {} - Epoch: {}", _response.4 % 6, _response.3);
+    assert_eq!(env.executor.ledger().get_epoch(), 15);
+}
+
+#[test]
+fn test_rng() {
+    let mut ledger = InMemorySubstateStore::with_bootstrap();
+    let mut env = TestEnv::new(&mut ledger);
+
+    env.create_user("creator");
+    env.publish_package("package", scrypto::include_code!("guess_it"));
+    let (component, _def, _) = create_game(&mut env);
+
+    let (response, _receipt): ((Actor, Address, H256, u64, u128), Receipt) = _get_context(&mut env, component);
+    let players = HashMap::from([
+        (0, Player { guess: 3u128 }),
+        (1, Player { guess: 4u128 })
+    ]);
+    let multiplier = players.into_iter()
+        .map(|(_,p)| p.guess)
+        .reduce(|a,b| a * b).unwrap_or(1);
+    let uuid = response.4;
+    let rng = ((uuid / multiplier) % 6) + 1;
+    // println!("Uuid: {}, multiplier: {}, rng: {}", uuid, multiplier, rng);
+    assert_ne!(rng, 0);
 }
 
 fn create_game<'a, L: SubstateStore>(

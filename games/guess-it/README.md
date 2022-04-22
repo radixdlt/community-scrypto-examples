@@ -14,29 +14,41 @@ Two players will enter a game and a dice is rolled. The player with the closest 
   - This is only for the front end app 
   - It is recommended to install [NVM](https://github.com/nvm-sh/nvm) first and pull Node in through it
   - [Yarn](https://classic.yarnpkg.com/lang/en/docs/install/#mac-stable) is the recommended package manager as it is async and builds a better dependency tree than NPM
-- Install Insomnia and import the `insomnia-gameplay.json` collection file for use with testing
+- Install [Insomnia](https://insomnia.rest/download) and import the `insomnia-gameplay.json` collection file for use with testing
 - Install [Revup](https://github.com/RadGuild/revup) from RadGuild to run the most basic gameplay scenario 
 
 ### Backend Setup:
 - Make sure we can build and run tests successfully `$ scrypto test`
-- Use `revup -r gameplay.rev` and make sure the final line is a success and the game's state is `"state": "Payout"`
+- Use `$ revup -r gameplay.rev` and make sure the final line is a success and the game's state is `"state": "Payout"`
 
 ### Frontend Setup:
 - enter the `$ cd server/` folder and install the dependencies using `$ yarn`
 - spin up the server using `$ yarn start:dev` or just `$ yarn start`
 
 ### Gameplay:
-- If you've done the frontend setup, open your browser to `http://localhost:3000`
-- You will need 2 browser windows/tabs open to simulate 2 players
-- One player will create a game by clicking the "Create A Game" button
-  - A prompt will appear asking you for the game name and a XRD amount you're expecting players to bet
-- Both players should be able to see this newly created game and can click on it to join
-- Once you join, the "Active Game Area" will update with the contract details
-- Once both players have joined, the state will move to "MakeGuess" and a new button will appear
-- Press the MakeGuess button and enter your guess in the following prompt
-- Once both players have guessed, the dice will roll and show up in the "last roll" section of the Active Game Area and a winner will be determined
-- The player who won can then "Claim Funds" by clicking the new button that appears
-  - The loser will still see the button (WIP) but cannot withdraw funds and will get an error in the console
+- If you've done the frontend setup, open your browser to [http://localhost:3000](http://localhost:3000)
+  - You will need 2 browser windows/tabs open to simulate 2 players
+  - One player will create a game by clicking the "Create A Game" button
+    - A prompt will appear asking you for the game name and a XRD amount you're expecting players to bet
+  - Both players should be able to see this newly created game and can click on it to join
+  - Once you join, the "Active Game Area" will update with the contract details
+  - Once both players have joined, the state will move to "MakeGuess" and a new button will appear
+  - Press the MakeGuess button and enter your guess in the following prompt
+  - Once both players have guessed, the dice will roll and show up in the "last roll" section of the Active Game Area and a winner will be determined
+  - The player who won can then "Claim Funds" by clicking the new button that appears
+    - The loser will still see the button (WIP) but cannot withdraw funds and will get an error in the console
+- If you chose to load the insomnia collection
+  - Run `Create Player 1`
+  - Run `Create Player 2`
+  - Run `Create Game`
+  - Run `Join Game Player 1`
+  - Run `Join Game Player 2`
+  - Run `Make Guess Player 1`
+  - Run `Make Guess Player 2`
+  - Run `Withdraw - Player 1 success`
+  - The others can be run at your behest
+    - Run `Check state` to view the current contract state
+    - Run `Withdraw - Player 2 fails` to see the failure response
 
 ### To Do:
 - There is no refund mechanism in case players choose to exit the game

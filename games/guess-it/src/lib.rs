@@ -65,7 +65,7 @@ impl fmt::Display for State {
 pub struct Game {
     name: String,
     state: State,
-    bet: String,
+    bet: u128,
     players: HashMap<NonFungibleKey, Player>,
     winner: NonFungibleKey,
     last_roll: u128,
@@ -77,7 +77,7 @@ impl fmt::Debug for Game {
     }
 }
 impl Game {
-    pub fn new(players: Option<HashMap<NonFungibleKey, Player>>, name: String, bet: String) -> Self {
+    pub fn new(players: Option<HashMap<NonFungibleKey, Player>>, name: String, bet: u128) -> Self {
         Self {
             name,
             state: State::AcceptingChallenger,
@@ -93,10 +93,10 @@ impl Game {
             .map(|(_,p)| p.guess)
             .reduce(|a,b| a * b).unwrap_or(1);
 
-        Uuid::generate() * multiplier
+        Uuid::generate() / multiplier
     }
 
-    fn get_winner(&self, random_number: u128) -> NonFungibleKey {
+    pub fn get_winner(&self, random_number: u128) -> NonFungibleKey {
         let player_ids: Vec<NonFungibleKey> = self.players.clone().into_iter().map(|(k,_)| k).collect();
         let p1 = random_number - self.players.get(&player_ids[0]).unwrap_or(&Player::empty()).guess;
         let p2 = random_number - self.players.get(&player_ids[1]).unwrap_or(&Player::empty()).guess;
@@ -104,6 +104,15 @@ impl Game {
         let winner = if p1 == closest_guess { &player_ids[0] } else { &player_ids[1] };
 
         return winner.to_owned();
+    }
+
+    pub fn has_guessed(&self) -> bool {
+        let guesses: Vec<u128> = self.players.clone().into_iter()
+            .map(|(_key, player)| player.guess)
+            .filter(|guess| guess > &0u128)
+            .collect();
+
+        guesses.len() == 2
     }
 
     pub fn serialize(game: &Self) -> String {
@@ -116,7 +125,7 @@ impl Game {
             state: game.state.clone(),
             players,
             winner: game.winner.to_string(),
-            bet: game.bet.clone(),
+            bet: game.bet,
             last_roll: game.last_roll.clone(),
         };
         unescape(serde_json::to_string(&serializable).unwrap_or("".to_string())
@@ -129,7 +138,7 @@ impl Game {
 pub struct GameSerialized {
     pub name: String,
     pub state: State,
-    pub bet: String,
+    pub bet: u128,
     pub players: HashMap<String, Player>,
     pub winner: String,
     pub last_roll: u128,
@@ -145,7 +154,7 @@ impl GameSerialized {
         Self {
             name: "".to_string(),
             state: State::AcceptingChallenger,
-            bet: 0.to_string(),
+            bet: 0u128,
             players: players.unwrap_or(HashMap::new()),
             winner: NonFungibleKey::from(0).to_string(),
             last_roll: 0u128,
@@ -155,7 +164,7 @@ impl GameSerialized {
 
 #[derive(Debug, TypeId, Describe, Decode, Encode, Clone, Serialize, Deserialize)]
 pub struct Player {
-    guess: u128,
+    pub guess: u128,
 }
 impl Player {
     pub fn empty() -> Player {
@@ -182,7 +191,7 @@ blueprint! {
     }
 
     impl GuessIt {
-        pub fn create(name: String, bet: String) -> Component {
+        pub fn create(name: String, bet: u128) -> Component {
             let player_badges: Bucket = ResourceBuilder::new_non_fungible()
                 .metadata("name", "Guess-It Game")
                 .metadata("symbol", "GIG")
@@ -214,7 +223,7 @@ blueprint! {
             let badge: Bucket = self.badges.take(Decimal::one());
             let nft_id: NonFungibleKey = badge.get_non_fungible_key();
             // Secure the funds
-            self.bank.put(payment.take(Decimal::from(self.game.bet.clone())));
+            self.bank.put(payment.take(Decimal::from(self.game.bet as i128)));
             // Add the player's details
             self.game.players.insert(nft_id.clone(), player.clone());
             self.game.state = if self.game.players.len() == 2 { State::MakeGuess } else { State::AcceptingChallenger };
@@ -234,11 +243,8 @@ blueprint! {
             let player = self.game.players.get_mut(&key).unwrap();
             player.guess = guess;
 
-            let guesses: Vec<u128> = self.game.players.clone().into_iter()
-                .map(|(_key, player)| player.guess)
-                .filter(|guess| guess > &0u128)
-                .collect();
-            self.game.state = if guesses.len() == 2 { State::WinnerSelection } else { State::MakeGuess };
+            self.game.state = if self.game.has_guessed() { State::WinnerSelection } else { State::MakeGuess };
+
             if self.game.state == State::WinnerSelection {
                 let response = self.check_winner();
                 if self.game.winner != NonFungibleKey::from(0) {
@@ -248,7 +254,6 @@ blueprint! {
             } else {
                 format!("Your guess '{}' was accepted", guess)
             }
-
         }
 
         pub fn check_winner(&mut self) -> String {
