@@ -5,19 +5,19 @@
 CALL_METHOD 
     ComponentAddress("02322ade870afd26c843a8f1e699d9e5d71a763bbfb8b4f95255a3") 
     "create_proof" 
-    ResourceAddress("0308bdb1daa2cd32b12bf3582dc8e248f29a499af94f0620a5c7b2");
+    ResourceAddress("035a183032a1d5a35bee1d71c7657dd5da1ff6aa817ca74bebdeea");
 
 # The `create_proof` method returns as Proof. As soon as a proof comes back to the transaction worktop, it gets sent
 # directly to the auth zone. Therefore, in the following instruction we're creating a `Proof` out of the badge in the
 # auth zone.
 CREATE_PROOF_FROM_AUTH_ZONE 
-    ResourceAddress("0308bdb1daa2cd32b12bf3582dc8e248f29a499af94f0620a5c7b2") 
+    ResourceAddress("035a183032a1d5a35bee1d71c7657dd5da1ff6aa817ca74bebdeea") 
     Proof("beneficiary_badge");
 
 # Now that the have obtained the beneficiary's badge in a proof, we may call the withdraw method on the vesting 
 # component to get the funds which have vested so far.
 CALL_METHOD 
-    ComponentAddress("02613d6b45470486d9b7c8d5ef02bbe3f72363bb53394f26a5ddcb") 
+    ComponentAddress("02ec7c405825ff53f7eee2592b9d7b44462ad9ac0935a31c8edad3") 
     "withdraw_funds" 
     Proof("beneficiary_badge");
 

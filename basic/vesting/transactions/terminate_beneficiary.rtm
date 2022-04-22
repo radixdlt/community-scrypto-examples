@@ -8,11 +8,11 @@
 CALL_METHOD 
     ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
     "create_proof" 
-    ResourceAddress("0354c91f2b826231b7098a594af9cc1bd80179b6761540fa961dba");
+    ResourceAddress("03dadb7890ad5927a5cbe870dc4974f6b7cb43d962e47bcf17115f");
 
 # Calling the terminate_beneficiary method on the vesting component to perform the termination
 CALL_METHOD 
-    ComponentAddress("02613d6b45470486d9b7c8d5ef02bbe3f72363bb53394f26a5ddcb") 
+    ComponentAddress("02ec7c405825ff53f7eee2592b9d7b44462ad9ac0935a31c8edad3") 
     "terminate_beneficiary" 
     NonFungibleId("0000000000000001");
 

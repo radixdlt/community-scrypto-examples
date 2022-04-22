@@ -3,7 +3,7 @@
 CALL_METHOD 
     ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
     "create_proof" 
-    ResourceAddress("0354c91f2b826231b7098a594af9cc1bd80179b6761540fa961dba");
+    ResourceAddress("03dadb7890ad5927a5cbe870dc4974f6b7cb43d962e47bcf17115f");
 
 # Withdrawing the tokens which we would like to be vested for the beneficiary. In this case, we would like to vest 
 # 1,000,000 USDT tokens for the beneficiary over a period of 100 epochs with a 20 epoch cliff. 
@@ -18,14 +18,14 @@ TAKE_FROM_WORKTOP
 
 # Adding the beneficiary to the vesting component
 CALL_METHOD 
-    ComponentAddress("02613d6b45470486d9b7c8d5ef02bbe3f72363bb53394f26a5ddcb") 
+    ComponentAddress("02ec7c405825ff53f7eee2592b9d7b44462ad9ac0935a31c8edad3") 
     "add_beneficiary" 
     Bucket("usdt_tokens") 20u64 100u64 Decimal("0.2");
 
 # The above method call returns a a beneficiary badge. We now need to take that badge from the transaction worktop and 
 # into a bucket to then send it to the beneficiary
 TAKE_FROM_WORKTOP 
-    ResourceAddress("0308bdb1daa2cd32b12bf3582dc8e248f29a499af94f0620a5c7b2") 
+    ResourceAddress("035a183032a1d5a35bee1d71c7657dd5da1ff6aa817ca74bebdeea") 
     Bucket("beneficiary_badge");
 CALL_METHOD 
     ComponentAddress("02322ade870afd26c843a8f1e699d9e5d71a763bbfb8b4f95255a3") 
