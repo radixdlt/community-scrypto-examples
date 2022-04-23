@@ -8,7 +8,7 @@ Two players will enter a game and a dice is rolled. The player with the closest 
 - You should be familiar with the [Scrypto](https://docs.radixdlt.com/main/scrypto/introduction.html) coding language and the anatomy of a Radix dApp
 - [Install the required toolchain](https://docs.radixdlt.com/main/scrypto/getting-started/install-scrypto.html) which will get Rust and the Radix Engine Simulator going
 - Download and install an IDE of your choice with the recommended extensions:
-  - VSCode: Install [Rust](https://github.com/rust-lang/vscode-rust) and the [Rust Analyzer](https://github.com/rust-lang/rust-analyzer) extensions
+  - VSCode: Install [Rust](https://github.com/rust-lang/vscode-rust) or the [Rust Analyzer](https://github.com/rust-lang/rust-analyzer) extension (known conflicts running both together; using the latter is recommended more highly)
   - IntelliJ Idea: Install [Rust](https://plugins.jetbrains.com/plugin/8182-rust) plugin
 - Install NodeJS which comes with the Node Package Manager (NPM)
   - This is only for the front end app 
@@ -19,11 +19,13 @@ Two players will enter a game and a dice is rolled. The player with the closest 
 
 ### Backend Setup:
 - Make sure we can build and run tests successfully `$ scrypto test`
-- Use `$ revup -r gameplay.rev` and make sure the final line is a success and the game's state is `"state": "Payout"`
+- Use `$ revup -r gameplay.rev` and make sure the final line is a success and the game's state is `"state": "Destroyed"`
 
 ### Frontend Setup:
 - enter the `$ cd server/` folder and install the dependencies using `$ yarn`
 - spin up the server using `$ yarn start:dev` or just `$ yarn start`
+  - Troubleshoot `port in use` error: run either `$ yarn kill:unix` or `$ yarn kill:windows` to kill the running process
+  - Note: Windows kill command is untested
 
 ### Gameplay:
 - If you've done the frontend setup, open your browser to [http://localhost:3000](http://localhost:3000)
@@ -31,12 +33,13 @@ Two players will enter a game and a dice is rolled. The player with the closest 
   - One player will create a game by clicking the "Create A Game" button
     - A prompt will appear asking you for the game name and a XRD amount you're expecting players to bet
   - Both players should be able to see this newly created game and can click on it to join
-  - Once you join, the "Active Game Area" will update with the contract details
+  - Once you join, the "Active Game Area" will update with the game state from the contract
   - Once both players have joined, the state will move to "MakeGuess" and a new button will appear
   - Press the MakeGuess button and enter your guess in the following prompt
   - Once both players have guessed, the dice will roll and show up in the "last roll" section of the Active Game Area and a winner will be determined
   - The player who won can then "Claim Funds" by clicking the new button that appears
-    - The loser will still see the button (WIP) but cannot withdraw funds and will get an error in the console
+    - The loser will still see the button (WIP) but cannot withdraw funds
+    - If a tie happens, guesses will be reset to 0 and the last_roll will indicate that a roll has taken place
 - If you chose to load the insomnia collection
   - Run `Create Player 1`
   - Run `Create Player 2`
@@ -45,16 +48,14 @@ Two players will enter a game and a dice is rolled. The player with the closest 
   - Run `Join Game Player 2`
   - Run `Make Guess Player 1`
   - Run `Make Guess Player 2`
-  - Run `Withdraw - Player 1 success`
+  - Run `Withdraw - Player 2 success`
   - The others can be run at your behest
     - Run `Check state` to view the current contract state
-    - Run `Withdraw - Player 2 fails` to see the failure response
+    - Run `Withdraw - Player 1 fails` to see the failure response
 
 ### To Do:
 - There is no refund mechanism in case players choose to exit the game
-- Currently, Player 1 has the advantage and will win the pot in the event of a tie
 - Only one round can be played per contract and the state moves to "Destroyed" and no other actions are available
-- There is no error messaging to the client other than what is in the dev console
 - Scrypto 0.4 is set to release and have better frontend integration
 
 ### Resources

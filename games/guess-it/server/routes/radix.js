@@ -53,7 +53,7 @@ function ioMiddleWare(io) {
             const user = USERS[socket.id];
             const response = await make_guess(user.key, user.account, user.component, guess);
             // console.log("Response", response, guess);
-            io.to(user.component).emit("server", {message: response});
+            socket.emit("server", {message: response});
             
             const state = await check_state(user.component);
             io.to(user.component).emit("got-state", state);
@@ -132,7 +132,6 @@ router.post('/make-guess', async function(req, res, next) {
 
 router.post('/check-state', async function(req, res, next) {
     const { component } = req.body;
-    console.log('component: ', {component});
     const response = await check_state(component);
     if (response.error){ return res.status(500).json(response) }
 
@@ -146,6 +145,15 @@ router.post('/withdraw-funds', async function(req, res, next) {
 
     return res.json(response);
 });
+
+function getLogMessage(error) {
+    const message = (error.stdout
+        .split("\n").slice(-3, -1)
+        .map(string => string.replaceAll(/└─ \[ERROR\]/gi, "").trim())[0] || "")
+        .replaceAll(/Logs: 0|New Entities: 0/gi, "");
+    const tx_status = error.stdout.split("\n").find(n => n.search(/Transaction Status:/gi) > -1);
+    return message || tx_status;
+}
 
 async function publish_code() {
     try {
@@ -161,7 +169,8 @@ async function publish_code() {
             package,
         };
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -179,7 +188,8 @@ async function new_account() {
             key: output[1],
         };
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -202,7 +212,8 @@ async function create_game(name, bet) {
         // console.log("Created game", {response, GAMES});
         return response;
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -215,7 +226,8 @@ async function login_user(public, private) {
 
         return Promise.resolve(`Account: ${private}\nPublic key: ${public}\nOutput: ${stdout}`);
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -230,7 +242,8 @@ async function join_game(public, private, component, bet) {
         if (stderr || !isValid) { throw Error(stderr) }
         return stdout.split("\n");
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -245,7 +258,8 @@ async function make_guess(public, private, component, guess) {
         if (stderr || !isValid) { throw Error(stderr) }
         return stdout.split("\n").slice(-5,-4).map(string => string.replaceAll(/├─|└─/gi, "").trim());
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -258,7 +272,8 @@ async function check_state(component) {
         const response = stdout.split("\n").slice(-5,-4).map(string => string.replaceAll(/├─|└─/gi, "").trim());
         return JSON.parse(response?.[0].substr(1,response?.[0].length-2));
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 
@@ -272,7 +287,8 @@ async function withdraw_funds(public, private, component) {
         if (stderr || !isValid) { throw Error(stderr) }
         return stdout.split("\n").slice(-5,-4).map(string => string.replaceAll(/├─|└─/gi, "").trim());
     } catch (e) {
-        return {error: e}
+        const logMessage = getLogMessage(e);
+        return {error: {...e, message: logMessage || e.stderr}}
     }
 }
 

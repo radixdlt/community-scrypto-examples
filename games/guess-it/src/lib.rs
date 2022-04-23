@@ -65,7 +65,7 @@ impl fmt::Display for State {
 pub struct Game {
     name: String,
     state: State,
-    bet: u128,
+    bet: i128,
     players: HashMap<NonFungibleKey, Player>,
     winner: NonFungibleKey,
     last_roll: u128,
@@ -81,7 +81,7 @@ impl Game {
         Self {
             name,
             state: State::AcceptingChallenger,
-            bet,
+            bet: bet as i128,
             players: players.unwrap_or(HashMap::new()),
             winner: NonFungibleKey::from(0),
             last_roll: 0u128,
@@ -101,9 +101,29 @@ impl Game {
         let p1 = random_number - self.players.get(&player_ids[0]).unwrap_or(&Player::empty()).guess;
         let p2 = random_number - self.players.get(&player_ids[1]).unwrap_or(&Player::empty()).guess;
         let closest_guess = cmp::min(p1, p2);
+
+        // Deal with a tie
+        if p1 == p2 { return NonFungibleKey::from(0); }
         let winner = if p1 == closest_guess { &player_ids[0] } else { &player_ids[1] };
 
         return winner.to_owned();
+    }
+
+    pub fn reset_game(&mut self) {
+        self.players.values_mut().for_each(|p| p.guess = 0u128 );
+        self.state = State::MakeGuess;
+    }
+
+    pub fn check_winner(&mut self) {
+        assert_eq!(self.state, State::WinnerSelection, "Not time to choose winner!");
+        // Pick random number and store it
+        let random_number = (self.get_random() % 6) + 1;
+        // determine who was closest without going over
+        self.winner = self.get_winner(random_number);
+        self.last_roll = random_number;
+
+        self.update_state();
+        if self.state == State::WinnerSelection { self.reset_game(); }
     }
 
     pub fn has_guessed(&self) -> bool {
@@ -113,6 +133,16 @@ impl Game {
             .collect();
 
         guesses.len() == 2
+    }
+
+    pub fn update_state(&mut self) {
+        match self.state {
+            State::AcceptingChallenger => if self.players.len() == 2 { self.state = State::MakeGuess; },
+            State::MakeGuess => if self.has_guessed() { self.state = State::WinnerSelection; self.check_winner(); },
+            State::WinnerSelection => if self.winner != NonFungibleKey::from(0) { self.state = State::Payout; },
+            State::Payout => { self.state = State::Destroyed; }
+            _ => ()
+        }
     }
 
     pub fn serialize(game: &Self) -> String {
@@ -138,7 +168,7 @@ impl Game {
 pub struct GameSerialized {
     pub name: String,
     pub state: State,
-    pub bet: u128,
+    pub bet: i128,
     pub players: HashMap<String, Player>,
     pub winner: String,
     pub last_roll: u128,
@@ -154,7 +184,7 @@ impl GameSerialized {
         Self {
             name: "".to_string(),
             state: State::AcceptingChallenger,
-            bet: 0u128,
+            bet: 0i128,
             players: players.unwrap_or(HashMap::new()),
             winner: NonFungibleKey::from(0).to_string(),
             last_roll: 0u128,
@@ -223,10 +253,10 @@ blueprint! {
             let badge: Bucket = self.badges.take(Decimal::one());
             let nft_id: NonFungibleKey = badge.get_non_fungible_key();
             // Secure the funds
-            self.bank.put(payment.take(Decimal::from(self.game.bet as i128)));
+            self.bank.put(payment.take(Decimal::from(self.game.bet)));
             // Add the player's details
-            self.game.players.insert(nft_id.clone(), player.clone());
-            self.game.state = if self.game.players.len() == 2 { State::MakeGuess } else { State::AcceptingChallenger };
+            self.game.players.insert(nft_id.clone(), player);
+            self.game.update_state();
 
             return (badge, payment, nft_id.to_string());
         }
@@ -238,46 +268,28 @@ blueprint! {
         #[auth(badge_ref)]
         pub fn make_guess(&mut self, guess: u128) -> String {
             assert_eq!(self.game.state, State::MakeGuess, "Not ready to make a guess!");
+            assert!(guess <= 6 && guess >= 1, "You can only guess 1-6!");
 
             let key = auth.get_non_fungible_key();
             let player = self.game.players.get_mut(&key).unwrap();
             player.guess = guess;
 
-            self.game.state = if self.game.has_guessed() { State::WinnerSelection } else { State::MakeGuess };
-
-            if self.game.state == State::WinnerSelection {
-                let response = self.check_winner();
-                if self.game.winner != NonFungibleKey::from(0) {
-                    self.game.state = State::Payout;
-                }
-                format!("Your guess '{}' was accepted\nResponse: {}", guess, response)
-            } else {
-                format!("Your guess '{}' was accepted", guess)
-            }
-        }
-
-        pub fn check_winner(&mut self) -> String {
-            // Pick random number and store it
-            let random_number = (self.game.get_random() % 6) + 1;
-            // determine who was closest without going over
-            self.game.winner = self.game.get_winner(random_number);
-            self.game.last_roll = random_number;
-
-            format!("Dice roll was: '{}' .... winner is: {}",random_number, self.game.winner)
+            self.game.update_state();
+            format!("Your guess '{}' was accepted", guess)
         }
 
         #[auth(badge_ref)]
         pub fn withdraw_funds(&mut self) -> (Bucket, String) {
             assert_eq!(self.game.state, State::Payout, "It's not time to get paid!");
+
             let nft_id: NonFungibleKey = auth.get_non_fungible_key();
+            assert!(nft_id == self.game.winner, "You cannot withdraw funds!");
 
-            if nft_id == self.game.winner {
-                let amt = self.bank.amount();
-                let payout = self.bank.take(amt);
+            let amt = self.bank.amount();
+            let payout = self.bank.take(amt);
 
-                (payout, format!("You withdrew {:?} XRD!", amt))
-            }
-            else { panic!("You cannot withdraw funds!") }
+            self.game.update_state();
+            (payout, format!("You withdrew {:?} XRD!", amt))
         }
 
         pub fn get_context(&self) -> (Actor, Address, H256, u64, u128) {

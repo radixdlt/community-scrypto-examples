@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link rel='stylesheet' href='/stylesheets/style.css' />
   <script src="/socket.io/socket.io.js"></script>
+  <link href="/toastr/build/toastr.min.css" rel="stylesheet"/>
   <style>
     html {
       background: darkslategrey;
@@ -105,13 +106,23 @@
   </div>
   <ul id="games"></ul>
 
+  <script src="/jquery/dist/jquery.min.js"></script>
+  <script src="/toastr/build/toastr.min.js"></script>
   <script>
     const socket = io();
 
-    socket.on('server', function ({
-      message
-    }) {
-      console.log("Got message from server: ", message);
+    socket.on('server', function ({ message }) {
+      if (message instanceof Array) {
+        const output = message.pop();
+        console.log("Got message from server: ", output);
+        toastr.success(output)
+      } else if (message.error) {
+        console.log("Got error message from server: ", message.error);
+        toastr.error(message.error.message)
+      } else {
+        console.log("Got message from server: ", message);
+        toastr.info(message)
+      }
     });
 
     socket.on('new-account', function (details) {

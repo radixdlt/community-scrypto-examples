@@ -3,7 +3,7 @@ extern crate radix_engine;
 use std::collections::HashMap;
 use radix_engine::ledger::*;
 use radix_engine::model::{Receipt};
-use scrypto::prelude::{Actor, Address, Bucket, H256};
+use scrypto::prelude::{Actor, Address, Bucket, H256, NonFungibleKey};
 use scrypto::types::RADIX_TOKEN;
 use scrypto_unit::*;
 use guess_it::{GameSerialized, Player, State};
@@ -236,6 +236,13 @@ fn test_rng() {
     let rng = ((uuid / multiplier) % 6) + 1;
     // println!("Uuid: {}, multiplier: {}, rng: {}", uuid, multiplier, rng);
     assert_ne!(rng, 0);
+}
+
+#[test]
+fn test_nft_keys_are_comparable() {
+    let v1: Vec<NonFungibleKey> = vec!();
+    let v2: Vec<NonFungibleKey> = vec!();
+    assert_eq!(v1, v2);
 }
 
 fn create_game<'a, L: SubstateStore>(
