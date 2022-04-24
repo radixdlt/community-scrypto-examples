@@ -1,6 +1,6 @@
 # Withdrawing 1,000,000 XRD from the admin's account to fund the splitter with.
 CALL_METHOD 
-    ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
+    ComponentAddress("02dbbcc440e1f4b402675af83b2f39220cfa2ea77a4ad890cd8252") 
     "withdraw" 
     ResourceAddress("030000000000000000000000000000000000000000000000000004");
 TAKE_FROM_WORKTOP 
@@ -9,12 +9,12 @@ TAKE_FROM_WORKTOP
 
 # Depositing the funds into the payment splitter
 CALL_METHOD 
-    ComponentAddress("026bad062689efedcd7bbb2436bc28509857c381ded6deb047a6c0") 
+    ComponentAddress("028e6137dfad5163005d9e6816f06c415e3311fb479511f3cfe35e") 
     "deposit" 
     Bucket("xrd_bucket");
 
 # The deposit method returns a bucket of the remaining XRD which we did not divide due to rounding. We need to deposit
 # that back into the admin's account
 CALL_METHOD_WITH_ALL_RESOURCES 
-    ComponentAddress("023989070e21339d5e29c5294ea45e962b9817599a9befa0b1691d") 
+    ComponentAddress("02dbbcc440e1f4b402675af83b2f39220cfa2ea77a4ad890cd8252") 
     "deposit_batch";

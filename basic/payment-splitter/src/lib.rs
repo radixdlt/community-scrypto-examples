@@ -19,10 +19,6 @@ blueprint! {
         /// funds from the component.
         shareholder_badge_resource_address: ResourceAddress,
         
-        /// PaymentSplitter component have admins and admins have two key roles: adding new shareholders to the payment
-        /// splitter, and disabling the addition of additional shareholders once all shareholders have been added. 
-        admin_badge_resource_address: ResourceAddress,
-
         /// The internal admin badge is a badge which is used by payment splitter components to mint and burn the 
         /// shareholder tokens. 
         internal_admin_badge: Vault,
@@ -91,6 +87,57 @@ blueprint! {
                 .metadata("description", "This is a PaymentSplitter admin badge used to authenticate the admin.")
                 .initial_supply(dec!("1"));
 
+            // Creating the component itself through the `instantiate_custom_access_payment_splitter` function on the
+            // blueprint which allows for the creation of payment-splitters which have custom access rules on them
+            let payment_splitter: ComponentAddress = Self::instantiate_custom_access_payment_splitter(
+                accepted_token_resource_address,
+                rule!(require(admin_badge.resource_address()))
+            );
+
+            return (payment_splitter, admin_badge);
+        }
+
+        /// Creates a new payment splitter component.
+        /// 
+        /// This function creates a new PaymentSplitter component that splits payment of a given token among 
+        /// shareholders in proportion to the amount of shares that they own. The payment splitter does not need to use
+        /// XRD tokens, it can use any token that the instantiator desires which may be configured through the argument
+        /// `accepted_token_resource_address`. 
+        /// 
+        /// A key piece of functionality which might be needed by users of the payment splitter is having their own auth 
+        /// rule which governs how shareholders are added to the splitter. As an example, say that you would like to 
+        /// create a payment splitter which requires three badges to be present in order to allow the addition of more
+        /// shareholders. Then, you can use this instantiation function to create a payment splitter which is configured
+        /// to perform that.
+        /// 
+        /// This function performs a number of checks before the PaymentSplitter component is created:
+        /// 
+        /// * **Check 1:** Checks to ensure that the `accepted_token_resource_address` is of a fungible token.
+        /// 
+        /// # Arguments
+        /// 
+        /// * `accepted_token_resource_address` (ResourceAddress) - The resource address of the token that this payment
+        /// splitter will perform splitting on. 
+        /// * `withdraw_and_lock_rule` (AccessRule) - This is an AccessRule defines the access rule for two main methods 
+        /// in the component: `add_shareholder` and `lock_splitter`. 
+        /// 
+        /// # Returns:
+        /// 
+        /// This function returns a tuple of (ComponentAddress, Bucket), where:
+        /// 
+        /// * `ComponentAddress` - The address of the `PaymentSplitter` component just created.
+        /// * `Bucket` - A bucket containing the admin badge. 
+        pub fn instantiate_custom_access_payment_splitter(
+            accepted_token_resource_address: ResourceAddress,
+            withdraw_and_lock_rule: AccessRule
+        ) -> ComponentAddress {
+            // Loading in the resource manager for the provided resource address
+            let accepted_token_resource_manager: &ResourceManager = borrow_resource_manager!(accepted_token_resource_address);
+            assert!(
+                accepted_token_resource_manager.resource_type() != ResourceType::NonFungible, 
+                "[Instantiation]: PaymentSplitters can't be made to split payments of NFTs."
+            );
+            
             // Creating the internal admin badge which we will use for the minting and burning of the shareholder tokens
             let internal_admin_badge: Bucket = ResourceBuilder::new_fungible()
                 .divisibility(1)
@@ -104,24 +151,23 @@ blueprint! {
             let shareholder_badge: ResourceAddress = ResourceBuilder::new_non_fungible()
                 .metadata("name", "Shareholder Badge")
                 .metadata("description", "A non-fungible-token used to authenticate shareholders.")
-                .mintable(auth!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
-                .burnable(auth!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
+                .mintable(rule!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
+                .burnable(rule!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
                 .no_initial_supply();
 
             // Creating the PaymentSplitter component and setting the auth on the methods
-            let auth: AccessRules = AccessRules::new()
-                .method("add_shareholder", auth!(require(admin_badge.resource_address())))
-                .method("lock_splitter", auth!(require(admin_badge.resource_address())))
+            let access_rules: AccessRules = AccessRules::new()
+                .method("add_shareholder", withdraw_and_lock_rule.clone())
+                .method("lock_splitter", withdraw_and_lock_rule.clone())
                             
                 // All other methods which we didn't set auth for. In this case we did not specify that we would like
                 // the auth system to handle the auth for us. We told it to allow all access to these methods so that we 
                 // can take the shareholder badge in a `Proof`, get its ID, and use the data associated with it.
-                .default(auth!(allow_all));
+                .default(rule!(allow_all));
 
             let payment_splitter: ComponentAddress = Self {
                 accepted_token_resource_address: accepted_token_resource_address,
                 shareholder_badge_resource_address: shareholder_badge,
-                admin_badge_resource_address: admin_badge.resource_address(),
                 internal_admin_badge: Vault::with_bucket(internal_admin_badge),
                 vaults: HashMap::new(),
                 dead_vaults: Vec::new(),
@@ -129,10 +175,10 @@ blueprint! {
                 total_amount_of_shares: dec!("0"),
             }
             .instantiate()
-            .add_access_check(auth)            
+            .add_access_check(access_rules)            
             .globalize();
 
-            return (payment_splitter, admin_badge);
+            return payment_splitter;
         }
 
         /// Adds a shareholder to the PaymentSplitter
