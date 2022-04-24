@@ -45,7 +45,7 @@ export REPLACEMENT_LOOKUP=" \
 
 # Replacing the parts from the lookup table
 sed "$REPLACEMENT_LOOKUP" $SCRIPT_DIR/raw_transactions/add_beneficiary.rtm > $SCRIPT_DIR/transactions/add_beneficiary.rtm
-sed "$REPLACEMENT_LOOKUP" $SCRIPT_DIR/raw_transactions/giveup_termination_rights.rtm > $SCRIPT_DIR/transactions/giveup_termination_rights.rtm
+sed "$REPLACEMENT_LOOKUP" $SCRIPT_DIR/raw_transactions/disable_termination.rtm > $SCRIPT_DIR/transactions/disable_termination.rtm
 sed "$REPLACEMENT_LOOKUP" $SCRIPT_DIR/raw_transactions/terminate_beneficiary.rtm > $SCRIPT_DIR/transactions/terminate_beneficiary.rtm
 sed "$REPLACEMENT_LOOKUP" $SCRIPT_DIR/raw_transactions/token_creation.rtm > $SCRIPT_DIR/transactions/token_creation.rtm
 sed "$REPLACEMENT_LOOKUP" $SCRIPT_DIR/raw_transactions/withdraw_funds.rtm > $SCRIPT_DIR/transactions/withdraw_funds.rtm

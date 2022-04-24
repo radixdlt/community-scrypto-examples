@@ -95,7 +95,7 @@ blueprint! {
                     "description",
                     "An admin badge with the authority to terminate the vesting of tokens",
                 )
-                .mintable(auth!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
+                .mintable(rule!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
                 .initial_supply(dec!("1"));
 
             // Creating the beneficiary's badge which is used to keep track of their vesting schedule.
@@ -105,7 +105,7 @@ blueprint! {
                     "description",
                     "A badge provided to beneficiaries by the vesting component for authentication",
                 )
-                .mintable(auth!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
+                .mintable(rule!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
                 .no_initial_supply();
 
             // Setting up the auth for the vesting component. With v0.4.0 of Scrypto we can now make the authentication
@@ -113,27 +113,27 @@ blueprint! {
             // impose quite a number of rules on who is authorized to access what.
             let auth: AccessRules = AccessRules::new()
                 // Only people who have at least 1 admin badge in their auth zone may make calls to these methods.
-                .method("add_beneficiary", auth!(require(admin_badge.resource_address())))
+                .method("add_beneficiary", rule!(require(admin_badge.resource_address())))
                 
                 // Only transactions where a minimum of `min_admins_required_for_multi_admin` admin badges are present 
                 // in the auth zone are allowed to make calls to these methods. This makes these methods dynamic as this 
                 // value will change as admins are added.
                 .method(
                     "terminate_beneficiary", 
-                    auth!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address()))
+                    rule!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address()))
                 )
                 .method(
                     "add_admin",
-                    auth!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
+                    rule!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
                 )
                 .method(
                     "disable_termination",
-                    auth!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
+                    rule!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
                 )
                 
                 // We do not want to handle the authentication of other methods through the auth zone. Instead, we would
                 // like to handle them all on our own.
-                .default(auth!(allow_all));
+                .default(rule!(allow_all));
 
             let vesting_component_address: ComponentAddress = Self {
                 funds: HashMap::new(),
