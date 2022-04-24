@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title><%= title %></title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel='stylesheet' href='/stylesheets/style.css' />
+  <script src="/socket.io/socket.io.js"></script>
+  <link href="/toastr/build/toastr.min.css" rel="stylesheet"/>
+  <style>
+    html {
+      background: darkslategrey;
+      color: navajowhite;
+    }
+
+    body {
+      margin: 0 auto;
+      max-width: 900px;
+    }
+
+    #welcome {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 0;
+    }
+
+    #active-game-box {
+      min-height: 100px;
+      border: 1px solid lightslategray;
+      padding: 0px 0px 0px 10px;
+      box-shadow: 5px 5px rgb(0 0 0 / 23%);
+    }
+
+    #active-game-box h4 {
+      margin: 0;
+      display: inline-block;
+    }
+
+    #active-game-box .title {
+      display: flex;
+      justify-content: space-between;
+    }
+
+    #active-game-box .button-group {
+      display: flex;
+      flex-direction: column;
+    }
+
+    #active-game-box #claim-button {
+      margin: auto 10px auto 0;
+      visibility: hidden;
+    }
+
+    #active-game-box #guess-button {
+      margin: auto 10px auto 0;
+      visibility: hidden;
+    }
+
+    #active-game {
+      margin-bottom: 17px;
+    }
+
+    ul#games {
+      display: grid;
+      grid-auto-flow: row;
+      grid-template-columns: repeat(3, auto);
+      grid-gap: 25px 0;
+      list-style: none;
+      padding: 0;
+    }
+
+    #games li {
+      width: 200px;
+      word-break: break-all;
+      padding: 10px;
+      border: 1px solid lightslategray;
+      border-radius: 5px;
+      box-shadow: 5px 5px rgb(0 0 0 / 23%);
+    }
+
+    .game-details h4 {
+      margin: 0 auto;
+    }
+
+    .game-details {
+      font-size: 10px;
+    }
+  </style>
+</head>
+
+<body>
+  <h1><%= title %></h1>
+  <div id="welcome">
+    <div>Welcome to <%= title %></div>
+    <div><button id="create-game-button">Create A Game</button></div>
+  </div>
+  <div id="active-game-box">
+    <div class="title">
+      <h2>Active Game Area</h2>
+      <div class="button-group">
+        <button id="guess-button">Make A Guess</button>
+        <button id="claim-button">Claim funds</button>
+      </div>
+    </div>
+    <div id="active-game"></div>
+  </div>
+  <ul id="games"></ul>
+
+  <script src="/jquery/dist/jquery.min.js"></script>
+  <script src="/toastr/build/toastr.min.js"></script>
+  <script>
+    const socket = io();
+
+    socket.on('server', function ({ message }) {
+      if (message instanceof Array) {
+        const output = message.pop();
+        console.log("Got message from server: ", output);
+        toastr.success(output)
+      } else if (message.error) {
+        console.log("Got error message from server: ", message.error);
+        toastr.error(message.error.message)
+      } else {
+        console.log("Got message from server: ", message);
+        toastr.info(message)
+      }
+    });
+
+    socket.on('new-account', function (details) {
+      console.log("Got new account!", {
+        details
+      });
+
+      localStorage.setItem('account', JSON.stringify(details));
+    });
+
+    socket.on('got-games', function (games) {
+      // console.log("Games!", { games });
+      buildGamesList(games);
+    });
+
+    socket.on('got-state', function (state) {
+      // console.log("Game state!", { state });
+      const game_area = document.getElementById('active-game');
+      const div = document.createElement('div');
+
+      removeAllChildren(game_area);
+
+      div.innerHTML = `
+        <h4>State:</h4> <span>${state.state}</span><br/>
+        <h4>Bet:</h4> <span>${state.bet}</span><br/>
+        <h4>Winner:</h4> <span>${state.winner}</span><br/>
+        <h4>Dice Roll:</h4> <span>${state.last_roll}</span><br/>
+      `;
+
+      const guess_button = document.getElementById('guess-button');
+      const claim_button = document.getElementById('claim-button');
+
+      if (state.state.toLowerCase().search("Payout".toLowerCase()) > -1) {
+        guess_button.style.visibility = "hidden";
+        claim_button.style.visibility = "visible";
+      }
+
+      if (state.state.toLowerCase().search("MakeGuess".toLowerCase()) > -1) {
+        guess_button.style.visibility = "visible";
+        claim_button.style.visibility = "hidden";
+      }
+
+      game_area.appendChild(div);
+    });
+
+    const guess_button = document.getElementById('guess-button');
+    guess_button.addEventListener('click', guessButtonClickHandler);
+
+    const claim_button = document.getElementById('claim-button');
+    claim_button.addEventListener('click', claimButtonClickHandler);
+
+    function claimButtonClickHandler() {
+      socket.emit('withdraw-funds');
+    }
+
+    function guessButtonClickHandler() {
+      const rawGuess = prompt("What is your guess?");
+
+      try {
+        const guess = Number(rawGuess);
+        socket.emit('make-guess', guess)
+      } catch (e) {
+        console.warn(`Your number '${rawGuess}' was invalid.. try again!`);
+      }
+    }
+
+    const join_button = document.getElementById('create-game-button');
+
+    join_button.addEventListener('click', function () {
+      const name = prompt("What's the game name?");
+      const bet = prompt("How much XRD is the minimum bet??");
+      socket.emit('create-game', {
+        name,
+        bet
+      });
+    });
+
+    function removeAllChildren(element) {
+      while (element.children.length > 0) {
+        for (child of element.children) {
+          element.removeChild(child);
+        }
+      }
+    }
+
+    function buildGamesList(games) {
+      // console.log('games: ', { games });
+      const ul = document.getElementById('games');
+
+      removeAllChildren(ul);
+
+      function getJoinClickHandler(game) {
+        // console.log('join game handler:', {game});
+        return async ({ target }) => {
+          socket.emit("join-game", game.component);
+        }
+      }
+
+      for (component_id in games) {
+        const li = document.createElement('li');
+        const div = document.createElement('div');
+
+        const game = games[component_id];
+        const avatar = generateAvatarUrl(component_id);
+
+        const joinClickHandler = getJoinClickHandler(game);
+        li.addEventListener('click', joinClickHandler);
+
+        div.innerHTML = `
+            <img src="${avatar}" alt="image" />
+            <h3>${game.name}</h3>
+            <div class="game-details">
+              <h4>Component:</h4> ${game.component}<br/><br/>
+              <h4>Resource Def:</h4> ${game.resourceDef}<br/>
+            </div>
+          `;
+
+        li.appendChild(div);
+        ul.appendChild(li);
+      }
+
+    }
+
+    function generateAvatarUrl(seed) {
+      const sprites = [
+        "male", "female", "human", "identicon", "initials",
+        "bottts", "avataaars", "jdenticon", "gridy", "micah",
+      ];
+
+      // const sprite = sprites[Math.floor(Math.random() * sprites.length)];
+      const sprite = sprites[5];
+      const url = `https://avatars.dicebear.com/api/${sprite}/${seed}.svg`;
+      return url;
+    }
+  </script>
+</body>
+
+</html>

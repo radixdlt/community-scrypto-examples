@@ -1,6 +1,9 @@
 # Visual studio code
 .vscode
 
+# IntelliJ Idea
+.idea
+
 # macOS folder attributes
 .DS_Store
 
@@ -11,3 +14,7 @@ Cargo.lock
 
 # Flamegraph profiles
 flamegraph.svg
+
+# Front end build folders
+build/
+node_modules/

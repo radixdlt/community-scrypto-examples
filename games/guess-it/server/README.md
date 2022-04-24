@@ -1,0 +1,4 @@
+- [Running shell commands in node](https://nodejs.org/api/child_process.html#child_processexeccommand-options-callback)
+- [Express Generator](https://expressjs.com/en/starter/generator.html)
+- [Socket.io](https://socket.io/get-started/chat)
+- [Express and Socket.io](https://newbedev.com/use-socket-io-inside-a-express-routes-file)
