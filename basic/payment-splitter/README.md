@@ -76,7 +76,7 @@ As an example, for the methods `add_shareholder` and `lock_splitter` the presenc
 
 The two methods of auth that are currently available are not meant to compete with one another in terms of who is best. They're meant to coexist where each of the two methods does its intended job exceptionally well. The `PaymentSplitter` blueprint is a good example of how these two ways of handling authentication can work side by side in a single blueprint and this example helps shine a light on how the decision to use one kind of auth over the other cam about.
 
-### Practicality Considerations
+### Practical Considerations
 
 In the physical world, when there is a need to split some kind of funds across multiple different people, there is typically a need for multiple people to approve the addition of shareholders to the physical-world contract before they can be added and have funds split across them as well. A key focus of the `PaymentSplitter` blueprint is to be as powerful and flexible as similar contracts can be in the physical world. Therefore, the `PaymentSplitter` has an option for the instantiator of the component to set the access rule that they would like for the addition of shareholders and the locking of the splitter. In human language, the `PaymentSplitter` allow for somebody to say "my manager and his manager have to both sign before a shareholder can be added", or "my manager or his manager need to sign before a shareholder is added", or a more general rule like "5 out of 10 board members need to sign before the shareholder can be added".
 
