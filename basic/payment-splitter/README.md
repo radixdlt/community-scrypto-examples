@@ -78,7 +78,7 @@ The two methods of auth that are currently available are not meant to compete wi
 
 ### Practical Considerations
 
-In the physical world, when there is a need to split some kind of funds across multiple different people, there is typically a need for multiple people to approve the addition of shareholders to the physical-world contract before they can be added and have funds split across them as well. A key focus of the `PaymentSplitter` blueprint is to be as powerful and flexible as similar contracts can be in the physical world. Therefore, the `PaymentSplitter` has an option for the instantiator of the component to set the access rule that they would like for the addition of shareholders and the locking of the splitter. In human language, the `PaymentSplitter` allow for somebody to say "my manager and his manager have to both sign before a shareholder can be added", or "my manager or his manager need to sign before a shareholder is added", or a more general rule like "5 out of 10 board members need to sign before the shareholder can be added".
+In the physical world, when there is a need to split some kind of funds across multiple different people, there is typically a need for multiple people to approve the addition of shareholders to the physical-world contract before they can be added and have funds split across them as well. A key focus of the `PaymentSplitter` blueprint is to be as powerful and flexible as similar contracts can be in the physical world. Therefore, the `PaymentSplitter` has an option for the instantiator of the component to set the access rule that they would like for the addition of shareholders and the locking of the splitter. In simpler terms, the `PaymentSplitter` allow for somebody to say "my manager and his manager have to both sign before a shareholder can be added", or "my manager or his manager need to sign before a shareholder is added", or a more general rule like "5 out of 10 board members need to sign before the shareholder can be added".
 
 The `PaymentSplitter` blueprint allows for such flexibility thanks to the new auth-zone-based authentication system introduced with v0.4.0 and the tons of abstractions that it introduces. The method which allows for the setting of a custom access rule for the `add_shareholder` and `lock_splitter` function is `instantiate_custom_access_payment_splitter`. In fact, the "default" constructor used by the `PaymentSplitter` uses the `instantiate_custom_access_payment_splitter` function with an admin badge it creates on the fly to set the access rule, this is how generic and powerful this function is.
 
@@ -88,7 +88,7 @@ Let's look at a few examples of how this function can be used and the power of i
 let supervisor_badge: ResourceAddress = ...;
 let admin_badge: ResourceAddress = ...;
 
-let payment_splitter: ComponentAddress = `PaymentSplitter`::instantiate_custom_access_payment_splitter(
+let payment_splitter: ComponentAddress = PaymentSplitter::instantiate_custom_access_payment_splitter(
     RADIX_TOKEN,
     rule!( require(supervisor_badge) && require(admin_badge) )
 );
@@ -102,7 +102,7 @@ let manager_badge: ResourceAddress = ...;
 
 let founder_badge: ResourceAddress = ...;
 
-let payment_splitter: ComponentAddress = `PaymentSplitter`::instantiate_custom_access_payment_splitter(
+let payment_splitter: ComponentAddress = PaymentSplitter::instantiate_custom_access_payment_splitter(
     RADIX_TOKEN,
     rule!( (require(supervisor_badge) && require(manager_badge)) || require(founder_badge) )
 );
@@ -115,7 +115,7 @@ let board_member_badge: ResourceAddress = ...;
 
 let founder_badge: ResourceAddress = ...;
 
-let payment_splitter: ComponentAddress = `PaymentSplitter`::instantiate_custom_access_payment_splitter(
+let payment_splitter: ComponentAddress = PaymentSplitter::instantiate_custom_access_payment_splitter(
     RADIX_TOKEN,
     rule!( (require_n_of(5, board_member_badge) && require(admin_badge)) )
 );
