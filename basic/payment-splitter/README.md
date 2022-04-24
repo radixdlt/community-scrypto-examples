@@ -1,4 +1,4 @@
-# `PaymentSplitter`
+# PaymentSplitter
 
 Just like in the physical world, when multiple people come together to build an NFT or a DeFI project they typically want to split the profits from such project in a clear and trustworthy way. The approach to have one entity to trust with the funds to later send to other shareholders simply bears too much risk of one party going rogue and refusing to send the shareholders their stake. This calls for a better way for funds from a project to be managed and split across the different shareholders in the project. The `PaymentSplitter` is a Scrypto blueprint which uses NFTs to authenticate shareholders and allow shareholders to have a clear and trustworthy way of withdrawing their profits from a project when they wish to do so.
 

@@ -3,12 +3,13 @@ name = "payment_splitter"
 version = "0.2.0"
 edition = "2021"
 
-[dependencies]
-sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
+[dependencies] # TODO: Update it so that we're using git + tag instead of a local path
+sbor = { path = "/Users/omarabdulla/Radix/radixdlt-scrypto/sbor" }
+scrypto = { path = "/Users/omarabdulla/Radix/radixdlt-scrypto/scrypto"}
+regex = "1"
 
 [dev-dependencies]
-radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
+radix-engine = { path = "/Users/omarabdulla/Radix/radixdlt-scrypto/radix-engine"}
 
 [profile.release]
 opt-level = 's'     # Optimize for size.

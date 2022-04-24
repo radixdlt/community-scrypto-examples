@@ -35,11 +35,7 @@ fn admin_can_add_shareholder() {
     let instantiation_receipt: Receipt = executor.validate_and_execute(&instantiation_tx).unwrap();
 
     let payment_splitter_component_address: ComponentAddress = instantiation_receipt.new_component_addresses[0];
-    let admin_badge_resource_address: ResourceAddress = get_resource_address_with_name(
-        instantiation_receipt.new_resource_addresses, 
-        String::from("Admin Badge"), 
-        executor.substate_store()
-    ).unwrap();
+    let admin_badge_resource_address: ResourceAddress = instantiation_receipt.new_resource_addresses[0];
 
     // Attempting to add a new shareholder to the payment splitter
     let adding_shareholder_tx: SignedTransaction = TransactionBuilder::new()
@@ -83,16 +79,8 @@ fn shareholder_cant_add_shareholder() {
     let instantiation_receipt: Receipt = executor.validate_and_execute(&instantiation_tx).unwrap();
 
     let payment_splitter_component_address: ComponentAddress = instantiation_receipt.new_component_addresses[0];
-    let admin_badge_resource_address: ResourceAddress = get_resource_address_with_name(
-        instantiation_receipt.new_resource_addresses.clone(), 
-        String::from("Admin Badge"), 
-        executor.substate_store()
-    ).unwrap();
-    let shareholder_badge_resource_address: ResourceAddress = get_resource_address_with_name(
-        instantiation_receipt.new_resource_addresses.clone(), 
-        String::from("Shareholder Badge"), 
-        executor.substate_store()
-    ).unwrap();
+    let admin_badge_resource_address: ResourceAddress = instantiation_receipt.new_resource_addresses[0];
+    let shareholder_badge_resource_address: ResourceAddress = instantiation_receipt.new_resource_addresses[2];
 
     // Attempting to add a new shareholder to the payment splitter
     let adding_shareholder_tx: SignedTransaction = TransactionBuilder::new()
@@ -197,11 +185,7 @@ fn admin_cant_add_shareholder_after_locking() {
     let instantiation_receipt: Receipt = executor.validate_and_execute(&instantiation_tx).unwrap();
 
     let payment_splitter_component_address: ComponentAddress = instantiation_receipt.new_component_addresses[0];
-    let admin_badge_resource_address: ResourceAddress = get_resource_address_with_name(
-        instantiation_receipt.new_resource_addresses, 
-        String::from("Admin Badge"), 
-        executor.substate_store()
-    ).unwrap();
+    let admin_badge_resource_address: ResourceAddress = instantiation_receipt.new_resource_addresses[0];
 
     // Locking the payment splitter
     let locking_tx: SignedTransaction = TransactionBuilder::new()
@@ -274,85 +258,141 @@ fn anybody_can_deposit() {
     assert!(deposit_receipt.result.is_ok());
 }
 
-// /// ####################################################################################################################
-// /// The resource addresses that we get in `receipt.new_resource_addresses` are not sorted in any way. So to get the 
-// /// correct resource address for most operations we need to search for it using its metadata or through other means.
-// /// ####################################################################################################################
+#[test]
+fn custom_rule_splitter_works_with_correct_badges() {
+    // Setting up the ledger and executor for this test
+    let mut ledger: InMemorySubstateStore = InMemorySubstateStore::with_bootstrap();
+    let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, true);
 
-#[derive(Debug, Clone)]
-pub enum ResourceNameError {
-    ResourceManagerNotFound,
-    ResourceHasNoName,
+    // Publishing the PaymentSplitter package
+    let package: PackageAddress = executor.publish_package(compile_package!()).unwrap();
+
+    // Creating two accounts which will be used to simulate the admin and the non-admin
+    let (
+        admin_public_key, 
+        admin_private_key, 
+        admin_component_address
+    ): (EcdsaPublicKey, EcdsaPrivateKey, ComponentAddress) = executor.new_account();
+
+    // Creating multiple badges to use for the splitter testing 
+    let badge_creation_tx: SignedTransaction = TransactionBuilder::new()
+        .new_badge_fixed(HashMap::new(), dec!("1"))
+        .new_badge_fixed(HashMap::new(), dec!("1"))
+        .new_badge_fixed(HashMap::new(), dec!("1"))
+        .call_method_with_all_resources(admin_component_address, "deposit_batch")
+        .build(executor.get_nonce([admin_public_key]))
+        .sign([&admin_private_key]);
+    let badge_creation_receipt: Receipt = executor.validate_and_execute(&badge_creation_tx).unwrap();
+
+    let supervisor_badge_resource_address: ResourceAddress = badge_creation_receipt.new_resource_addresses[0];
+    let admin_badge_resource_address: ResourceAddress = badge_creation_receipt.new_resource_addresses[1];
+    let superadmin_badge_resource_address: ResourceAddress = badge_creation_receipt.new_resource_addresses[2];
+
+    // Creating the access rule which we would like to use for the addition of shareholders
+    let rule: AccessRule = rule!(
+        require(supervisor_badge_resource_address) 
+        && require(admin_badge_resource_address) 
+        && require(superadmin_badge_resource_address)
+    );
+
+    let instantiation_tx: SignedTransaction = TransactionBuilder::new()
+        .call_function(
+            package, 
+            "PaymentSplitter", 
+            "instantiate_custom_access_payment_splitter", 
+            args![
+                RADIX_TOKEN,
+                rule
+            ]
+        )
+        .call_method_with_all_resources(admin_component_address, "deposit_batch")
+        .build(executor.get_nonce([admin_public_key]))
+        .sign([&admin_private_key]);
+    let instantiation_receipt: Receipt = executor.validate_and_execute(&instantiation_tx).unwrap();
+
+    let payment_splitter_component_address: ComponentAddress = instantiation_receipt.new_component_addresses[0];
+
+    // Attempting to add a new shareholder to the payment splitter
+    let adding_shareholder_tx: SignedTransaction = TransactionBuilder::new()
+        .create_proof_from_account_by_amount(dec!("1"), admin_badge_resource_address, admin_component_address)
+        .create_proof_from_account_by_amount(dec!("1"), superadmin_badge_resource_address, admin_component_address)
+        .create_proof_from_account_by_amount(dec!("1"), supervisor_badge_resource_address, admin_component_address)
+        .call_method(payment_splitter_component_address, "add_shareholder", args!(dec!("20")))
+        .call_method_with_all_resources(admin_component_address, "deposit_batch")
+        .build(executor.get_nonce([admin_public_key]))
+        .sign([&admin_private_key]);
+    let adding_shareholder_receipt: Receipt = executor.validate_and_execute(&adding_shareholder_tx).unwrap();
+    println!("{:?}", adding_shareholder_receipt);
+
+    // Adding an additional shareholder should fail.
+    assert!(adding_shareholder_receipt.result.is_ok());
 }
 
-/// Gets the name of a resource 
-/// 
-/// This function loads in the resource manager and the of a given resource address from the substate store and then 
-/// tries to find the name of the resource from the metadata. If the resource does not exist or if the resource has no
-/// name then a `ResourceNameError` is returned.
-/// 
-/// # Arguments:
-/// 
-/// * `resource_address` (ResourceAddress) - The address of the resource
-/// * `substate_store` (T: SubstateStore) - A generic type representing a substate store.
-/// 
-/// # Returns:
-///    
-/// This function returns a `String` on the successful retrieval of the resource name and a `ResourceNameError` on
-/// failure.
-pub fn get_resource_name<T: SubstateStore>(
-    resource_address: &ResourceAddress,
-    substate_store: &T
-) -> Result<String, ResourceNameError> {
-    // Getting the resource manager from the substate
-    let resource_manager: Option<radix_engine::model::ResourceManager> = substate_store
-        .get_decoded_substate(resource_address)
-        .map(|(resource, _)| resource);
+#[test]
+fn custom_rule_splitter_doesnt_work_with_incorrect_badges() {
+    // Setting up the ledger and executor for this test
+    let mut ledger: InMemorySubstateStore = InMemorySubstateStore::with_bootstrap();
+    let mut executor: TransactionExecutor<InMemorySubstateStore> = TransactionExecutor::new(&mut ledger, true);
 
-    // Checking if a resource manager exists, if it does then we can try to attempt to find the name, else we return
-    // an error
-    match resource_manager {
-        Some(rm) => {
-            // Check the metadata to see if it contains a name
-            match rm.metadata().get("name") {
-                Some(name) => Ok(name.clone()),
-                None => Err(ResourceNameError::ResourceHasNoName)
-            }
-        },
-        None => Err(ResourceNameError::ResourceManagerNotFound)
-    }
-}
+    // Publishing the PaymentSplitter package
+    let package: PackageAddress = executor.publish_package(compile_package!()).unwrap();
 
-/// Returns the ResourceAddress of a resource which has a specific name.
-/// 
-/// This function takes in a vector of `ResourceAddress` objects and attempts to find the address of the resource which
-/// has a the name `name` in the `substate_store`. If no resource is found with that given name then a `None` is 
-/// returned.
-/// 
-/// # Arguments:
-/// 
-/// * `resource_addresses` (Vec<ResourceAddresss>) - A vector of the resource addresses to find the appropriate one in
-/// * `name` (String) - The name that we're looking for.
-/// * * `substate_store` (T: SubstateStore) - A generic type representing a substate store.
-/// 
-/// # Returns:
-/// 
-/// This function returns a resource address if one is found that has the desired name, otherwise, this function returns
-/// a `None`
-pub fn get_resource_address_with_name<T: SubstateStore>(
-    resource_addresses: Vec<ResourceAddress>,
-    name: String,
-    substate_store: &T
-) -> Option<ResourceAddress> {
-    for ra in resource_addresses.iter() {
-        match get_resource_name(ra, substate_store) {
-            Ok(resource_name) => {
-                if name == resource_name {
-                    return Some(*ra)
-                }
-            },
-            Err(_) => {}
-        }
-    }
-    return None;
+    // Creating two accounts which will be used to simulate the admin and the non-admin
+    let (
+        admin_public_key, 
+        admin_private_key, 
+        admin_component_address
+    ): (EcdsaPublicKey, EcdsaPrivateKey, ComponentAddress) = executor.new_account();
+
+    // Creating multiple badges to use for the splitter testing 
+    let badge_creation_tx: SignedTransaction = TransactionBuilder::new()
+        .new_badge_fixed(HashMap::new(), dec!("1"))
+        .new_badge_fixed(HashMap::new(), dec!("1"))
+        .new_badge_fixed(HashMap::new(), dec!("1"))
+        .call_method_with_all_resources(admin_component_address, "deposit_batch")
+        .build(executor.get_nonce([admin_public_key]))
+        .sign([&admin_private_key]);
+    let badge_creation_receipt: Receipt = executor.validate_and_execute(&badge_creation_tx).unwrap();
+
+    let supervisor_badge_resource_address: ResourceAddress = badge_creation_receipt.new_resource_addresses[0];
+    let admin_badge_resource_address: ResourceAddress = badge_creation_receipt.new_resource_addresses[1];
+    let superadmin_badge_resource_address: ResourceAddress = badge_creation_receipt.new_resource_addresses[2];
+
+    // Creating the access rule which we would like to use for the addition of shareholders
+    let rule: AccessRule = rule!(
+        require(supervisor_badge_resource_address) 
+        && require(admin_badge_resource_address) 
+        && require(superadmin_badge_resource_address)
+    );
+
+    let instantiation_tx: SignedTransaction = TransactionBuilder::new()
+        .call_function(
+            package, 
+            "PaymentSplitter", 
+            "instantiate_custom_access_payment_splitter", 
+            args![
+                RADIX_TOKEN,
+                rule
+            ]
+        )
+        .call_method_with_all_resources(admin_component_address, "deposit_batch")
+        .build(executor.get_nonce([admin_public_key]))
+        .sign([&admin_private_key]);
+    let instantiation_receipt: Receipt = executor.validate_and_execute(&instantiation_tx).unwrap();
+
+    let payment_splitter_component_address: ComponentAddress = instantiation_receipt.new_component_addresses[0];
+
+    // Attempting to add a new shareholder to the payment splitter
+    let adding_shareholder_tx: SignedTransaction = TransactionBuilder::new()
+        .create_proof_from_account_by_amount(dec!("1"), admin_badge_resource_address, admin_component_address)
+        .create_proof_from_account_by_amount(dec!("1"), superadmin_badge_resource_address, admin_component_address)
+        .call_method(payment_splitter_component_address, "add_shareholder", args!(dec!("20")))
+        .call_method_with_all_resources(admin_component_address, "deposit_batch")
+        .build(executor.get_nonce([admin_public_key]))
+        .sign([&admin_private_key]);
+    let adding_shareholder_receipt: Receipt = executor.validate_and_execute(&adding_shareholder_tx).unwrap();
+    println!("{:?}", adding_shareholder_receipt);
+
+    // Adding an additional shareholder should fail.
+    assert!(adding_shareholder_receipt.result.is_err());
 }
