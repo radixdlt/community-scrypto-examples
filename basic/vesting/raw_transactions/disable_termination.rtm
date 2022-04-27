@@ -1,0 +1,21 @@
+# Many beneficiary's might feel worried at the fact that their vesting schedule may be terminated at any point of time 
+# and they unclaimed tokens can be taken away from them. Therefore, vesting components allow for the admin to giveup 
+# their termination rights while keeping their right to add more beneficiaries.
+
+# The `giveup_termination_rights` method is an authenticated method that uses the auth zone for authentication. Therefore,
+# we can begin by withdrawing the admin badge from the account and into the auth zone. The `create_proof` method returns
+# a `Proof` and whenever a `Proof` is returned to the transaction worktop, it gets sent to the auth zone automatically.
+CALL_METHOD 
+    ComponentAddress("<<<account1_address>>>") 
+    "create_proof" 
+    ResourceAddress("<<<admin_badge>>>");
+
+# Calling the `giveup_termination_rights` method on the vesting component to give up our termination rights
+CALL_METHOD 
+    ComponentAddress("<<<vesting_component_address>>>") 
+    "disable_termination";
+
+# Depositing everything back into the admin's account
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("<<<account1_address>>>") 
+    "deposit_batch";

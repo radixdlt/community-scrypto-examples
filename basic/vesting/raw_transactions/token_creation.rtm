@@ -1,0 +1,2 @@
+CALL_FUNCTION PackageAddress("010000000000000000000000000000000000000000000000000001") "System" "new_resource" Enum(0u8, 18u8) HashMap<String, String>("symbol", "USDY", "name", "Tether") HashMap<Enum, Tuple>(Enum(2u8), Tuple(Enum(0u8), Enum(0u8))) Some(Enum(0u8, Decimal("1000000")));
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("<<<account1_address>>>") "deposit_batch";

@@ -1,0 +1,39 @@
+# Withdrawing the admin badge from the admin account. When we call the `create_proof` methods on the account component
+# the returned proof is automatically put in our auth zone so we do not need to manually manage it.
+CALL_METHOD 
+    ComponentAddress("<<<account1_address>>>") 
+    "create_proof" 
+    ResourceAddress("<<<admin_badge>>>");
+
+# Withdrawing the tokens which we would like to be vested for the beneficiary. In this case, we would like to vest 
+# 1,000,000 USDT tokens for the beneficiary over a period of 100 epochs with a 20 epoch cliff. 
+CALL_METHOD 
+    ComponentAddress("<<<account1_address>>>") 
+    "withdraw_by_amount" 
+    Decimal("1000000") 
+    ResourceAddress("<<<usdt_token>>>");
+TAKE_FROM_WORKTOP 
+    ResourceAddress("<<<usdt_token>>>") 
+    Bucket("usdt_tokens");
+
+# Adding the beneficiary to the vesting component
+CALL_METHOD 
+    ComponentAddress("<<<vesting_component_address>>>") 
+    "add_beneficiary" 
+    Bucket("usdt_tokens") 20u64 100u64 Decimal("0.2");
+
+# The above method call returns a a beneficiary badge. We now need to take that badge from the transaction worktop and 
+# into a bucket to then send it to the beneficiary
+TAKE_FROM_WORKTOP 
+    ResourceAddress("<<<beneficiary_badge>>>") 
+    Bucket("beneficiary_badge");
+CALL_METHOD 
+    ComponentAddress("<<<account2_address>>>") 
+    "deposit" 
+    Bucket("beneficiary_badge");
+
+# After the beneficiary's badge has been sent to their account, we deposit all remaining items in the transaction 
+# worktop into the admin account
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("<<<account1_address>>>") 
+    "deposit_batch";

@@ -1,0 +1,28 @@
+# The withdrawal of funds from the vesting component requires that the beneficiary's vesting badge is passed to the 
+# method as an actual `Proof` so that the data in the proof may be read and so that the vesting component can then 
+# determine how much funds have vested so far. Therefore, we need to withdraw the beneficiary's badge from the account
+# component and into a proof.
+CALL_METHOD 
+    ComponentAddress("02c026ae65349ab7f248eebfd40cfcb3c7804b1aab4f1c177d9dca") 
+    "create_proof" 
+    ResourceAddress("036058e91c603b8c1dcd0ced9d97d066f331167dcd88e9d5a56244");
+
+# The `create_proof` method returns as Proof. As soon as a proof comes back to the transaction worktop, it gets sent
+# directly to the auth zone. Therefore, in the following instruction we're creating a `Proof` out of the badge in the
+# auth zone.
+CREATE_PROOF_FROM_AUTH_ZONE 
+    ResourceAddress("036058e91c603b8c1dcd0ced9d97d066f331167dcd88e9d5a56244") 
+    Proof("beneficiary_badge");
+
+# Now that the have obtained the beneficiary's badge in a proof, we may call the withdraw method on the vesting 
+# component to get the funds which have vested so far.
+CALL_METHOD 
+    ComponentAddress("0213deccef6e0c959d9fc9f8db88e0091dd785c51d60ba4663bdd0") 
+    "withdraw_funds" 
+    Proof("beneficiary_badge");
+
+# We've now completed the withdrawal of tokens from the vesting component. We may now deposit everything into the 
+# beneficiary's account
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("02c026ae65349ab7f248eebfd40cfcb3c7804b1aab4f1c177d9dca") 
+    "deposit_batch";
