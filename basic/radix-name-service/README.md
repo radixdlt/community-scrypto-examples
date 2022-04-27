@@ -35,13 +35,13 @@ to `$name_resource` (third new entity) and the component address to `$component`
 resim call-function $package RadixNameService instantiate_rns 50 10 25 
 ```
 5. Simulate that a user comes along and uses the RNS component.  
-Save the account address to `$user_account` and the public key to `$user_pubkey`
+Save the account address to `$user_account` and the private key to `$user_privkey`
 ```
 resim new-account
 ```
 6. Set this account as the new default account
 ```
-resim set-default-account $user_account $user_pubkey
+resim set-default-account $user_account $user_privkey
 ```
 7. Simulate that the user registers the name "satoshi.xrd" to point to his account address.  
 The name is reserved for 10 years which requires a refundable deposit of $XRD 500
