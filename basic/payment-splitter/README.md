@@ -1,14 +1,131 @@
-# Payment Splitter
+# PaymentSplitter
 
 Just like in the physical world, when multiple people come together to build an NFT or a DeFI project they typically want to split the profits from such project in a clear and trustworthy way. The approach to have one entity to trust with the funds to later send to other shareholders simply bears too much risk of one party going rogue and refusing to send the shareholders their stake. This calls for a better way for funds from a project to be managed and split across the different shareholders in the project. The `PaymentSplitter` is a Scrypto blueprint which uses NFTs to authenticate shareholders and allow shareholders to have a clear and trustworthy way of withdrawing their profits from a project when they wish to do so.
 
 ## Motivations
 
-The motivation behind this blueprint is to build a payment splitter similar to Ethereum's OpenZeppelin [implementation](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/finance/PaymentSplitter.sol) but to build it on Radix using all of the new and exciting concepts and ideas that Radix provides.
+The motivation behind this blueprint is to build a `PaymentSplitter` similar to Ethereum's OpenZeppelin [implementation](https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/finance/PaymentSplitter.sol) but to build it on Radix using all of the new and exciting concepts and ideas that Radix provides.
+
+## Features
+The `PaymentSplitter` blueprint comes with quite a number of features. Such as:
+
+* Allows for an easy way to split funds between multiple different entities.
+* Supports XRD as well as other fungible tokens.
+* Allows the the admin of the `PaymentSplitter` to disable the addition of new shareholders (to protect current shareholders).
+* Allows shareholders to withdraw their owed funds in full or in part.
+* Allows shareholders to give up their shares if they choose to.
+
+## Design Details
+
+The `PaymentSplitter` blueprint allows multiple parties to split their shares of funds securely and in a trustless manner. It allows anybody to deposit funds into its components but only allows shareholders to withdraw these funds. As soon as funds are deposited into a `PaymentSplitter` they are split into a number of vaults which are controlled by the `PaymentSplitter`. Each shareholder has their own vault which is associated with the ID of their non-fungible badge and where their tokens are stored. The decision of making each shareholder have their own vault comes from the fact that this brings added security as the funds will be segregated; meaning that given the math is correct, it would be impossible for one shareholder to take the funds of another shareholder. A `PaymentSplitter` may be instantiated to allow for the deposit and splitting of any fungible token. 
+
+There are two main parties in a typical `PaymentSplitter`:
+* An Admin: The admin is whoever holds the admin badge. This is typically the instantiator of the splitter but could also be a different person. The admin is given the right to add shareholders to the splitter in the way that they see fit. Once a shareholder has been added to the splitter, they may never be removed again.
+* Shareholders: These are people who have shareholder badges and are the entities we want to split the received funds across. Each shareholder is given a non-fungible token which stores information on the amount of shares owned by the shareholder.
+
+While removing a shareholder is not possible in the `PaymentSplitter` blueprint, an admin could later add an disproportionate amount of shares for themselves leading to other shareholders have shares that equate to almost zero. Therefore, the `PaymentSplitter` allows for a locking mechanism which is a mechanism by which the splitter is locked and no more shareholders may be added. This mechanism protects the shareholders from such attacks (provided that the admin agrees to lock the splitter).
+
+The core functionality of the splitter is implemented in the [lib.rs](./src/lib.rs) file in the `PaymentSplitter` struct. This implementation of the `PaymentSplitter` utilizes the new authentication system introduced with v0.4.0 of Scrypto which is a fantastic new system that allows for authentication to be automatically handled when the right badges are present in the auth zone. Despite that, some methods in the `PaymentSplitter` blueprint use the v0.3.0-style authentication system for reasons that will be explained later.
+
+The `PaymentSplitter` component has the following methods and functions:
+
+| Function / Method Name                       | Auth Type      | Intended User    | Description |
+| -------------------------------------------- | -------------- | ---------------- | ----------- |
+| `instantiate_payment_splitter`               |                |                  | This function instantiates a new `PaymentSplitter` component as well as all of the badges and resources required for it to function correctly. 
+| `instantiate_custom_access_payment_splitter` |                |                  | This function instantiates a new `PaymentSplitter` component which has a custom access-rule set for its `add_shareholder` and `lock_splitter` methods.
+| `deposit`                                    |                |                  | This method allows for any entity to deposit funds into the `PaymentSplitter` which would be split among the shareholders.
+| `add_shareholder`                            | Auth Zone      | Admin            | This is an authenticated method which allows the `PaymentSplitter`'s admin to add a shareholder with a given amount of shares to the splitter. 
+| `lock_splitter`                              | Auth Zone      | Admin            | This is an authenticated method which allows the `PaymentSplitter`'s admin to lock the splitter which would allow normal operation of the splitter minus the adding of additional shareholders.
+| `withdraw`                                   | Pass By Intent | Shareholder      | This is an authenticated method which allows the `PaymentSplitter`'s shareholders to withdraw all of the funds owed to them from the splitter.
+| `withdraw_by_amount`                         | Pass By Intent | Shareholder      | This is an authenticated method which allows the `PaymentSplitter`'s shareholders to withdraw a portion of the funds owed to them from the splitter.
+| `withdraw_and_giveup_shares`                 | Pass By Intent | Shareholder      | This is an authenticated method which allows the `PaymentSplitter`'s shareholders to withdraw all of the funds owed to them from the splitter and give up their shares so that they go no share in any future deposit.
+
+
+Version 0.3.0 of Scrypto introduced the concept of transaction manifests and the transaction worktop which is used to store resources (tokens), buckets, and badges (in the form of `BucketRef`s). Version 0.4.0 introduces an extension to the transaction worktop which is called the "Auth Zone". Similar to how the transaction worktop stores tokens and buckets, the Auth Zone in the main area where `Proof`s (formerly called `BucketRef`s) live to be used in transactions which require them. 
+
+A method which is configured to use the new authorization system would determine whether a call to it is authorized or not depending on whether the badge required in the configuration is present in the Auth Zone or not<sup>*</sup>. If the badge is present then the call to the method is allowed, and vice-versa. 
+
+The `PaymentSplitter` blueprint utilizes this new concept of the Auth Zone for the authorization of a number of its methods. As an example: `add_shareholder`, `lock_splitter` all require an admin badge to work; however, the admin badge is not passed as a proof in the method calls. Instead, if the Auth Zone of the transaction has the admin badge then the caller would be authorized to make the calls. The admin can get their admin badge into their auth zone by calling the `create_proof` method on their account component which returns a proof and stores it in the Auth Zone.
+
+Similar to v0.3.0 of Scrypto where buckets and tokens returned from methods or functions would be automatically put onto the transaction worktop, in v0.4.0 all Proofs returned from function or method calls are put in the Auth Zone automatically.
+
+This approach to authorization makes component authorization very clear and transparent to the caller. As an example, let's say that I'm a potential shareholder and I wish to see who has the power to lock this splitter. In the current version of resim, I can `show` the component state to understand who is allowed to lock the splitter:
+```
+$ resim show 02729d2037a333cee1734718de58a51c95c1caa52bd1a6e0cb0999
+Component: 02729d2037a333cee1734718de58a51c95c1caa52bd1a6e0cb0999
+Blueprint: { package_address: 018a10614b7d516906593a01b4cb611e5d47f7804f8d66e6af509c, blueprint_name: "PaymentSplitter" }
+Authorization
+├─ "lock_splitter" => Protected(ProofRule(Require(StaticResource(03fe2138055411553eb32641ce73e4a436164938745a083f6aa104))))
+└─ "add_shareholder" => Protected(ProofRule(Require(StaticResource(03fe2138055411553eb32641ce73e4a436164938745a083f6aa104))))
+```
+
+Looking at the above output makes it very clear for a `lock_splitter` method call to succeed, then it is required that a badge with the resource address `03fe2138055411553eb32641ce73e4a436164938745a083f6aa104` is present in the auth zone. Therefore, without needing to read the source code or anything, I now know some information about this splitter. If I wanted do, I can do some more sleuthing to find out if the resource `03fe2138055411553eb32641ce73e4a436164938745a083f6aa104` is mintable or not to determine if more admins may be added to the splitter or not in the future.
+
+In addition to the clarity and transparency of handling auth through the Auth Zone, this method of handling auth allows for complex auth to be set on methods and functions such that they may only be called when a number of conditions are satisfied. As an example, let's say that we have some organization where some method or function requires the approval of a number of people on different levels. This auth system allows us to set an auth rule similar to the following on that method:
+```
+supervisor_badge & manager_badge & admin_badge & super_admin_badge
+```
+
+This would mean that this function or method would only be callable when all of the four required badges are present in the auth zone. The power of this auth system does not stop here; this system also allows us to set rules which dynamically change depending on the state of the component, as an example, we can set the auth system up so that it always requires 50% or more admins to approve an action before it can be taken.
+
+While v0.3.0 of Scrypto required multiple transaction manifest instructions for operations that required badge reuse, this version drastically reduce the amount of instructions needed as for operations handled by the Auth Zone, there is no longer a need to clone the Proof multiple times to preserve a copy of it to use for subsequent operations.
+
+The benefits that this system of auth provides are numerous and are very clear. However, sometimes we need to use the other system of auth which was present in v0.3.0 which is the system where we need to provide a `Proof` (formerly called `BucketRef` in v0.3.0) a method or a function. This is typically the case when the method or function being called does not only require the presence of a certain badge, but it also needs to read the data of the badge to make some kind of determination. 
+
+As an example, for the methods `add_shareholder` and `lock_splitter` the presence of an admin badge in the auth zone is enough to authorize these operations to take place; therefore, auth for these methods is handled through the Auth Zone. However, when it comes to the withdraw methods the presence of a shareholder badge is not enough to withdraw the funds. This is because these methods know that you are a shareholder but they would like to know also know *which* shareholder you are to determine how much funds are owed to you. Therefore, these methods take a `Proof` (formerly called a `BucketRef`) as an argument and based on the resources in that `Proof` they determine your eligibility to withdraw as well as the amount of funds currently available for you.
+
+The two methods of auth that are currently available are not meant to compete with one another in terms of who is best. They're meant to coexist where each of the two methods does its intended job exceptionally well. The `PaymentSplitter` blueprint is a good example of how these two ways of handling authentication can work side by side in a single blueprint and this example helps shine a light on how the decision to use one kind of auth over the other cam about.
+
+### Practical Considerations
+
+In the physical world, when there is a need to split some kind of funds across multiple different people, there is typically a need for multiple people to approve the addition of shareholders to the physical-world contract before they can be added and have funds split across them as well. A key focus of the `PaymentSplitter` blueprint is to be as powerful and flexible as similar contracts can be in the physical world. Therefore, the `PaymentSplitter` has an option for the instantiator of the component to set the access rule that they would like for the addition of shareholders and the locking of the splitter. In simpler terms, the `PaymentSplitter` allow for somebody to say "my manager and his manager have to both sign before a shareholder can be added", or "my manager or his manager need to sign before a shareholder is added", or a more general rule like "5 out of 10 board members need to sign before the shareholder can be added".
+
+The `PaymentSplitter` blueprint allows for such flexibility thanks to the new auth-zone-based authentication system introduced with v0.4.0 and the tons of abstractions that it introduces. The method which allows for the setting of a custom access rule for the `add_shareholder` and `lock_splitter` function is `instantiate_custom_access_payment_splitter`. In fact, the "default" constructor used by the `PaymentSplitter` uses the `instantiate_custom_access_payment_splitter` function with an admin badge it creates on the fly to set the access rule, this is how generic and powerful this function is.
+
+Let's look at a few examples of how this function can be used and the power of it. Let's say that we would like to create a `PaymentSplitter` which requires both a supervisor and admin to be present before a shareholder is added. This `PaymentSplitter` may be instantiated as follows:
+
+```rust
+let supervisor_badge: ResourceAddress = ...;
+let admin_badge: ResourceAddress = ...;
+
+let payment_splitter: ComponentAddress = PaymentSplitter::instantiate_custom_access_payment_splitter(
+    RADIX_TOKEN,
+    rule!( require(supervisor_badge) && require(admin_badge) )
+);
+```
+
+We can do many more powerful things with this concept. Let's say that we want to create a `PaymentSplitter` where a supervisor and manager need to approve on the addition of a new shareholder or the founder needs to approve on that. We can create such a component with the code snippet below:
+
+```rust
+let supervisor_badge: ResourceAddress = ...;
+let manager_badge: ResourceAddress = ...;
+
+let founder_badge: ResourceAddress = ...;
+
+let payment_splitter: ComponentAddress = PaymentSplitter::instantiate_custom_access_payment_splitter(
+    RADIX_TOKEN,
+    rule!( (require(supervisor_badge) && require(manager_badge)) || require(founder_badge) )
+);
+```
+
+We can take this another step further and create `PaymentSplitter`s with a truly crazy and realistic set of rules. Let's say that some entity has a board. 5 board members need to vote on an action before it happens. After the board has voted, the founder needs to also approve of the action before it can happen. If we say that the "action" is adding a new shareholder to our splitter, then this can be created with the following code:
+
+```rust
+let board_member_badge: ResourceAddress = ...;
+
+let founder_badge: ResourceAddress = ...;
+
+let payment_splitter: ComponentAddress = PaymentSplitter::instantiate_custom_access_payment_splitter(
+    RADIX_TOKEN,
+    rule!( (require_n_of(5, board_member_badge) && require(admin_badge)) )
+);
+```
+
+With the above splitter, only when 5 board members have approved on the addition of a new shareholder and also the founder has approved of that, can that shareholder be added. The new system of auth introduced with v0.4.0 of Scrypto makes real life situations of authentication very easy to model and think about and provides other developers with a great deal of flexibility in terms of how they wish to use the splitter.
 
 ## Getting Started
 
-If you wand to try out this blueprint there are three main ways to do that, the first is by using a new feature with Scrypto v0.3.0 which is the new transaction model and the transaction manifests, the second is by using an `example.py` file which runs all of the needed CLI commands for the example, and the third and final method is by typing in the commands manually. 
+If you wand to try out this blueprint there are three main ways to do that, the first is by using the new transaction model and the transaction manifests, the second is by using an `script.sh` file which runs all of the needed CLI commands for the example, and the third and final method is by typing in the commands manually. 
 
 ### Method 1: Using transaction manifest files
 
@@ -16,228 +133,106 @@ Transaction manifests is an extremely cool new feature introduced with v0.3.0 of
 
 Lets begin by resetting the radix engine simulator by running the following command:
 
-```shell
-$ resim reset
+```sh
+resim reset
 ```
 
 We will need a number of accounts for the examples that we will be running. So, let's create four different accounts using the following command:
 
-```shell
-$ export op1=$(resim new-account)
-$ export pub_key1=$(echo $op1 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address1=$(echo $op1 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-$ export op2=$(resim new-account)
-$ export pub_key2=$(echo $op2 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address2=$(echo $op2 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-$ export op3=$(resim new-account)
-$ export pub_key3=$(echo $op3 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address3=$(echo $op3 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-$ export op4=$(resim new-account)
-$ export pub_key4=$(echo $op4 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address4=$(echo $op4 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
+```sh
+OP1=$(resim new-account)
+export ADMIN_PRIV_KEY=$(echo "$OP1" | sed -nr "s/Private key: ([[:alnum:]_]+)/\1/p")
+export ADMIN_PUB_KEY=$(echo "$OP1" | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
+export ADMIN_ADDRESS=$(echo "$OP1" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
+
+OP2=$(resim new-account)
+export SHAREHOLDER1_PRIV_KEY=$(echo "$OP2" | sed -nr "s/Private key: ([[:alnum:]_]+)/\1/p")
+export SHAREHOLDER1_PUB_KEY=$(echo "$OP2" | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
+export SHAREHOLDER1_ADDRESS=$(echo "$OP2" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
+
+OP3=$(resim new-account)
+export SHAREHOLDER2_PRIV_KEY=$(echo "$OP3" | sed -nr "s/Private key: ([[:alnum:]_]+)/\1/p")
+export SHAREHOLDER2_PUB_KEY=$(echo "$OP3" | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
+export SHAREHOLDER2_ADDRESS=$(echo "$OP3" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
+
+OP4=$(resim new-account)
+export SHAREHOLDER3_PRIV_KEY=$(echo "$OP4" | sed -nr "s/Private key: ([[:alnum:]_]+)/\1/p")
+export SHAREHOLDER3_PUB_KEY=$(echo "$OP4" | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
+export SHAREHOLDER3_ADDRESS=$(echo "$OP4" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
 ```
 
 Now that we have created four different accounts, let's set the first account to be the default account by running the following command:
 
-```shell
-resim set-default-account $address1 $pub_key1
+```sh
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
 ```
 
 Let's now publish the package to our local radix engine simulator by running the following:
 
-```shell
+```sh
 resim publish .
 ```
 
-Now begins the exciting stuff with the new transaction model! The very first radix transaction manifest file that we will using is a file that creates a PaymentSplitter component on the local simulator. To run this file, run the following command:
+Now begins the exciting stuff with the new transaction model! The very first radix transaction manifest file that we will using is a file that creates a `PaymentSplitter` component on the local simulator. To run this file, run the following command:
 
 ```
 $ resim run transactions/component_creation.rtm
 ```
 
-What we would like to do now is to add shareholders to our PaymentSplitter component and to send the shareholders the NFTs that prove their identity. If we decide not to use the new transaction manifest feature we would have twice as many transaction as shareholders we wish to add (i.e. 10 shareholders = 20 transactions) as each shareholder would require a transaction for the minting of the NFT and another transaction for the sending of the NFT. However, with the new transaction model and the introduction of the transaction manifest, we can perform all of that in a single transaction! We have created a radix transaction manifest (rtm) file for you that performs the minting and sending of the tokens all in a single transaction! You may run it through the following command:
+What we would like to do now is to add shareholders to our `PaymentSplitter` component and to send the shareholders the NFTs that prove their identity. If we decide not to use the new transaction manifest feature we would have twice as many transaction as shareholders we wish to add (i.e. 10 shareholders = 20 transactions) as each shareholder would require a transaction for the minting of the NFT and another transaction for the sending of the NFT. However, with the new transaction model and the introduction of the transaction manifest, we can perform all of that in a single transaction! We have created a radix transaction manifest (rtm) file for you that performs the minting and sending of the tokens all in a single transaction! You may run it through the following command:
 
-```shell
+```sh
 $ resim run ./transactions/adding_shareholders.rtm
 ```
 
 After the above command runs you can check the balances of the four accounts that we have and you will see that each one of those accounts now have 1 shareholder NFT.
 
-We would now like to test the PaymentSplitter to make sure that it does indeed do what we expect it to do. For that purpose we will deposit some funds into the payment splitter from account 1 and then we will withdraw them the share of the second account of the funds.
+We would now like to test the `PaymentSplitter` to make sure that it does indeed do what we expect it to do. For that purpose we will deposit some funds into the `PaymentSplitter` from account 1 and then we will withdraw them the share of the second account of the funds.
 
 Let's run the transaction manifest file containing the instruction of the depositing of tokens through account 1.
-```shell
+```sh
 $ resim run ./transactions/funding_the_splitter.rtm 
 ```
 
 We may now switch to account 2 and try to withdraw the funds.
 
-```shell
-$ resim set-default-account $address2 $pub_key2
+```sh
+$ resim set-default-account $SHAREHOLDER1_ADDRESS $SHAREHOLDER1_PUB_KEY $SHAREHOLDER1_PRIV_KEY
 $ resim run ./transactions/withdrawing_owed_amount.rtm 
 ```
 
 And that's it! Now if you check the balance of account 2 you would see that account 2 now has more XRD as a result of the splitting of profits made.
 
-### Method 2: Automatic method using `example.py`.
+### Method 2: Automatic method using `script.sh`.
 
-The `example.py` file included with this blueprint is a quick python script written during the implementation of the blueprint to allow for a quick way for the package to be redeployed and for accounts to be created quickly and with ease.
+The `script.sh` file included with this blueprint is a quick bash script written during the implementation of the blueprint to allow for a quick way for the package to be redeployed and for accounts to be created quickly and with ease.
 
-When you run the `example.py` file the following will take place:
+When you run the `script.sh` file the following will take place:
 
 * Your resim will be reset so that any accounts previously created or packages deployed are deleted.
 * Four new accounts will be created. The script will keep track of their addresses and public keys.
 * The package will be published and the script will store the package address.
-* The script will call the `new` function on the blueprint to create the PaymentSplitter component. When creating the component, a number of resource definitions will be created for the badges that blueprint creates.
-* The script will then add all four of the addresses that we created as shareholders by calling the `add_shareholder` method on the PaymentSplitter component.
-* Some XRD will be deposited by account 1 (by calling the `deposit_xrd` method) and then later account 2 will attempt to withdraw their share of it (by calling the `withdraw_xrd` method).
+* The script will call the `new` function on the blueprint to create the `PaymentSplitter` component. When creating the component, a number of resource definitions will be created for the badges that blueprint creates.
+* The script will then add all four of the addresses that we created as shareholders by calling the `add_shareholder` method on the `PaymentSplitter` component.
+* Some XRD will be deposited by account 1 (by calling the `deposit` method) and then later account 2 will attempt to withdraw their share of it (by calling the `withdraw` method).
 
-You do not need to install any additional packages to run this `example.py` file. This file used the standard python 3 library and packages. So, to run this example just type the following into your command line:
+You do not need to install any additional packages to run this `script.sh` file. This file used the standard python 3 library and packages. So, to run this example just type the following into your command line:
 
-```shell
-python3 example.py
+```sh
+./build_rtm.sh
+./script.sh
 ```
 
-### Method 3: Manual method using Resim and CLI.
-
-This method is the typical method used to run Scrypto programs which is through the command line interface and the `resim` tool. In this section of the document we will go through a similar example to the one above using the resim CLI.
-
-> Note that the addresses that I'm getting here will be different from yours.
-
-First of all, let's begin by resetting our simulator just in case there are any packages already deployed.
-
-```shell
-$ resim reset
-Data directory cleared.
-```
-
-Now that we've reset our simulator, let's create four different accounts to use for this example. In the codeblock below, we're creating the accounts and then saving them as environment variables as soon as creation is done
-```shell
-$ export op1=$(resim new-account)
-$ export pub_key1=$(echo $op1 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address1=$(echo $op1 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-$ export op2=$(resim new-account)
-$ export pub_key2=$(echo $op2 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address2=$(echo $op2 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-$ export op3=$(resim new-account)
-$ export pub_key3=$(echo $op3 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address3=$(echo $op3 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-$ export op4=$(resim new-account)
-$ export pub_key4=$(echo $op4 | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
-$ export address4=$(echo $op4 | sed -nr "s/Account address: ([[:alnum:]_]+)/\1/p")
-```
-
-Let's check to make sure that the account creation has happened with no problems. To do that, let's try to echo out the account addresses
-
-```shell
-$ echo $address1
-02c1897261516ff0597fded2b19bf2472ff97b2d791ea50bd02ab2
-$ echo $address2
-02d8541671ab09116ae450d468f91e5488a9b22c705d70dcfe9e09
-$ echo $address3
-02b8dd9f4232ce3c00dcb3496956fb57096d5d50763b989ca56f3b
-$ echo $address4
-02b9f7c0c44a6e2162403cea3fa44500dff50eb18fd4ff5a9dd079
-```
-
-With the four accounts created, let's now change our default account so that it's the first account that we created.
-
-```shell
-$ resim set-default-account $address1 $pub_key1
-Default account set!
-```
-
-Alright, now we're finally ready to publish our package to the simulator.
-
-```shell
-$ resim publish .
-Finished release [optimized] target(s) in 0.08s
-Transaction Status: SUCCESS
-Execution Time: 400 ms
-Instructions:
-├─ CallFunction { package_address: 010000000000000000000000000000000000000000000000000001, blueprint_name: "System", function: "publish_package", args: [LargeValue(len: 1792331)] }
-└─ End { signers: [04005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9] }
-Results:
-├─ Ok(Some(01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c))
-└─ Ok(None)
-Logs: 0
-New Entities: 1
-└─ Package: 01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c
-$ export package=01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c
-```
-
-We may now use the package address to instantiate a new PaymentSplitter component.
-
-```shell
-$ resim call-function $package PaymentSplitter new
-Finished release [optimized] target(s) in 0.03s
-Transaction Status: SUCCESS
-Execution Time: 400 ms
-Instructions:
-├─ CallFunction { package_address: 010000000000000000000000000000000000000000000000000001, blueprint_name: "System", function: "publish_package", args: [LargeValue(len: 1792331)] }
-└─ End { signers: [04005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9] }
-Results:
-├─ Ok(Some(01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c))
-└─ Ok(None)
-Logs: 0
-New Entities: 1
-└─ Package: 01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c
-omarabdulla@Omars-MacBook-Pro payment_splitter % export package=01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c
-omarabdulla@Omars-MacBook-Pro payment_splitter % resim call-function $package PaymentSplitter new
-Transaction Status: SUCCESS
-Execution Time: 17 ms
-Instructions:
-├─ CallFunction { package_address: 01d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c, blueprint_name: "PaymentSplitter", function: "new", args: [] }
-├─ DropAllBucketRefs
-├─ DepositAllBuckets { account: 02c1897261516ff0597fded2b19bf2472ff97b2d791ea50bd02ab2 }
-└─ End { signers: [04005feceb66ffc86f38d952786c6d696c79c2dbc239dd4e91b46729d73a27fb57e9] }
-Results:
-├─ Ok(Some((023af09cc79097add03aa9614eadb005e61874681545a1ac2b8caf, Bid(1))))
-├─ Ok(None)
-├─ Ok(Some(()))
-└─ Ok(None)
-Logs: 0
-New Entities: 4
-├─ ResourceDef: 03c29248a0d4c7d4da7b323adfeb4b4fbe811868eb637725ebb7c1
-├─ ResourceDef: 03fbffedd2e0f3d0f3c5381b57b02c0f3b30bad1c57120f1c334bd
-└─ Component: 023af09cc79097add03aa9614eadb005e61874681545a1ac2b8caf
-$ export adm=03c29248a0d4c7d4da7b323adfeb4b4fbe811868eb637725ebb7c1
-$ export shb=03fbffedd2e0f3d0f3c5381b57b02c0f3b30bad1c57120f1c334bd
-$ export component=023af09cc79097add03aa9614eadb005e61874681545a1ac2b8caf
-```
-
-Our payment splitter has now been created and initialized. We may now begin adding shareholders to our component. The following codeblock will add all four addresses to the shareholders list with a random amount of shares.
-
-```shell
-$ resim call-method $component add_shareholder $address1 $RANDOM 1,$adm
-$ resim call-method $component add_shareholder $address2 $RANDOM 1,$adm
-$ resim transfer "#00000000000000000000000000000001,$shb" $address2
-$ resim call-method $component add_shareholder $address3 $RANDOM 1,$adm
-$ resim transfer "#00000000000000000000000000000002,$shb" $address3
-$ resim call-method $component add_shareholder $address4 $RANDOM 1,$adm
-$ resim transfer "#00000000000000000000000000000003,$shb" $address4
-```
-
-Now we can finally do the exciting stuff! Let's now deposit some XRD using account 1 and then try to withdraw our share as account 2. Note that when account 1 deposits the money, the NFT metadata will get updated to reflect on the amount of XRD that each shareholder is owed.
-
-```shell
-$ export RADIX_TOKEN=030000000000000000000000000000000000000000000000000004
-$ resim call-method $component deposit_xrd 100000,$RADIX_TOKEN
-```
-
-Lets now switch to account 2 and try to withdraw our share of the tokens in the PaymentSplitter
-
-```shell
-$ resim set-default-account $address2 $pub_key2
-Default account set!
-$ resim call-method $component withdraw_xrd 1,$shb
-```
-
-And we're done! Account 2 has now withdrawn their share of the total XRD stored in the Payment splitter. If they now try to withdraw again they will get an empty bucket of XRD. Only when another payment is received to the payment splitter can account 2 withdraw again.
+| NOTE | If you try running the `script.sh` script and you get errors such saying that some addresses were not found, then please run the `build_rtm.sh` script first and then the `script.sh`. |
+|------|-----|
 
 ## Future Work and Improvements
 
-This is certainly a simple example of what a payment splitter might look like if built on Radix using Scrypto where NFTs are used for authentication and tracking of data. Of course, there are a number of improvements that can be made to this blueprint to make it function even better:
+This is certainly a simple example of what a `PaymentSplitter` might look like if built on Radix using Scrypto where NFTs are used for authentication and tracking of data. Of course, there are a number of improvements that can be made to this blueprint to make it function even better:
 
-* Allowing for a `HashMap` to be passed to the function `new` so that the shareholders are added at the creation of the component (requires Scrypto v3.0.0 for this).
-* Allowing shareholders to only withdraw a portion of their XRD instead of withdrawing it all when calling the `withdraw_xrd` method.
+* Investigate the upside and downside of introducing a voting mechanism whereby a majority vote from the shareholders is needed before adding an additional shareholder.
+* Allowing for a voting mechanism whereby the admin would regain the to add shareholders if a majority of the shareholders agree that the admin should be given this power back.
+
+## Footnotes:
+
+\* -  This is a simplified example of the use of the Auth Zone for the handling of authorization. There are many more things available such as authorization based on the amount of resource, authorization based on multiple Proofs being present, as well as other kinds of authorization supported directly by this system.

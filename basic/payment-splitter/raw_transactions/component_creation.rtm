@@ -1,8 +1,8 @@
 CALL_FUNCTION 
-    PackageAddress("0143be2c52773f614c8b80dd40f32a1313917ccd2d77e7406478aa") 
+    PackageAddress("<<<package_address>>>") 
     "PaymentSplitter" 
     "instantiate_payment_splitter"
     ResourceAddress("030000000000000000000000000000000000000000000000000004");
 CALL_METHOD_WITH_ALL_RESOURCES 
-    ComponentAddress("02dbbcc440e1f4b402675af83b2f39220cfa2ea77a4ad890cd8252") 
+    ComponentAddress("<<<account1_address>>>") 
     "deposit_batch";
