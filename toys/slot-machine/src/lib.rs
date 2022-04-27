@@ -1,5 +1,4 @@
 use scrypto::prelude::*;
-use scrypto::core::Uuid;
 
 const CHERRY: i32 = 0;
 const LEMON:  i32 = 1;
@@ -18,16 +17,16 @@ blueprint! {
 
     impl SlotMachine {
 
-        pub fn new(supply: Decimal) -> Component {
-            let bank_bucket: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+        pub fn new(supply: Decimal) -> ComponentAddress {
+            let bank_bucket: Bucket = ResourceBuilder::new_fungible()
                 .metadata("name", "Vegas")
                 .metadata("symbol", "VEG")
-                .initial_supply_fungible(supply);
+                .initial_supply(supply);
 
             Self {
                 casino_bank: Vault::with_bucket(bank_bucket),
             }
-            .instantiate()
+            .instantiate().globalize()
         }
 
         pub fn free_token(&mut self) -> Bucket {
@@ -39,7 +38,7 @@ blueprint! {
             self.casino_bank.take(Decimal::from(free_amount))
         }
 
-        pub fn play(&mut self, bet: Bucket) -> Bucket {
+        pub fn play(&mut self, bet: Bucket) -> Option<Bucket> {
 
             let bet_amount = bet.amount();
 
@@ -63,12 +62,11 @@ blueprint! {
 
             if score == 0 {
                 info!("You've lost! Good luck next time.");
-                let empty_bucket: Bucket = Bucket::new(RADIX_TOKEN);
-                return empty_bucket
+                return None
             } else {
                 let win = bet_amount * score;
                 info!("You've won {} VegasToken! Congratulations!", win);
-                return self.casino_bank.take(win)
+                return Some(self.casino_bank.take(win))
             }
 
         }
@@ -78,7 +76,7 @@ blueprint! {
 }
 
 fn spin_wheel() -> i32 {
-    let item = Uuid::generate() % NUMBER_OF_ITEMS;
+    let item = Runtime::generate_uuid() % NUMBER_OF_ITEMS;
     dbg!("Generated number: {}", item);
     return i32::try_from(item).unwrap();
 }
