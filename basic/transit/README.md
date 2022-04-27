@@ -6,7 +6,7 @@ This is a basic example of a transit component.
 - Make sure you are in the correct directory: `cd transit` and clear data: `resim reset`
 ```
 resim new-account
-export pubkey1=
+export privkey1=
 export acct1=
 resim new-token-fixed 1000 --description "The American dollar" --name "dollar" --symbol "USD"
 export usd=
@@ -16,13 +16,13 @@ export eur=
 ## Setup account 2
 ```
 resim new-account
-export pubkey2=
+export privkey2=
 export acct2=
 ```
 ## Transfer funds from account 1 to account 2
 ```
-resim transfer 500,$usd $acct2
-resim transfer 500,$eur $acct2
+resim transfer 500 $usd $acct2
+resim transfer 500 $eur $acct2
 ```
 - At this point both accounts should have $500 and €500 you can verify with: `resim show $acct1`
 ## Publish package
@@ -52,12 +52,12 @@ resim call-method $component buy_ticket 10,$eur
 ## Transfer the european badge to account 2
 - Each region has 1 host badge for controlling rides and withdrawing payments
 ```
-resim transfer 1,$european_badge $acct2
+resim transfer 1 $european_badge $acct2
 ```
 ## Switch to account 2
 - account 2 should now have the european badge, $500 and €500: `resim show $acct2`
 ```
-resim set-default-account $acct2 $pubkey2
+resim set-default-account $acct2 $privkey2
 ```
 ## Buy more tickets but now with account 2
 ```
@@ -72,7 +72,9 @@ resim call-method $component buy_ticket 10,$eur
 ```
 resim call-method $component ride 1,$ticket "European"
 resim call-method $component ride 1,$ticket "American"
+```
 ## Set current epoch
+
 ```
 resim set-current-epoch 5
 ```
@@ -81,21 +83,31 @@ resim set-current-epoch 5
 resim call-method $component ride 1,$ticket "American"
 ```
 ## Time to shutdown the transit and collect payments
-```
-resim call-method $component withdraw_euros false 1,$european_badge
+The `withdraw_euros` is an authenticated method that uses the new rule-based authentication system. To use this authentication system it is necessary to use a transaction manifest. Therefore, the commands below quickly build and run a transaction manifest file to perform the withdrawal. 
+```sh
+resim call-method $component ride 1,$ticket "American"
+echo "CALL_METHOD ComponentAddress(\"$acct2\") \"create_proof\" ResourceAddress(\"$european_badge\");" > ./withdraw_euros.rtm
+echo "CALL_METHOD ComponentAddress(\"$component\") \"withdraw_euros\" false;" >> ./withdraw_euros.rtm
+echo "CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress(\"$acct2\") \"deposit_batch\";" >> ./withdraw_euros.rtm
+resim run ./withdraw_euros.rtm
 ```
 - The european rides are shutdown and we made an additional €20 today if you check: `resim show $acct2`
 ## Attempt to ride european again
-```
+```sh
 resim call-method $component ride 1,$ticket "European"
 ```
 - You should notice an error, indicating that the ride is shutdown.
 ## Switch back to account 1
-```
-resim set-default-account $acct1 $pubkey1
+```sh
+resim set-default-account $acct1 $privkey1
 ```
 ## Shutdown the transit and collect payments
-```
-resim call-method $component withdraw_dollars false 1,$american_badge
+The `withdraw_dollars` is an authenticated method that uses the new rule-based authentication system. To use this authentication system it is necessary to use a transaction manifest. Therefore, the commands below quickly build and run a transaction manifest file to perform the withdrawal. 
+```sh
+resim set-default-account $acct1 $privkey1
+echo "CALL_METHOD ComponentAddress(\"$acct1\") \"create_proof\" ResourceAddress(\"$american_badge\");" > ./withdraw_dollars.rtm
+echo "CALL_METHOD ComponentAddress(\"$component\") \"withdraw_dollars\" false;" >> ./withdraw_dollars.rtm
+echo "CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress(\"$acct1\") \"deposit_batch\";" >> ./withdraw_dollars.rtm
+resim run ./withdraw_dollars.rtm
 ```
 - The American rides are now shutdown and we should have earned $20 if you check: `resim show $acct1`
