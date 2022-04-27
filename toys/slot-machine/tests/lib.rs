@@ -7,62 +7,50 @@ fn test_slot_machine() {
     // Set up environment.
     let mut ledger = InMemorySubstateStore::with_bootstrap();
     let mut executor = TransactionExecutor::new(&mut ledger, true);
-    let key = executor.new_public_key();
-    let account = executor.new_account(key);
-    let package = executor.publish_package(include_code!("slot_machine")).unwrap();
+    let (pk, sk, account) = executor.new_account();
+    let package = executor.publish_package(compile_package!()).unwrap();
 
     // Test the `new` function.
-    let transaction1 = TransactionBuilder::new(&executor)
+    let transaction1 = TransactionBuilder::new()
         .call_function(
             package,
             "SlotMachine",
             "new",
-            vec![
-                "100000".to_owned()
+            args![
+                dec!("100000")
             ],
-            None
         )
-        .build(vec![key])
-        .unwrap();
-    let receipt1 = executor.run(transaction1).unwrap();
+        .build(executor.get_nonce([pk]))
+        .sign([&sk]);
+    let receipt1 = executor.validate_and_execute(&transaction1).unwrap();
     println!("{:?}\n", receipt1);
     assert!(receipt1.result.is_ok());
 
     // Test the `free_token` method.
-    let casino = receipt1.component(0).unwrap();
-    let vegas_token_ref = receipt1.resource_def(0).unwrap();
-    let amount = fungible_amount(10, vegas_token_ref);
-    let transaction2 = TransactionBuilder::new(&executor)
-        .call_method(casino, "free_token", vec![], Some(account))
-        .assert_worktop_contains(amount.amount().unwrap(), amount.resource_address())
+    let casino = receipt1.new_component_addresses.get(0).unwrap();
+    let vegas_token_ref = receipt1.new_resource_addresses.get(0).unwrap();
+    let transaction2 = TransactionBuilder::new()
+        .call_method(*casino, "free_token", args![])
+        .assert_worktop_contains_by_amount(dec!("10"), *vegas_token_ref)
         .call_method_with_all_resources(account, "deposit_batch")
-        .build(vec![key])
-        .unwrap();
-    let receipt2 = executor.run(transaction2).unwrap();
+        .build(executor.get_nonce([pk]))
+        .sign([&sk]);
+    let receipt2 = executor.validate_and_execute(&transaction2).unwrap();
     println!("{:?}\n", receipt2);
     assert!(receipt2.result.is_ok());
 
     // Test the `play` method.
     let bet = Decimal::one();
-    let transaction3 = TransactionBuilder::new(&executor)
-        .call_method(
-            casino,
-            "play",
-            vec![
-                format!("{},{}", bet, vegas_token_ref).to_owned()
-            ],
-            Some(account))
+    let transaction3 = TransactionBuilder::new()
+        .withdraw_from_account_by_amount(bet, *vegas_token_ref, account)
+        .take_from_worktop(*vegas_token_ref, |builder, bucket_id| {
+            builder.call_method(*casino, "play", args![Bucket(bucket_id)])
+        })
         .call_method_with_all_resources(account, "deposit_batch")
-        .build(vec![key])
-        .unwrap();
-    let receipt3 = executor.run(transaction3).unwrap();
+        .build(executor.get_nonce([pk]))
+        .sign([&sk]);
+
+    let receipt3 = executor.validate_and_execute(&transaction3).unwrap();
     println!("{:?}\n", receipt3);
     assert!(receipt3.result.is_ok());
-}
-
-fn fungible_amount(amount: i32, resource_address: Address) -> Resource {
-    Resource::Fungible {
-        amount: Decimal::from(amount),
-        resource_address: resource_address,
-    }
 }
