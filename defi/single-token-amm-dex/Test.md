@@ -1,3 +1,6 @@
+# Warning: The code was upgraded to v0.4, but the indications in this file were not
+
+
 -------------------------------------------------------------------------------------------
 # Part 1.Let's test "stock/restock/unstock" candy methods.
 -------------------------------------------------------------------------------------------
