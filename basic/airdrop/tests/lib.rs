@@ -1,8 +1,12 @@
-use radix_engine::ledger::*;
+// TODO: Update the tests for this example once the `balances` method on the account blueprint has been changed to allow
+// unauthenticated calls to it.
+
+use radix_engine::model::{SignedTransaction, Receipt};
 use radix_engine::transaction::*;
+use radix_engine::ledger::*;
 use scrypto::prelude::*;
 
-#[test]
+#[test] 
 fn test_airdrop_0_users() {
     let mut ledger = InMemorySubstateStore::with_bootstrap();
 
@@ -149,25 +153,10 @@ impl<'a> TestEnv<'a> {
         receipt
     }
 
-    fn get_balance(&self, account: Address, token: Address) -> Result<Decimal, String> {
-        let component = self.executor.ledger().get_component(account).unwrap();
-        let state = component.state();
-        let maps = radix_engine::engine::validate_data(state).unwrap().lazy_maps;
-        let resources = self.executor.ledger().get_lazy_map(&account, &maps[0]).unwrap();
-        let vault_id_data = resources.get_entry(&scrypto_encode(&token));
-
-        match vault_id_data {
-            Some(vault_id_data) => {
-                let vault_id = scrypto_decode::<Vid>(&vault_id_data).unwrap();
-                let vault = self.executor.ledger().get_vault(&account, &vault_id).unwrap();
-                Ok(vault.amount())
-            },
-            None => {
-                Err(format!(
-                    "No vault found for token {} in account {}",
-                    token, account
-                ))
-            }
-        }
+    fn get_balance(&self, account: ComponentAddress, token: ResourceAddress) -> Result<Decimal, String> {
+        let balances_transaction: SignedTransaction = TransactionBuilder::new()
+            .call_method(account, "balance", args!(token))
+            .build(executor.get_nonce([admin_public_key]))
+            .sign([&admin_private_key]);
     }
 }
