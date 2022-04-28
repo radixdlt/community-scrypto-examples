@@ -3,7 +3,7 @@ name = "multisig_transmission_maker"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies] # TODO: Change Back
+[dependencies] 
 sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
 scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
 
