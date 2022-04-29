@@ -16,7 +16,7 @@ This blueprint allows you to:
   - `resim show $account`
   - You should have some VXRD now
 - Get resource_def for VXRD
-  - `vxrd=$(resim show "$account" | grep VXRD | cut -d " " -f6 | cut -d "," -f1)`
+  - `vxrd=$(resim show "$account" | grep VXRD | cut -d " " -f7 | cut -d "," -f1)`
 - Swap VXRD for XRD
   - `resim call-method "$component" swap_vxrd_for_xrd 10,"$vxrd"`
 - See account balances
