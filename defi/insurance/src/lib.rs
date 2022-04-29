@@ -5,7 +5,7 @@ blueprint! {
     struct Insurance {
         /// Mint authorization to TL tokens.
         org_vault: Vault,
-        org_badge: ResourceDef,
+        org_badge: ResourceAddress,
 
         // Non locked assets
         assets_pool: Vault,
@@ -13,9 +13,9 @@ blueprint! {
         locked_pool: Vault,
        
         // HashMap of policy address and details
-        policies: HashMap<Address, Vault>,
+        policies: HashMap<ResourceAddress, Vault>,
         // HashMap of insurer and policy vaults HashMap
-        purchases: HashMap<Address, HashMap<Address, Vault>>,
+        purchases: HashMap<ComponentAddress, HashMap<ResourceAddress, Vault>>,
 
         // A vector which we use to store all of the dead vaults
         dead_vaults: Vec<Vault>
@@ -24,34 +24,35 @@ blueprint! {
     impl Insurance {
         
         // Create new Insurance component
-        pub fn new(base_assets: Bucket) -> (Component, Bucket) {
+        pub fn new(base_assets: Bucket) -> (ComponentAddress, Bucket) {
             assert!(base_assets.amount() > Decimal::zero(), "Base assets cannot be zero");
-            assert!(base_assets.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
+            assert!(base_assets.resource_address() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
 
             // Org/Minter badge
-            let mut org_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let mut org_bucket = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Org Mint Auth")
-                .initial_supply_fungible(2);
+                .initial_supply(2);
 
-            let org_resource_def = org_bucket.resource_def();
+            let org_resource_address = org_bucket.resource_address();
             let org_return_bucket: Bucket = org_bucket.take(1); // Return this badge to the caller
 
-            let assets_def = base_assets.resource_def();
+            let assets_address = base_assets.resource_address();
             let component = Self {
                 org_vault: Vault::with_bucket(org_bucket),
-                org_badge: org_resource_def,
+                org_badge: org_resource_address,
                 assets_pool: Vault::with_bucket(base_assets),
-                locked_pool: Vault::new(assets_def),
+                locked_pool: Vault::new(assets_address),
                 policies:HashMap::new(),
                 purchases: HashMap::new(),
                 dead_vaults: Vec::new(),
             }
-            .instantiate();
+            .instantiate()
+            .globalize();
             (component,org_return_bucket)
         }
 
         // Create policy
-        // #[auth(org_badge)]
         pub fn make_policy(&mut self, policy_type: String, coverage: Decimal, price:Decimal, duration:u64, supply: Decimal){
             assert!(coverage > Decimal::zero(), "Coverage cannot be zero");
             assert!(price > Decimal::zero(), "Price cannot be zero");
@@ -61,25 +62,25 @@ blueprint! {
             assert!(self.assets_pool.amount() >= coverage * supply, "You don't have enough assets to cover this supply");
 
             // policy badge
-            let mut ip_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
-                 .metadata("name", "Insurance Policy badge")
-                 .metadata("symbol", policy_type)
-                 .metadata("price", price.to_string())
-                 .metadata("coverage", coverage.to_string())
-                 .metadata("duration", duration.to_string())
-                 .flags(MINTABLE | BURNABLE)
-                 .badge(self.org_vault.resource_def(), MAY_MINT | MAY_BURN)
-                 .no_initial_supply();
+            let mut ip_resource_address = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_MAXIMUM)
+                .metadata("name", "Insurance Policy badge")
+                .metadata("symbol", policy_type)
+                .metadata("price", price.to_string())
+                .metadata("coverage", coverage.to_string())
+                .metadata("duration", duration.to_string())
+                .mintable(rule!(require(self.org_vault.resource_address())), LOCKED)
+                .burnable(rule!(require(self.org_vault.resource_address())), LOCKED)
+                .no_initial_supply();
 
             // mint badges
-            let bucket = self.org_vault.authorize(|badge| {
-                ip_resource_def
-                    .mint(supply, badge)
+            let bucket = self.org_vault.authorize(|| {
+                borrow_resource_manager!(ip_resource_address).mint(supply)
             });
 
             // new vault
             let vault = Vault::with_bucket(bucket);
-            self.policies.insert(ip_resource_def.address(), vault);
+            self.policies.insert(ip_resource_address, vault);
 
             // lock assets
             let locked = self.assets_pool.take(coverage * supply);
@@ -87,9 +88,9 @@ blueprint! {
         }
 
         // Purchase specific policy by address
-        pub fn purchase(&mut self, policy_address: Address, insurer: Address, mut bucket: Bucket) -> Bucket {
+        pub fn purchase(&mut self, policy_address: ResourceAddress, insurer: ComponentAddress, mut bucket: Bucket) -> Bucket {
             assert!(self.policies.contains_key(&policy_address), "No policy found");
-            assert!(bucket.resource_def() == RADIX_TOKEN.into(), "You must purchase policies with Radix (XRD).");
+            assert!(bucket.resource_address() == RADIX_TOKEN.into(), "You must purchase policies with Radix (XRD).");
             
             // Don't allow an insurer to buy the exact same policy again
             let purchases = self.purchases.entry(insurer).or_insert(HashMap::new());
@@ -102,37 +103,36 @@ blueprint! {
             // take one policy from the supply
             let policy = policies.take(1);
             // get metadata
-            let metadata = policy.resource_def().metadata();
+            let metadata = borrow_resource_manager!(policy.resource_address()).metadata();
             // check price
             let price:Decimal = metadata["price"].parse().unwrap();
             assert!(bucket.amount() >= price, "Not enough amount to purchase this policy");
 
             // check duration and setup the end epoch
             let duration:u64 = metadata["duration"].parse().unwrap();
-            let expires = Context::current_epoch() + duration;
+            let expires = Runtime::current_epoch() + duration;
 
             // get coverage
             let coverage:Decimal = metadata["coverage"].parse().unwrap();
 
             // build and mint policy badge with supply equals to coverage
-            let mut ip_resource_def = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+            let mut ip_resource_address = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_MAXIMUM)
                 .metadata("name", "Insurance Purchase Badge")
                 .metadata("symbol", "IPB")
                 .metadata("expires", expires.to_string())
                 .metadata("policy", policy_address.to_string())
-                .flags(MINTABLE | BURNABLE)
-                .badge(self.org_vault.resource_def(), MAY_MINT | MAY_BURN)
+                .mintable(rule!(require(self.org_vault.resource_address())), LOCKED)
+                .burnable(rule!(require(self.org_vault.resource_address())), LOCKED)
                 .no_initial_supply();
 
-            let ip_badge = self.org_vault.authorize(|badge| {
-                ip_resource_def
-                    .mint(coverage, badge)
+            let ip_badge = self.org_vault.authorize(|| {
+                borrow_resource_manager!(ip_resource_address).mint(coverage)
             });
             
-
             // burn taken policy
-            self.org_vault.authorize(|badge| {
-                policy.burn_with_auth(badge);
+            self.org_vault.authorize(|| {
+                policy.burn();
             });
 
             // update the vault
@@ -149,7 +149,7 @@ blueprint! {
 
         // Approve payment with specific amount to the insurer using policy address 
         //#[auth(org_badge)]
-        pub fn approve(&mut self, insurer: Address, policy_address: Address, amount: Decimal){
+        pub fn approve(&mut self, insurer: ComponentAddress, policy_address: ResourceAddress, amount: Decimal){
             assert!(self.purchases.contains_key(&insurer), "No vault found for this insurer");
 
             let purchases = self.purchases.get_mut(&insurer).unwrap();
@@ -159,23 +159,23 @@ blueprint! {
             let bucket = purchase.take(amount);
 
             // get metadata and check if policy is not expired
-            let metadata = bucket.resource_def().metadata();
+            let metadata = borrow_resource_manager!(bucket.resource_address()).metadata();
             let expires:u64 = metadata["expires"].parse().unwrap();
-            assert!(Context::current_epoch() <= expires, "Policy is expired");
+            assert!(Runtime::current_epoch() <= expires, "Policy is expired");
 
             let supply = bucket.amount();
             // Burn purchase badges
-            self.org_vault.authorize(|badge| {
-                bucket.burn_with_auth(badge);
+            self.org_vault.authorize(|| {
+                bucket.burn();
             });
         
             // send XRD from locked pool to the insurer
-            Component::from(insurer).call::<()>("deposit", vec![scrypto_encode(&self.locked_pool.take(supply))]);
+            borrow_component!(insurer).call::<()>("deposit", args![self.locked_pool.take(supply)]);
         }
 
         // Burn expired purchases to release locked assets
         //#[auth(org_badge)]
-        pub fn burn_purchases(&mut self, insurer: Address, policy_address: Address) {
+        pub fn burn_purchases(&mut self, insurer: ComponentAddress, policy_address: ResourceAddress) {
             assert!(self.purchases.contains_key(&insurer), "No vault found for this insurer");
 
             let purchases = self.purchases.get_mut(&insurer).unwrap();
@@ -186,14 +186,14 @@ blueprint! {
             let bucket = purchase.take_all();
 
             // prevent burning non-expired badges
-            let metadata = bucket.resource_def().metadata();
+            let metadata = borrow_resource_manager!(bucket.resource_address()).metadata();
             let expires:u64 = metadata["expires"].parse().unwrap();
-            assert!(Context::current_epoch() > expires, "Policy is not expired");
+            assert!(Runtime::current_epoch() > expires, "Policy is not expired");
 
             let supply = bucket.amount();
             // Burn the the rest purchases
-            self.org_vault.authorize(|badge| {
-                bucket.burn_with_auth(badge);
+            self.org_vault.authorize(|| {
+                bucket.burn();
             });
 
             // unlock assets
@@ -205,7 +205,7 @@ blueprint! {
 
         // Burn unused policies
         //#[auth(org_badge)]
-        pub fn burn_policies(&mut self, policy_address: Address) {
+        pub fn burn_policies(&mut self, policy_address: ResourceAddress) {
             info!("Policy Address: {}", policy_address);
             info!("Policies: {:?}", self.policies);
             assert!(self.policies.contains_key(&policy_address), "No policy found");
@@ -215,13 +215,13 @@ blueprint! {
             let bucket = policies.take_all();
 
             // get coverage and calculate the volume of XRD that should be released
-            let metadata = bucket.resource_def().metadata();
+            let metadata = borrow_resource_manager!(bucket.resource_address()).metadata();
             let coverage:Decimal = metadata["coverage"].parse().unwrap();
             let volume = bucket.amount()*coverage;
 
             // Burn the the rest purchases
-            self.org_vault.authorize(|badge| {
-                bucket.burn_with_auth(badge);
+            self.org_vault.authorize(|| {
+                bucket.burn();
             });
 
             // unlock assets
@@ -232,27 +232,23 @@ blueprint! {
         }
 
         /// Org assets methods
-        // #[auth(org_badge)]
         pub fn deposit(&mut self, bucket: Bucket) {
-            assert!(bucket.resource_def() == RADIX_TOKEN.into(), "You must deposit with Radix (XRD).");
+            assert!(bucket.resource_address() == RADIX_TOKEN.into(), "You must deposit with Radix (XRD).");
             assert!(bucket.amount() > Decimal::zero(), "You cannot deposit zero amount");
 
             self.assets_pool.put(bucket)
         }
 
-        // #[auth(org_badge)]
         pub fn withdraw(&mut self, amount: Decimal) -> Bucket {
             assert!(self.assets_pool.amount() >= amount, "Withdraw amount is bigger than available assets");
 
             self.assets_pool.take(amount)
         }
 
-        // #[auth(org_badge)]
         pub fn assets(&mut self) -> Decimal {
             self.assets_pool.amount()
         }
 
-        // #[auth(org_badge)]
         pub fn locked(&mut self) -> Decimal {
             self.locked_pool.amount()
         }
