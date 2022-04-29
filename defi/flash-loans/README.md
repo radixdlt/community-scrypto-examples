@@ -9,7 +9,7 @@ How to test:
 1. `cd flashloan`
 1. `scrypto build`
 1. `resim publish .` -> save package id into $fl_package
-1. `resim new-account` -> save address into $acc1 and public key into $pub1
+1. `resim new-account` -> save address into $acc1 and private key into $priv1
 
 Create the flashloan component with 900 000 XRD of funds and a 5% interest
 1. `resim call-function $fl_package FlashLoan new 900000,$xrd 5` -> save component address into $flashloan

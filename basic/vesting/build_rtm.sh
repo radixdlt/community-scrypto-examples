@@ -40,7 +40,6 @@ export REPLACEMENT_LOOKUP=" \
     s/<<<usdt_token>>>/$USDT/g; \
     s/<<<vesting_component_address>>>/$COMPONENT/g; \
     s/<<<beneficiary_badge>>>/$BENEFICIARY_BADGE/g; \
-
 "
 
 # Replacing the parts from the lookup table
