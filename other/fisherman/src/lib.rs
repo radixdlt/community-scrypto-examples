@@ -2,7 +2,7 @@ use scrypto::prelude::*;
 
 blueprint! {
     struct Fisherman {
-        admin_badge: ResourceDef,
+        admin_badge: ResourceAddress,
         fee: Decimal,
         collected_fees: Vault,
         prize_pool: Vault,
@@ -13,21 +13,26 @@ blueprint! {
         // price per bet
         price: Decimal, 
         // collect history of games played
-        history: LazyMap<String, Vault>,
-        players: HashMap<String, (Decimal, usize)>
+        history: LazyMap<u64, Vault>,
+        players: HashMap<ComponentAddress, (Decimal, usize)>
     }
 
     impl Fisherman {
         
-        pub fn new(fee_percent: Decimal) -> (Component, Bucket) {
-            let admin_bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-                 .metadata("name", "Fisherman Badge Mint Auth")
-                 .initial_supply_fungible(1);
+        pub fn new(fee_percent: Decimal) -> (ComponentAddress, Bucket) {
+            let admin_bucket = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata("name", "Fisherman Badge Mint Auth")
+                .initial_supply(1);
 
-            let admin_resource_def = admin_bucket.resource_def();
+            let access_rules = AccessRules::new()
+                .method("withdraw", rule!(require(admin_bucket.resource_address())))
+                .method("new_game", rule!(require(admin_bucket.resource_address())))
+                .method("finish", rule!(require(admin_bucket.resource_address())))
+                .default(rule!(allow_all));
 
             let component = Self {
-                admin_badge: admin_resource_def,
+                admin_badge: admin_bucket.resource_address(),
                 collected_fees: Vault::new(RADIX_TOKEN),
                 fee: fee_percent,
                 prize_pool: Vault::new(RADIX_TOKEN),
@@ -37,12 +42,13 @@ blueprint! {
                 history: LazyMap::new(),
                 players: HashMap::new()
             }
-            .instantiate();
+            .instantiate()
+            .add_access_check(access_rules)
+            .globalize();
 
             (component, admin_bucket)
         }
 
-        #[auth(admin_badge)]
         pub fn new_game(&mut self, price: Decimal) {
             assert!(price > Decimal::zero(), "Price per game cannot be zero");
             assert!(!self.is_ready, "Current game is ready. Please finish it before making a new one");
@@ -54,21 +60,21 @@ blueprint! {
             self.price = price;
         }
 
-        pub fn capture(&mut self, player: Address, depth: Decimal, mut payment: Bucket) -> Bucket {
-            assert!(payment.resource_def() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
+        pub fn capture(&mut self, player: ComponentAddress, depth: Decimal, mut payment: Bucket) -> Bucket {
+            assert!(payment.resource_address() == RADIX_TOKEN.into(), "You must use Radix (XRD).");
             assert!(self.is_ready, "Current game is not ready yet");
-            assert!(!self.players.contains_key(&player.to_string()), "You are already in the game");
+            assert!(!self.players.contains_key(&player), "You are already in the game");
             assert!(depth > Decimal::zero(), "Depth cannot be zero");
-            assert!(depth <= 10.into(), "Depth more than 10 is not allowed");
+            assert!(depth <= dec!("10"), "Depth more than 10 is not allowed");
             assert!(payment.amount() >= self.price, "Not enough amount to play");
 
             // we use special target possibility. Bigger depth increases fish size but reduces target (chances to capture)
-            let portion = Decimal::from(100) / depth;
-            let target = (portion / 100) * 10000 * Decimal::from(99)/Decimal::from(100);
+            let portion = dec!("100") / depth;
+            let target = (portion / 100) * 10000 * dec!("99")/dec!("100");
             info!("Target: {}", target);
 
             // take hash
-            let hash = Context::transaction_hash().to_string();
+            let hash = Runtime::transaction_hash().to_string();
 
             //take first 10 bits of result hash
             let seed = &hash[0..10];
@@ -94,7 +100,7 @@ blueprint! {
 
             // save player result
             let player_num = self.players.len() + 1;
-            self.players.insert(player.to_string(), (weight, player_num));
+            self.players.insert(player, (weight, player_num));
 
             // take payment
             let bucket = payment.take(self.price);
@@ -104,13 +110,12 @@ blueprint! {
             payment
         }
 
-        #[auth(admin_badge)]
         pub fn finish(&mut self) {
             assert!(self.is_ready, "Current game is not ready");
 
             // find player with heavier fish
             let mut weight = Decimal::zero();
-            let mut winner = "";
+            let mut winner = self.players.keys().next().unwrap();
             let mut num: usize = 0;
 
             for (key, value) in &self.players {
@@ -131,8 +136,7 @@ blueprint! {
                 // send money to winner minus fee
                 let fee = self.prize_pool.amount() * self.fee / dec!("100");
                 self.collected_fees.put(self.prize_pool.take(fee));
-                let address = Address::from_str(winner).unwrap();
-                Component::from(address).call::<()>("deposit", vec![scrypto_encode(&self.prize_pool.take_all())]);
+                borrow_component!(*winner).call::<()>("deposit", vec![scrypto_encode(&self.prize_pool.take_all())]);
             }else{
                 info!("Ooops, we have no winner. The prize pool will be used in the next game");
             }
@@ -141,23 +145,23 @@ blueprint! {
             self.is_ready = false;
 
             // save history
-            let bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-            .metadata("name", "Fisherman Game Badge")
-            .metadata("symbol", "FGB")
-            .metadata("epoch", Context::current_epoch().to_string())
-            .metadata("winner", winner)
-            .metadata("winner_num", num.to_string())
-            .metadata("fish_weight", weight.to_string())
-            .initial_supply_fungible(1);
+            let bucket = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata("name", "Fisherman Game Badge")
+                .metadata("symbol", "FGB")
+                .metadata("epoch", Runtime::current_epoch().to_string())
+                .metadata("winner", winner.to_string())
+                .metadata("winner_num", num.to_string())
+                .metadata("fish_weight", weight.to_string())
+                .initial_supply(1);
 
             let vault = Vault::with_bucket(bucket);
-            self.history.insert(self.game_id.to_string(), vault);
+            self.history.insert(self.game_id, vault);
 
             // clear players
             self.players.clear();
         }
 
-        #[auth(admin_badge)]
         pub fn withdraw(&mut self, amount: Decimal) -> Bucket {
             assert!(self.collected_fees.amount() >= amount, "Withdraw amount is bigger than available assets");
 
