@@ -12,12 +12,11 @@ Create two new accounts, and put the hashes in environment variables for easy ac
 ```
 $ resim new-account
 $ export acct1=...
-$ export pubkey1=...
+$ export privkey1=...
 $ resim new-accounts
 $ export acct2=...
-$ export pubkey2=...
-$ resim show $acct1
-$ export xrd=...
+$ export privkey2=...
+$ export xrd=030000000000000000000000000000000000000000000000000004
 ```
 
 ## Publish the package
@@ -52,7 +51,7 @@ own resource definition. You cannot pledge after the campaign has finished.
 You will get a patron_badge. You may use this badge to recall your pledge.
 
 ```
-$ resim set-default-account $acct2 $pubkey2
+$ resim set-default-account $acct2 $privkey2
 $ resim call-method $component pledge 5000,$xrd
 $ resim show $acct2
 $ export pledge_badge=...
@@ -62,17 +61,16 @@ $ export pledge_badge=...
 If campaign has not finished, or the goal has not been met patrons are able to recall their pledge.
 
 ```
-$ resim set-default-account $acct2 $pubkey2
+$ resim set-default-account $acct2 $privkey2
 $ resim call-method $component recall_pledge 1,$pledge_badge
 $ resim show $acct2
 ```
 
 ## Withdraw collected XRD from campaign
-If the campaign has finished, and the goal has been met the fundraiser can collect XRD, with the fundraiser badge.
+If the campaign has finished, and the goal has been met the fundraiser can collect XRD, with the fundraiser badge. It is important to note that the `withdraw` method uses the auth-zone for it's auth operations. This means that the fundraiser badge needs to be in the auth zone for this method call to succeed. Which means that we must use a transaction manifest to perform this operation. The following transaction manifest code can be used to perform this:
 
-```
-$ resim set-default-account $acct1 $pubkey1
-$ resim call-method $component withdraw 1,$fundraiser_badge
-$ resim show $acct1
-$ resim show $component
+```sh
+CALL_METHOD ComponentAddress("<Account Address>") "create_proof_by_amount" Decimal("1") ResourceAddress("<Fundraiser Badge Resource Address>");
+CALL_METHOD ComponentAddress("<Component Address>") "withdraw";
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("<Account Address>") "deposit_batch";
 ```
