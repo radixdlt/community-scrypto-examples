@@ -13,8 +13,8 @@ pub struct StakingData {
 blueprint! {
     struct Staking {
         token_minter: Vault,
-        token_id_counter: u128,
-        token_resource_def: ResourceDef,
+        token_id_counter: u64,
+        token_resource_address: ResourceAddress,
         // staking and rewards pools
         staking_pool: Vault,
         rewards_pool: Vault,
@@ -24,46 +24,36 @@ blueprint! {
         last_update: u64,
         // reward rate per staking
         rate: Decimal,
-        // collects rewards per account
-        // rewards: HashMap<Address, Decimal>,
-        // collects balance per account
-        // balances: HashMap<Address, Decimal>,
-        // collects paid reward per account
-        // paid: HashMap<Address, Decimal>
     }
 
     impl Staking {
         
         // initiate component with some rewards pool
-        pub fn new(rewards: Bucket) -> Component {
-            
-            let rewards_ref = rewards.resource_def();
-
-            let token_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-            .metadata("name", "Staking Token Minter")
-            .initial_supply_fungible(1);
+        pub fn new(rewards: Bucket) -> ComponentAddress {
+            let token_minter = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata("name", "Staking Token Minter")
+                .initial_supply(1);
 
             let token = ResourceBuilder::new_non_fungible()
-            .metadata("name", "Staking Token")
-            .metadata("symbol", "STT")
-            .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
-            .badge(token_minter.resource_def(), MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA)
-            .no_initial_supply();
+                .metadata("name", "Staking Token")
+                .metadata("symbol", "STT")
+                .mintable(rule!(require(token_minter.resource_address())), LOCKED)
+                .updateable_non_fungible_data(rule!(require(token_minter.resource_address())), LOCKED)
+                .no_initial_supply();
 
             Self {
                 token_minter: Vault::with_bucket(token_minter),
-                token_id_counter: 0,
-                token_resource_def: token,
-                staking_pool: Vault::new(rewards_ref),
+                token_id_counter: 0u64,
+                token_resource_address: token,
+                staking_pool: Vault::new(rewards.resource_address()),
                 rewards_pool: Vault::with_bucket(rewards),
                 reward_value: Decimal::zero(),
-                last_update: Context::current_epoch(),
-                rate: 2.into(),
-                // rewards: HashMap::new(),
-                // balances: HashMap::new(),
-                // paid: HashMap::new()
+                last_update: Runtime::current_epoch(),
+                rate: dec!("2"),
             }
             .instantiate()
+            .globalize()
         }
 
         // Calculates reward per token in supply
@@ -75,7 +65,7 @@ blueprint! {
             }
             
             // calculate per token reward depending on the time passed since last epoch
-            let time = Context::current_epoch()-self.last_update;
+            let time = Runtime::current_epoch()-self.last_update;
             let exp = 1e18 as i64;
             let exp_rate = Decimal::from(exp) / self.staking_pool.amount();
             // 10k epochs as possible way to calculate the yearly rate to get the rate per epoch
@@ -117,7 +107,7 @@ blueprint! {
             // update per token reward
             self.reward_value = self.get_reward_value();
             // update epoch
-            self.last_update = Context::current_epoch();
+            self.last_update = Runtime::current_epoch();
 
             let earned = self.earned(&data);
 
@@ -133,9 +123,9 @@ blueprint! {
                 paid: Decimal::zero()
             };
 
-            let bucket = self.token_minter.authorize(|auth| {
-                self.token_resource_def
-                    .mint_non_fungible(&NonFungibleKey::from(self.token_id_counter), token_data, auth)
+            let bucket = self.token_minter.authorize(|| {
+                borrow_resource_manager!(self.token_resource_address)
+                    .mint_non_fungible(&NonFungibleId::from_u64(self.token_id_counter), token_data)
             });
             self.token_id_counter += 1;
             
@@ -143,13 +133,12 @@ blueprint! {
         }
 
         // staking for specific account
-        #[auth(token_resource_def)]
-        pub fn stake(&mut self, staking: Bucket) {
-            // let user_id = Self::get_user_id(user_auth);
+        pub fn stake(&mut self, staking: Bucket, auth: Proof) {
+            assert_eq!(auth.resource_address(), self.token_resource_address, "Invalid badge provided");
+            assert_eq!(auth.amount(), dec!("1"), "Invalid badge amount provided");
 
-             // get nft data from bucket
-            let id = auth.get_non_fungible_key();
-            let mut data: StakingData = self.token_resource_def.get_non_fungible_data(&id);
+            // get nft data from bucket        
+            let mut data: StakingData = auth.non_fungible().data();
 
             // update the reward
             let earned = self.update_reward(&data);
@@ -163,17 +152,17 @@ blueprint! {
 
             debug!("Account staking balance: {}", data.balance);
 
-            self.token_minter
-            .authorize(|auth| self.token_resource_def.update_non_fungible_data(&id, data, auth));
+            self.token_minter.authorize(|| auth.non_fungible().update_data(data));
 
             self.staking_pool.put(staking);
         }
 
         // withdraw the staking amount and the reward
-        #[auth(token_resource_def)]
-        pub fn withdraw(&mut self) -> Bucket {
-            let id = auth.get_non_fungible_key();
-            let mut data: StakingData = self.token_resource_def.get_non_fungible_data(&id);
+        pub fn withdraw(&mut self, auth: Proof) -> Bucket {
+            assert_eq!(auth.resource_address(), self.token_resource_address, "Invalid badge provided");
+            assert_eq!(auth.amount(), dec!("1"), "Invalid badge provided");
+
+            let mut data: StakingData = auth.non_fungible().data();
 
             let earned = self.update_reward(&data);
             data.reward = earned;
@@ -187,8 +176,7 @@ blueprint! {
             data.reward = Decimal::zero();
             
             // update NFT
-            self.token_minter
-            .authorize(|auth| self.token_resource_def.update_non_fungible_data(&id, data, auth));
+            self.token_minter.authorize(|| auth.non_fungible().update_data(data));
             
             bucket
         }

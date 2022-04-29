@@ -2,21 +2,21 @@ use scrypto::prelude::*;
 
 import! { r#"
 {
-  "package": "013fa22e238526e9c82376d2b4679a845364243bf970e5f783d13f",
-  "name": "Staking",
+  "package_address": "01c7adee40dd9a16ae290272d0e99835ad5c5e679941d3fb28e608",
+  "blueprint_name": "Staking",
   "functions": [
     {
       "name": "new",
       "inputs": [
         {
           "type": "Custom",
-          "name": "scrypto::resource::Bucket",
+          "name": "Bucket",
           "generics": []
         }
       ],
       "output": {
         "type": "Custom",
-        "name": "scrypto::core::Component",
+        "name": "ComponentAddress",
         "generics": []
       }
     }
@@ -28,7 +28,7 @@ import! { r#"
       "inputs": [],
       "output": {
         "type": "Custom",
-        "name": "scrypto::resource::Bucket",
+        "name": "Bucket",
         "generics": []
       }
     },
@@ -38,12 +38,12 @@ import! { r#"
       "inputs": [
         {
           "type": "Custom",
-          "name": "scrypto::resource::Bucket",
+          "name": "Bucket",
           "generics": []
         },
         {
           "type": "Custom",
-          "name": "scrypto::resource::BucketRef",
+          "name": "Proof",
           "generics": []
         }
       ],
@@ -57,13 +57,13 @@ import! { r#"
       "inputs": [
         {
           "type": "Custom",
-          "name": "scrypto::resource::BucketRef",
+          "name": "Proof",
           "generics": []
         }
       ],
       "output": {
         "type": "Custom",
-        "name": "scrypto::resource::Bucket",
+        "name": "Bucket",
         "generics": []
       }
     }
@@ -75,7 +75,7 @@ import! { r#"
 #[derive(NonFungibleData)]
 pub struct LotteryTicketData {
     // holds lottery ID this ticket belongs to
-    lottery_id: u128,
+    lottery_id: u64,
     //use to mark a ticket after the withdraw
     #[scrypto(mutable)]
     checked: bool, 
@@ -93,7 +93,7 @@ pub struct LotteryData {
     lottery_epoch: u64,
     // mutable minted tickets array
     #[scrypto(mutable)]
-    minted: Vec<NonFungibleKey>,
+    minted: Vec<NonFungibleId>,
     // ended flag
     #[scrypto(mutable)]
     ended: bool,
@@ -102,7 +102,7 @@ pub struct LotteryData {
     reward: Decimal,
     // winner ticket id after lottery end
     #[scrypto(mutable)]
-    winner: Option<NonFungibleKey>
+    winner: Option<NonFungibleId>
 }
 
 blueprint! {
@@ -110,11 +110,11 @@ blueprint! {
         // staking component
         staking: Staking,
         // admin and minting badges
-        admin_badge: ResourceDef,
+        admin_badge: ResourceAddress,
         // vault for minting tickets
         lottery_minter: Vault,
         // address of staking contract
-        staking_address: Address,
+        staking_address: ComponentAddress,
         // staking user NFT
         staking_token: Vault,
         // track staking amount
@@ -122,44 +122,46 @@ blueprint! {
         // vault that will be used for withdrawals and reward
         assets_vault: Vault,
         // resource def for minting lottery tickets
-        tickets_resource_def: ResourceDef,
+        tickets_resource_address: ResourceAddress,
         // resource def for the lottery
-        lottery_resource_def: ResourceDef,
+        lottery_resource_address: ResourceAddress,
         // ID counters
-        lottery_id_counter: u128,
-        ticket_id_counter: u128,
+        lottery_id_counter: u64,
+        ticket_id_counter: u64,
     }
 
     impl Lottery {
         
       // Initiate new Lottery using address for the staking component
-        pub fn new(staking_address: Address) -> (Component, Bucket) {
+        pub fn new(staking_address: ComponentAddress) -> (ComponentAddress, Bucket) {
            
             // main badges for admin and minting
-            let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-            .metadata("name", "Lottery Admin Badge")
-            .initial_supply_fungible(1);
+            let admin_badge = ResourceBuilder::new_fungible()
+              .divisibility(DIVISIBILITY_NONE)
+              .metadata("name", "Lottery Admin Badge")
+              .initial_supply(1);
 
-            let lottery_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
-            .metadata("name", "Lottery Ticket Minter")
-            .initial_supply_fungible(1);
+            let lottery_minter = ResourceBuilder::new_fungible()
+              .divisibility(DIVISIBILITY_NONE)
+              .metadata("name", "Lottery Ticket Minter")
+              .initial_supply(1);
 
-            let admin_resource_def = admin_badge.resource_def();
+            let admin_resource_address = admin_badge.resource_address();
 
             // lottery nft
-            let lottery_resource_def = ResourceBuilder::new_non_fungible()
+            let lottery_resource_address = ResourceBuilder::new_non_fungible()
             .metadata("name", "Lottery Token")
             .metadata("symbol", "LOT")
-            .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
-            .badge(lottery_minter.resource_def(), MAY_MINT | MAY_CHANGE_INDIVIDUAL_METADATA)
+            .mintable(rule!(require(lottery_minter.resource_address())), LOCKED)
+            .updateable_non_fungible_data(rule!(require(lottery_minter.resource_address())), LOCKED)
             .no_initial_supply();
 
             // lottery ticket nft
-            let tickets_resource_def = ResourceBuilder::new_non_fungible()
+            let tickets_resource_address = ResourceBuilder::new_non_fungible()
             .metadata("name", "Lottery Ticket Token")
             .metadata("symbol", "LTT")
-            .flags(MINTABLE | INDIVIDUAL_METADATA_MUTABLE)
-            .badge(lottery_minter.resource_def(), MAY_MINT| MAY_CHANGE_INDIVIDUAL_METADATA)
+            .mintable(rule!(require(lottery_minter.resource_address())), LOCKED)
+            .updateable_non_fungible_data(rule!(require(lottery_minter.resource_address())), LOCKED)
             .no_initial_supply();
 
             // staking setup
@@ -167,9 +169,14 @@ blueprint! {
             // register new user and take the staking user nft (STT)
             let staking_nft = staking.new_user();
 
+            let access_rules = AccessRules::new()
+              .method("start_lottery", rule!(require(admin_badge.resource_address())))
+              .method("end_lottery", rule!(require(admin_badge.resource_address())))
+              .default(rule!(allow_all));
+
             let component = Self {
                 staking,
-                admin_badge: admin_resource_def, 
+                admin_badge: admin_resource_address, 
                 lottery_minter: Vault::with_bucket(lottery_minter),
                 staking_token: Vault::with_bucket(staking_nft),
                 staking_address,
@@ -177,16 +184,17 @@ blueprint! {
                 assets_vault: Vault::new(RADIX_TOKEN),
                 ticket_id_counter: 0,
                 lottery_id_counter: 0,
-                tickets_resource_def,
-                lottery_resource_def
+                tickets_resource_address,
+                lottery_resource_address
             }
-            .instantiate();
+            .instantiate()
+            .add_access_check(access_rules)
+            .globalize();
             
             (component, admin_badge)
         }
 
         // initiate new lottery
-        #[auth(admin_badge)]
         pub fn start_lottery(&mut self, name: String, epoch: u64, price: Decimal) -> Bucket {
             assert!(epoch > 0, "Epoch cannot be zero");
             assert!(!name.is_empty(), "Name cannot be empty");
@@ -202,8 +210,9 @@ blueprint! {
               winner: None
           };
 
-          let lottery = self.lottery_minter.authorize(|auth| {
-              self.lottery_resource_def.mint_non_fungible(&NonFungibleKey::from(self.lottery_id_counter), data, auth)
+          let lottery = self.lottery_minter.authorize(|| {
+              borrow_resource_manager!(self.lottery_resource_address)
+                .mint_non_fungible(&NonFungibleId::from_u64(self.lottery_id_counter), data)
           });
 
           // increase lottery count
@@ -213,18 +222,18 @@ blueprint! {
         }
 
         // End lottery by specific ID
-        #[auth(admin_badge)]
-        pub fn end_lottery(&mut self, lottery_id: u128) {
+        pub fn end_lottery(&mut self, lottery_id: u64) {
 
             // find this lottery
-            let mut lottery_data: LotteryData = self.lottery_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
-            assert!(Context::current_epoch() > lottery_data.lottery_epoch, "Lottery epoch is not ended yet");
+            let mut lottery_data: LotteryData = borrow_resource_manager!(self.lottery_resource_address)
+              .get_non_fungible_data(&NonFungibleId::from_u64(lottery_id));
+            assert!(Runtime::current_epoch() > lottery_data.lottery_epoch, "Lottery epoch is not ended yet");
 
             debug!("++++++Lottery Finished++++++");
 
             // pick winner
             // take hash
-            let hash = Context::transaction_hash().to_string();
+            let hash = Runtime::transaction_hash().to_string();
             //take first 5 bits of result hash
             let seed = &hash[0..5];
             //convert 10 hex bits to usize
@@ -241,25 +250,29 @@ blueprint! {
 
             // withdraw staking
             // get current staking amount
-            let staking_amount = self.current_staking;            
-            self.staking_token.authorize(|auth| {
-                let withdraw = self.staking.withdraw(auth);
+            let staking_amount = self.current_staking;     
+            
+            let auth = self.staking_token.create_proof();
 
-                // take the reward from the withdraw amount
-                let reward = withdraw.amount() - staking_amount;
-                debug!("Reward: {}", reward);
+            let withdraw = self.staking.withdraw(auth.clone());
 
-                // update lottery data reward params
-                lottery_data.reward = reward;
+            // take the reward from the withdraw amount
+            let reward = withdraw.amount() - staking_amount;
+            debug!("Reward: {}", reward);
 
-                // clear staking value
-                self.current_staking = Decimal::zero();
-                self.assets_vault.put(withdraw);
-            });            
+            // update lottery data reward params
+            lottery_data.reward = reward;
+
+            // clear staking value
+            self.current_staking = Decimal::zero();
+            self.assets_vault.put(withdraw);
+            
+            auth.drop();          
                         
             // update lottery NFT
-            self.lottery_minter.authorize(|auth| {
-                self.lottery_resource_def.update_non_fungible_data(&NonFungibleKey::from(lottery_id), lottery_data, auth);
+            self.lottery_minter.authorize(|| {
+                borrow_resource_manager!(self.lottery_resource_address)
+                  .update_non_fungible_data(&NonFungibleId::from_u64(lottery_id), lottery_data);
             });
 
             // clear current staking
@@ -267,18 +280,19 @@ blueprint! {
         }
 
         // Buy a ticket for a specific lottery
-        pub fn buy_ticket(&mut self, lottery_id: u128, mut payment: Bucket) -> (Bucket, Bucket) {
+        pub fn buy_ticket(&mut self, lottery_id: u64, mut payment: Bucket) -> (Bucket, Bucket) {
           // find this lottery
-          let mut lottery_data: LotteryData = self.lottery_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
+          let mut lottery_data: LotteryData = borrow_resource_manager!(self.lottery_resource_address)
+            .get_non_fungible_data(&NonFungibleId::from_u64(lottery_id));
           assert!(!lottery_data.ended, "Lottery is ended");
 
           assert!(payment.resource_address() == RADIX_TOKEN, "You can only use radix");
           assert!(payment.amount() >= lottery_data.ticket_price, "Not enough amount");
 
           // send to stake
-          self.staking_token.authorize(|auth| {
-              self.staking.stake(payment.take(lottery_data.ticket_price), auth);
-          });
+          let auth = self.staking_token.create_proof();
+          self.staking.stake(payment.take(lottery_data.ticket_price), auth.clone());
+          auth.drop();
 
           // update staking amount
           self.current_staking += lottery_data.ticket_price;
@@ -290,37 +304,37 @@ blueprint! {
               winner: false
           };
 
-          let ticket = self.lottery_minter.authorize(|auth| {
-              self.tickets_resource_def.mint_non_fungible(&NonFungibleKey::from(self.ticket_id_counter), data, auth)
+          let ticket = self.lottery_minter.authorize(|| {
+              borrow_resource_manager!(self.tickets_resource_address).mint_non_fungible(&NonFungibleId::from_u64(self.ticket_id_counter), data)
           });
 
           self.ticket_id_counter += 1;
 
           // save minted ticket id for the lottery
-          let id = ticket.get_non_fungible_key();
+          let id = ticket.non_fungible::<LotteryTicketData>().id();
           debug!("Minted new ticket: {}", id);
           lottery_data.minted.push(id);
 
           // update lottery NFT
-          self.lottery_minter.authorize(|auth| {
-            self.lottery_resource_def.update_non_fungible_data(&NonFungibleKey::from(lottery_id), lottery_data, auth);
+          self.lottery_minter.authorize(|| {
+            borrow_resource_manager!(self.lottery_resource_address).update_non_fungible_data(&NonFungibleId::from_u64(lottery_id), lottery_data);
           });
 
           (payment, ticket)
         }
 
         // Withdraw the stake amount (purchased ticket price) and reward (in case of winning) for the lottery
-        #[auth(tickets_resource_def)]
-        pub fn withdraw(&mut self, lottery_id: u128) -> Bucket {
+        pub fn withdraw(&mut self, lottery_id: u64, auth: Proof) -> Bucket {
+          assert_eq!(auth.resource_address(), self.tickets_resource_address, "Invalid badge provided");
           assert!(auth.amount() == Decimal::one(), "Only one ticket withdraw at the time");
 
           // check lottery
-          let lottery_data: LotteryData = self.lottery_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
+          let lottery_data: LotteryData = borrow_resource_manager!(self.lottery_resource_address).get_non_fungible_data(&NonFungibleId::from_u64(lottery_id));
           assert!(lottery_data.ended, "Lottery is not ended yet");
 
           // check the ticket
-          let ticket_id = auth.get_non_fungible_key();
-          let mut ticket_data: LotteryTicketData = self.tickets_resource_def.get_non_fungible_data(&NonFungibleKey::from(lottery_id));
+          let ticket_id = auth.non_fungible::<LotteryTicketData>().id();
+          let mut ticket_data: LotteryTicketData = borrow_resource_manager!(self.tickets_resource_address).get_non_fungible_data(&NonFungibleId::from_u64(lottery_id));
           assert!(ticket_data.lottery_id == lottery_id, "The ticket doesn't belong to the specified lottery");
           assert!(!ticket_data.checked, "This ticket was already checked for the withdraw");
 
@@ -346,8 +360,8 @@ blueprint! {
           }
 
           // update ticket data
-          self.lottery_minter.authorize(|minter_auth| {
-            self.tickets_resource_def.update_non_fungible_data(&NonFungibleKey::from(lottery_id), ticket_data, minter_auth);
+          self.lottery_minter.authorize(|| {
+            borrow_resource_manager!(self.tickets_resource_address).update_non_fungible_data(&NonFungibleId::from_u64(lottery_id), ticket_data);
           });
 
           withdraw
