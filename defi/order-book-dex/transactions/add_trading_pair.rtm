@@ -1,0 +1,9 @@
+# resim call-method 0246f768fdf369942e0c7f6d6db43463df67d16a03cec713136d4b add_trading_pair \
+#   030000000000000000000000000000000000000000000000000004 0346c82723645afa14855dba6592974ca2ec943c0cb965cb5f43ad \
+#   1,034815cac149c68b5a7d2706105feeb7ad0b59df16cdc0c3648b03
+
+# Put the admin badge on the auth zone
+CALL_METHOD ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "create_proof" ResourceAddress("034815cac149c68b5a7d2706105feeb7ad0b59df16cdc0c3648b03");
+
+# Call the `add_trading_pair` method on the component
+CALL_METHOD ComponentAddress("0246f768fdf369942e0c7f6d6db43463df67d16a03cec713136d4b") "add_trading_pair" ResourceAddress("030000000000000000000000000000000000000000000000000004") ResourceAddress("0346c82723645afa14855dba6592974ca2ec943c0cb965cb5f43ad");

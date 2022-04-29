@@ -1,2 +1,2 @@
-CALL_FUNCTION Address("010000000000000000000000000000000000000000000000000001") "System" "new_resource" Enum(0u8, {18u8}) HashMap<String, String>("symbol", "rUSD") 0u64 0u64 HashMap<Address, U64>() Some(Enum(0u8, {Decimal("1000000")}));
-CALL_METHOD_WITH_ALL_RESOURCES Address("0293c502780e23621475989d707cd8128e4506362e5fed6ac0c00a") "deposit_batch";
+CALL_FUNCTION PackageAddress("010000000000000000000000000000000000000000000000000001") "System" "new_resource" Enum("Fungible", 18u8) HashMap<String, String>("symbol", "rUSD") HashMap<Enum, Tuple>(Enum("Withdraw"), Tuple(Enum("AllowAll"), Enum("LOCKED"))) Some(Enum("Fungible", Decimal("1000000")));
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "deposit_batch";
