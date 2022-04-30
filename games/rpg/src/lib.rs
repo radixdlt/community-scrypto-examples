@@ -148,7 +148,7 @@ blueprint! {
 
         }
 
-        pub fun level_1(&mut self) -> Bucket {
+        pub fn level_1(&mut self) -> Bucket {
             let seed = Runtime::generate_uuid();
             let damage_rng = 
             let mut nft_data: Account = nft_character.non_fungible().data();
