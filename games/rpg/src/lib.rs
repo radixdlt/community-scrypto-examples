@@ -15,16 +15,24 @@ pub struct Account {
 
 blueprint! {
     struct Substradix {
+         // Vault for holding ingame Gold
          gold_vault: Vault,
+         // Vault for holding Xrd from sales
          collected_xrd: Vault,
+         // Game price (can be changed)
          game_price: Decimal,
+         // Account/Character ID
          character_number: u64,
+         // NFT for character
          character_nft: ResourceAddress,
+         // Vault to hold with badge for system actions
          system_vault: Vault,
+         // Version ID to allow updates post instantiation, older NFTs can't be used in updated versions without updating the NFT. Prevents exploits.
+         version: Decimal,
     }
 
     impl Substradix {
-        pub fn new(game_price: Decimal) -> ComponentAddress {
+        pub fn new(game_price: Decimal, version: Decimal) -> ComponentAddress {
             // Creates system badge for minting + verifying level outcomes.
             let system_badge = ResourceBuilder::new_fungible()
                 .metadata("name", "system")
@@ -70,6 +78,7 @@ blueprint! {
                 game_price,
                 character_number: 0,
                 character_nft,
+                version: 1,
 
             }
             .instantiate()
@@ -88,6 +97,7 @@ blueprint! {
             mut payment: Bucket,
             ) -> (Bucket, Bucket) {
 
+            // Prevents making alt accounts on one wallet.
             assert!(new_character.amount() == dec!(0),
                 "You cannot have more than one character per account!");
 
@@ -139,6 +149,7 @@ blueprint! {
 
         pub fun level_1(&mut self) -> Bucket {
             let seed = Runtime::generate_uuid();
+            let damage_rng = 
             let mut nft_data: Account = nft_character.non_fungible().data();
             let health: u32 = nft_data.health;
             let attack: u32 = nft_data.attack;
