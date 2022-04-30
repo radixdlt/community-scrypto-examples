@@ -150,11 +150,17 @@ blueprint! {
             loop {
                 let health = health - enemy_attack;
                 let enemy_health = enemy_health - attack;
-                if health <=1,
-                    println!("You Died"),
+                if health <=1 {
+                    println!("You Died");
+                    break;
+                }
+  
+                if enemy_health <=1 {
+                    println!("Victory!");
+                    
+
+                }
             }
-
         }
-
     }
 }
