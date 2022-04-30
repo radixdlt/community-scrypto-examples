@@ -16,7 +16,7 @@ export BENEFICIARY_PUB_KEY=$(echo "$OP2" | sed -nr "s/Public key: ([[:alnum:]_]+
 export BENEFICIARY_ADDRESS=$(echo "$OP2" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
 
 # Create a new vesting component through the admin account
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 
 # Creating a new token to use for the vesting contract
 TK_OP=$(resim run $SCRIPT_DIR/transactions/token_creation.rtm)

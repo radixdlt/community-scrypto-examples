@@ -209,9 +209,9 @@ resim publish . # Save the package address into $package
 # - the maximum personal allocation: 500 XRD
 # 
 # The new call results in the creating of 4 new components.
-# The first new ResourceDef is the admin_badge address. Save that into $admin_badge
-# Ignore the second new ResourceDef.
-# The third new ResourceDef is the address of the sale ticket. Save that into $ticket
+# The first new ResourceAddress is the admin_badge address. Save that into $admin_badge
+# Ignore the second new ResourceAddress.
+# The third new ResourceAddress is the address of the sale ticket. Save that into $ticket
 # Also, save the component address into $component
 resim call-function $package TokenSale new 10000,$shiny $xrd 0.1 500
 

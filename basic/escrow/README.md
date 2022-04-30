@@ -14,7 +14,7 @@
 ## Trading DGC for XRD through the escrow
 $acc1 will be account A and $acc2 will be account B. A wants to trade 500 XRD for 10 DGC
 
-1. Instantiate the component for the trade: `resim call-function $package Escrow new $xrd $dgc $acc1 $acc2` -> save the component's address in $component, the first resourceDef into $badgeA and the second into $badgeB
+1. Instantiate the component for the trade: `resim call-function $package Escrow new $xrd $dgc $acc1 $acc2` -> save the component's address in $component, the first ResourceAddress into $badgeA and the second into $badgeB
 1. Send badge B to the account with who you want to trade with: `resim transfer 1 $badgeB $acc2`
 1. Send the 500 XRD from account A: `resim call-method $component put_tokens 500,$xrd 1,$badgeA`
 1. `resim set-default-account $acc2 $priv2`

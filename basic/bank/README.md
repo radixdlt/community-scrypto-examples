@@ -31,7 +31,7 @@ You can call the methods with the following commands
 ## Hints
 
 To make it easier, I use local variables on a Mac.
-You can safe the `component adress` and the `ResourceDef adress` for the admin badge in local variables and call them easier.
+You can safe the `component address` and the `Resource address` for the admin badge in local variables and call them easier.
 
 #### Hit example
 Lets assume this is your console and it logs 
