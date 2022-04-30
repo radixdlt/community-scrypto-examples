@@ -191,8 +191,8 @@ resim reset
 # Save the XRD token address into env variable $xrd
 export xrd=030000000000000000000000000000000000000000000000000004
 
-resim new-account # Save the private key and account address into $admin_key and $admin_account resp.
-resim new-account # Save the private key and account address into $customer_key and $customer_account resp.
+resim new-account # Save the private key and account address into $admin_private_key and $admin_account resp.
+resim new-account # Save the private key and account address into $customer_private_key and $customer_account resp.
 
 
 # Create some tokens that we can put up for sale
@@ -231,7 +231,7 @@ resim transfer 1 $ticket $customer_account
 resim run start_sale.rtm
 
 # Now we step into the shoes of our customer:
-resim set-default-account $customer_account $customer_key
+resim set-default-account $customer_account $customer_private_key
 
 # Because we are a sneaky customer, we will try to get a few more tokens than we have been allocated. 
 # We specify a bucket with 600 XRD as payment and we also pass our sale ticket.
@@ -243,7 +243,7 @@ resim call-method $component buy_tokens 600,$xrd 1,$ticket
 resim show $customer_account
 
 # Let's switch back to our admin user.
-resim set-default-account $admin_account $admin_key
+resim set-default-account $admin_account $admin_private_key
 
 # Checking on our component, we see that some SHINY tokens have been sold and some XRD tokens have been deposited.
 resim show $component
