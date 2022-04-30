@@ -7,6 +7,22 @@ use scrypto::crypto::{EcdsaPrivateKey, EcdsaPublicKey};
 use scrypto::engine::types::*;
 use scrypto::prelude::*;
 
+#[macro_export]
+macro_rules! assert_auth_error {
+    ($error:expr) => {{
+        if !matches!(
+            $error,
+            RuntimeError::AuthorizationError {
+                authorization: _,
+                function: _,
+                error: ::radix_engine::model::MethodAuthorizationError::NotAuthorized
+            }
+        ) {
+            panic!("Expected auth error but got: {:?}", $error);
+        }
+    }};
+}
+
 #[test]
 fn add_beneficiary_fails_without_admin_badge() {
     // Setting up the environment
@@ -46,7 +62,7 @@ fn add_beneficiary_fails_without_admin_badge() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -61,11 +77,11 @@ fn add_beneficiary_fails_without_admin_badge() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -73,7 +89,7 @@ fn add_beneficiary_fails_without_admin_badge() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -81,12 +97,8 @@ fn add_beneficiary_fails_without_admin_badge() {
         .sign([&admin_private_key]);
     let adding_beneficiary_receipt: Receipt = executor.validate_and_execute(&adding_beneficiary_tx).unwrap();
 
-    match adding_beneficiary_receipt.result.expect_err("Should have failed") {
-        RuntimeError::AuthorizationError(_, _) => {}
-        _ => {
-            assert!(false)
-        }
-    }
+    let error: RuntimeError = adding_beneficiary_receipt.result.expect_err("Should have failed");
+    assert_auth_error!(error);
 }
 
 #[test]
@@ -128,7 +140,7 @@ fn add_beneficiary_succeeds_with_admin_badge() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -146,11 +158,11 @@ fn add_beneficiary_succeeds_with_admin_badge() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -158,7 +170,7 @@ fn add_beneficiary_succeeds_with_admin_badge() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -208,7 +220,7 @@ fn terminate_beneficiary_fails_without_admin_badge() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -226,11 +238,11 @@ fn terminate_beneficiary_fails_without_admin_badge() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -238,7 +250,7 @@ fn terminate_beneficiary_fails_without_admin_badge() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -251,19 +263,15 @@ fn terminate_beneficiary_fails_without_admin_badge() {
         .call_method(
             vesting_component,
             "terminate_beneficiary",
-            vec![scrypto_encode(&NonFungibleId::from_u64(1u64))],
+            args![NonFungibleId::from_u64(1u64)],
         )
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
     let terminating_beneficiary_receipt: Receipt = executor.validate_and_execute(&terminating_beneficiary_tx).unwrap();
 
-    match terminating_beneficiary_receipt.result.expect_err("Should have failed") {
-        RuntimeError::AuthorizationError(_, _) => {}
-        _ => {
-            assert!(false)
-        }
-    }
+let error: RuntimeError = terminating_beneficiary_receipt.result.expect_err("Should have failed");
+    assert_auth_error!(error);
 }
 
 #[test]
@@ -305,7 +313,7 @@ fn terminate_beneficiary_succeeds_with_admin_badge() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -323,11 +331,11 @@ fn terminate_beneficiary_succeeds_with_admin_badge() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -335,7 +343,7 @@ fn terminate_beneficiary_succeeds_with_admin_badge() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -349,7 +357,7 @@ fn terminate_beneficiary_succeeds_with_admin_badge() {
         .call_method(
             vesting_component,
             "terminate_beneficiary",
-            vec![scrypto_encode(&NonFungibleId::from_u64(1u64))],
+            args![NonFungibleId::from_u64(1u64)],
         )
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
@@ -398,7 +406,7 @@ fn withdraw_without_beneficiary_badge_fails() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -416,11 +424,11 @@ fn withdraw_without_beneficiary_badge_fails() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -428,7 +436,7 @@ fn withdraw_without_beneficiary_badge_fails() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -444,7 +452,7 @@ fn withdraw_without_beneficiary_badge_fails() {
                 builder.call_method(
                     vesting_component,
                     "withdraw_funds",
-                    vec![scrypto_encode(&scrypto::resource::Proof(proof_id))],
+                    args![scrypto::resource::Proof(proof_id)],
                 )
             })
         })
@@ -495,7 +503,7 @@ fn withdraw_with_valid_beneficiary_badge_succeeds() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -513,11 +521,11 @@ fn withdraw_with_valid_beneficiary_badge_succeeds() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -525,7 +533,7 @@ fn withdraw_with_valid_beneficiary_badge_succeeds() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -541,7 +549,7 @@ fn withdraw_with_valid_beneficiary_badge_succeeds() {
                 builder.call_method(
                     vesting_component,
                     "withdraw_funds",
-                    vec![scrypto_encode(&scrypto::resource::Proof(proof_id))],
+                    args![scrypto::resource::Proof(proof_id)],
                 )
             })
         })
@@ -592,7 +600,7 @@ fn withdraw_with_terminated_beneficiary_badge_fails() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -610,11 +618,11 @@ fn withdraw_with_terminated_beneficiary_badge_fails() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -622,7 +630,7 @@ fn withdraw_with_terminated_beneficiary_badge_fails() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -636,7 +644,7 @@ fn withdraw_with_terminated_beneficiary_badge_fails() {
         .call_method(
             vesting_component,
             "terminate_beneficiary",
-            vec![scrypto_encode(&NonFungibleId::from_u64(1u64))],
+            args![NonFungibleId::from_u64(1u64)],
         )
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
@@ -651,7 +659,7 @@ fn withdraw_with_terminated_beneficiary_badge_fails() {
                 builder.call_method(
                     vesting_component,
                     "withdraw_funds",
-                    vec![scrypto_encode(&scrypto::resource::Proof(proof_id))],
+                    args![scrypto::resource::Proof(proof_id)],
                 )
             })
         })
@@ -702,7 +710,7 @@ fn should_be_empty_withdraw_before_cliff() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -720,11 +728,11 @@ fn should_be_empty_withdraw_before_cliff() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -732,7 +740,7 @@ fn should_be_empty_withdraw_before_cliff() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -751,7 +759,7 @@ fn should_be_empty_withdraw_before_cliff() {
                 builder.call_method(
                     vesting_component,
                     "withdraw_funds",
-                    vec![scrypto_encode(&scrypto::resource::Proof(proof_id))],
+                    args![scrypto::resource::Proof(proof_id)],
                 )
             })
         })
@@ -809,7 +817,7 @@ fn should_withdraw_initial_on_cliff() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -827,11 +835,11 @@ fn should_withdraw_initial_on_cliff() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -839,7 +847,7 @@ fn should_withdraw_initial_on_cliff() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -858,7 +866,7 @@ fn should_withdraw_initial_on_cliff() {
                 builder.call_method(
                     vesting_component,
                     "withdraw_funds",
-                    vec![scrypto_encode(&scrypto::resource::Proof(proof_id))],
+                    args![scrypto::resource::Proof(proof_id)],
                 )
             })
         })
@@ -916,7 +924,7 @@ fn should_withdraw_total_long_after_due() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -934,11 +942,11 @@ fn should_withdraw_total_long_after_due() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -946,7 +954,7 @@ fn should_withdraw_total_long_after_due() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -965,7 +973,7 @@ fn should_withdraw_total_long_after_due() {
                 builder.call_method(
                     vesting_component,
                     "withdraw_funds",
-                    vec![scrypto_encode(&scrypto::resource::Proof(proof_id))],
+                    args![scrypto::resource::Proof(proof_id)],
                 )
             })
         })
@@ -1023,7 +1031,7 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -1041,11 +1049,11 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -1053,7 +1061,7 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -1064,7 +1072,7 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
     // Giving up the termination rights
     let disable_termination_tx: SignedTransaction = TransactionBuilder::new()
         .create_proof_from_account(admin_badge, admin_address)
-        .call_method(vesting_component, "disable_termination", vec![])
+        .call_method(vesting_component, "disable_termination", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -1076,7 +1084,7 @@ fn terminating_beneficiary_after_giving_up_rights_fails() {
         .call_method(
             vesting_component,
             "terminate_beneficiary",
-            vec![scrypto_encode(&NonFungibleId::from_u64(1u64))],
+            args![NonFungibleId::from_u64(1u64)],
         )
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
@@ -1125,7 +1133,7 @@ fn non_admin_cant_disable_termination() {
     let percentage_available_on_cliff: Decimal = dec!("0.2");
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
@@ -1143,11 +1151,11 @@ fn non_admin_cant_disable_termination() {
             builder.call_method(
                 vesting_component,
                 "add_beneficiary",
-                vec![
-                    scrypto_encode(&scrypto::resource::Bucket(bucket_id)),
-                    scrypto_encode(&relative_cliff_epoch),
-                    scrypto_encode(&relative_ending_epoch),
-                    scrypto_encode(&percentage_available_on_cliff),
+                args![
+                    scrypto::resource::Bucket(bucket_id),
+                    relative_cliff_epoch,
+                    relative_ending_epoch,
+                    percentage_available_on_cliff
                 ],
             )
         })
@@ -1155,7 +1163,7 @@ fn non_admin_cant_disable_termination() {
             builder.call_method(
                 beneficiary_address,
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_address, "deposit_batch")
@@ -1165,18 +1173,14 @@ fn non_admin_cant_disable_termination() {
 
     // Giving up the termination rights
     let disable_termination_tx: SignedTransaction = TransactionBuilder::new()
-        .call_method(vesting_component, "disable_termination", vec![])
+        .call_method(vesting_component, "disable_termination", args![])
         .call_method_with_all_resources(admin_address, "deposit_batch")
         .build(executor.get_nonce([admin_public_key]))
         .sign([&admin_private_key]);
     let disable_termination_receipt: Receipt = executor.validate_and_execute(&disable_termination_tx).unwrap();
 
-    match disable_termination_receipt.result.expect_err("Should have failed") {
-        RuntimeError::AuthorizationError(_, _) => {}
-        _ => {
-            assert!(false)
-        }
-    }
+let error: RuntimeError = disable_termination_receipt.result.expect_err("Should have failed");
+    assert_auth_error!(error);
 }
 
 #[test]
@@ -1212,7 +1216,7 @@ fn not_enough_admins_cant_disable_termination() {
     let _token_creation_receipt: Receipt = executor.validate_and_execute(&token_creation_tx).unwrap();
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_addresses[0], "deposit_batch")
         .build(executor.get_nonce([admin_public_keys[0]]))
         .sign([&admin_private_keys[0]]);
@@ -1224,68 +1228,68 @@ fn not_enough_admins_cant_disable_termination() {
     // Creating 9 additional admin badges for the 9 additional admins in this vesting component
     let additional_admins_tx: SignedTransaction = TransactionBuilder::new()
         .create_proof_from_account(admin_badge, admin_addresses[0])
-        .call_method(vesting_component, "add_admin", vec![scrypto_encode(&dec!("9"))])
+        .call_method(vesting_component, "add_admin", args![dec!("9")])
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[1],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[2],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[3],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[4],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[5],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[6],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[7],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[8],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[9],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_addresses[0], "deposit_batch")
@@ -1299,7 +1303,7 @@ fn not_enough_admins_cant_disable_termination() {
         .create_proof_from_account(admin_badge, admin_addresses[1])
         .create_proof_from_account(admin_badge, admin_addresses[2])
         .create_proof_from_account(admin_badge, admin_addresses[3])
-        .call_method(vesting_component, "disable_termination", vec![])
+        .call_method(vesting_component, "disable_termination", args![])
         .build(executor.get_nonce([
             admin_public_keys[0],
             admin_public_keys[1],
@@ -1310,15 +1314,8 @@ fn not_enough_admins_cant_disable_termination() {
     let disable_termination_receipt: Receipt =
         executor.validate_and_execute(&disable_termination_tx).unwrap();
 
-    match disable_termination_receipt
-        .result
-        .expect_err("Should have failed")
-    {
-        RuntimeError::AuthorizationError(_, _) => {}
-        _ => {
-            assert!(false)
-        }
-    }
+    let error: RuntimeError = disable_termination_receipt.result.expect_err("Should have failed");
+    assert_auth_error!(error);
 }
 
 #[test]
@@ -1354,7 +1351,7 @@ fn enough_admins_can_disable_termination() {
     let _token_creation_receipt: Receipt = executor.validate_and_execute(&token_creation_tx).unwrap();
 
     let component_creation_tx: SignedTransaction = TransactionBuilder::new()
-        .call_function(package, "Vesting", "instantiate_vesting", vec![])
+        .call_function(package, "Vesting", "instantiate_vesting", args![])
         .call_method_with_all_resources(admin_addresses[0], "deposit_batch")
         .build(executor.get_nonce([admin_public_keys[0]]))
         .sign([&admin_private_keys[0]]);
@@ -1366,68 +1363,68 @@ fn enough_admins_can_disable_termination() {
     // Creating 9 additional admin badges for the 9 additional admins in this vesting component
     let additional_admins_tx: SignedTransaction = TransactionBuilder::new()
         .create_proof_from_account(admin_badge, admin_addresses[0])
-        .call_method(vesting_component, "add_admin", vec![scrypto_encode(&dec!("9"))])
+        .call_method(vesting_component, "add_admin", args![dec!("9")])
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[1],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[2],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[3],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[4],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[5],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[6],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[7],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[8],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .take_from_worktop_by_amount(dec!("1"), admin_badge, |builder, bucket_id| {
             builder.call_method(
                 admin_addresses[9],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .call_method_with_all_resources(admin_addresses[0], "deposit_batch")
@@ -1448,11 +1445,11 @@ fn enough_admins_can_disable_termination() {
             builder.call_method(
                 admin_addresses[0],
                 "deposit",
-                vec![scrypto_encode(&scrypto::resource::Bucket(bucket_id))],
+                args![scrypto::resource::Bucket(bucket_id)],
             )
         })
         .create_proof_from_account(admin_badge, admin_addresses[0])
-        .call_method(vesting_component, "disable_termination", vec![])
+        .call_method(vesting_component, "disable_termination", args![])
         .clear_auth_zone()
         .build(executor.get_nonce([
             admin_public_keys[0],
