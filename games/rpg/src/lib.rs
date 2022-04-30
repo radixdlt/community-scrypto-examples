@@ -44,7 +44,7 @@ blueprint! {
                 .metadata("type", "Substradix character NFT")
                 .mintable(AccessRule::AllowAll, LOCKED)
                 .burnable(AccessRule::AllowAll, LOCKED)
-                .updateable_non_fungible_data(rule!(require(system_badge.resource_address())), LOCKED)
+                .updateable_non_fungible_data(AccessRule::AllowAll, LOCKED)
                 .restrict_deposit(AccessRule::DenyAll, LOCKED)
                 .restrict_withdraw(AccessRule::DenyAll, LOCKED)
                 .no_initial_supply();
