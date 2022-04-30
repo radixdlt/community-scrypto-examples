@@ -112,7 +112,7 @@ blueprint! {
                 speed: speed,
             };
 
-            let new_character = self.system_vault.authorize(|| {
+            let new_character = self.authorize(|| {
                 borrow_resource_manager!(self.character_nft)
                     .mint_non_fungible(&NonFungibleId::from_u64(self.character_number), character_data)
             });
