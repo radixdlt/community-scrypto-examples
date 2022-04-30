@@ -158,6 +158,8 @@ blueprint! {
   
                 if enemy_health <=1 {
                     println!("Victory!");
+                    nft_data.exp += 15;
+                    continue;
                     
 
                 }
