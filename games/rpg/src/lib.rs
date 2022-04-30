@@ -136,5 +136,17 @@ blueprint! {
             nft_character
 
         }
+
+        pub fun level_1(&mut self) -> Bucket {
+            let seed = Runtime::generate_uuid();
+
+            let health: u32 = nft_data.health;
+            let attack: u32 = nft_data.attack;
+            let magic: u32 = nft_data.magic;
+            let defense: u32 = nft_data.defense;
+            let speed: u32 = nft_data.speed;
+
+        }
+
     }
 }
