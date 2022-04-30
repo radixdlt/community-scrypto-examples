@@ -24,7 +24,7 @@ blueprint! {
     }
 
     impl Substradix {
-        pub fn new(&mut self, game_price: Decimal) -> ComponentAddress {
+        pub fn new(game_price: Decimal) -> ComponentAddress {
             // Creates system badge for minting + verifying level outcomes.
             let system_badge = ResourceBuilder::new_fungible()
                 .metadata("name", "system")
