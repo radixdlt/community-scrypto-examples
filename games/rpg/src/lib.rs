@@ -148,8 +148,9 @@ blueprint! {
             let enemy_data = bruh;
     
             loop {
-                let health = health - enemy_attack;
-                let enemy_health = enemy_health - attack;
+                let health = health - ((enemy_attack - defense) *  );
+                let enemy_health = enemy_health - ((attack - enemy_defense) *  );
+
                 if health <=1 {
                     println!("You Died");
                     break;
