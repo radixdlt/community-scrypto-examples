@@ -42,7 +42,8 @@ blueprint! {
             // NFT for character data
             let character_nft = ResourceBuilder::new_non_fungible()
                 .metadata("type", "Substradix character NFT")
-                .mintable(rule!(require(system_badge.resource_address())), LOCKED)
+                .mintable(AccessRule::AllowAll, LOCKED)
+                .burnable(AccessRule::AllowAll, LOCKED)
                 .updateable_non_fungible_data(rule!(require(system_badge.resource_address())), LOCKED)
                 .restrict_deposit(AccessRule::DenyAll, LOCKED)
                 .restrict_withdraw(AccessRule::DenyAll, LOCKED)
