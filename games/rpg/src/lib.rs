@@ -145,6 +145,12 @@ blueprint! {
             let magic: u32 = nft_data.magic;
             let defense: u32 = nft_data.defense;
             let speed: u32 = nft_data.speed;
+            let enemy_data = bruh;
+    
+            loop {
+                let health = health - enemy_attack;
+                let enemy_health = enemy_health - attack;
+            }
 
         }
 
