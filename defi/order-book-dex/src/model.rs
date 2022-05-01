@@ -23,7 +23,7 @@ impl Side {
 #[derive(sbor::TypeId, sbor::Encode, sbor::Decode, sbor::Describe, NonFungibleData)]
 pub(crate) struct LimitOrder {
     /// A key that uniquely identifies the order
-    pub order_key: NonFungibleKey,
+    pub order_key: NonFungibleId,
 
     /// The side of the order
     pub side: Side,
@@ -48,7 +48,7 @@ impl LimitOrder {
     /// Creates a new limit order
     /// Panics if price or quantity are <= 0
     pub fn new(
-        order_key: NonFungibleKey,
+        order_key: NonFungibleId,
         side: Side,
         price: Decimal,
         quantity: Decimal,
@@ -96,7 +96,7 @@ struct OrderBookSide {
 
     /// The orders on this side of the order book
     /// Keys represent the price level while values are vectors holding the keys of all orders that live on this price level.
-    orders: BTreeMap<Decimal, Vec<NonFungibleKey>>,
+    orders: BTreeMap<Decimal, Vec<NonFungibleId>>,
 }
 
 impl OrderBookSide {
@@ -109,7 +109,7 @@ impl OrderBookSide {
 
     /// Retrieves the best price level that exists on this side of the order book. If no orders exist, None is returned.
     /// The returned tuple contains 1) the price level and 2) all orders at this price level.
-    fn get_best_price_level(&self) -> Option<(&Decimal, &Vec<NonFungibleKey>)> {
+    fn get_best_price_level(&self) -> Option<(&Decimal, &Vec<NonFungibleId>)> {
         // Implementation is likely inefficient and should be replaced with a better solution before production.
         // Once https://github.com/rust-lang/rust/issues/62924 is resolved, switch to the appropriate methods.
         match self.side {
@@ -119,7 +119,7 @@ impl OrderBookSide {
     }
 
     /// Returns the key of the best order that exists on this side of the order book. Returns None if no order exists.
-    fn get_best_order(&self) -> Option<&NonFungibleKey> {
+    fn get_best_order(&self) -> Option<&NonFungibleId> {
         let (_, best_orders) = self.get_best_price_level()?;
         best_orders.first()
     }
@@ -172,7 +172,7 @@ impl OrderBook {
 
     /// Returns the key of the best order in the order book for the given side. Returns None if no orders exists
     /// on that side of the order book.
-    pub fn get_best_order(&self, side: Side) -> Option<&NonFungibleKey> {
+    pub fn get_best_order(&self, side: Side) -> Option<&NonFungibleId> {
         let side = match side {
             Side::Ask => &self.asks,
             Side::Bid => &self.bids,
@@ -221,7 +221,7 @@ mod test {
     #[should_panic(expected = "Parameter price must be > zero")]
     fn test_limit_order_constructor_panics_on_zero_price() {
         LimitOrder::new(
-            NonFungibleKey::from_str("1234").unwrap(),
+            NonFungibleId::from_str("1234").unwrap(),
             Side::Ask,
             0.into(),
             1.into(),
@@ -232,7 +232,7 @@ mod test {
     #[should_panic(expected = "Parameter price must be > zero")]
     fn test_limit_order_constructor_panics_on_negative_price() {
         LimitOrder::new(
-            NonFungibleKey::from_str("1234").unwrap(),
+            NonFungibleId::from_str("1234").unwrap(),
             Side::Ask,
             (-1).into(),
             1.into(),
@@ -243,7 +243,7 @@ mod test {
     #[should_panic(expected = "Parameter quantity must be > zero")]
     fn test_limit_order_constructor_panics_on_zero_quantity() {
         LimitOrder::new(
-            NonFungibleKey::from_str("1234").unwrap(),
+            NonFungibleId::from_str("1234").unwrap(),
             Side::Ask,
             1.into(),
             0.into(),
@@ -254,7 +254,7 @@ mod test {
     #[should_panic(expected = "Parameter quantity must be > zero")]
     fn test_limit_order_constructor_panics_on_negative_quantity() {
         LimitOrder::new(
-            NonFungibleKey::from_str("1234").unwrap(),
+            NonFungibleId::from_str("1234").unwrap(),
             Side::Ask,
             1.into(),
             (-1).into(),

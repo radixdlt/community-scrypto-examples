@@ -8,7 +8,7 @@ use scrypto::prelude::*;
 blueprint! {
     struct Caller {
         // Address of the flashloan component
-        loaner_component: Address,
+        loaner_component: ComponentAddress,
         // Used to store payment for the opportunity
         hidden_vault: Vault,
         // Used to represent tokens that can be accessed if the user gets the loan
@@ -16,9 +16,9 @@ blueprint! {
     }
 
     impl Caller {
-        pub fn new(loaner_component_address: Address, opportunity: Bucket) -> Component {
-            assert!(opportunity.amount() > 1000.into(), "The amount of the opportunity must be bigger than 1000");
-            assert!(opportunity.resource_address() == RADIX_TOKEN, "The tokens for the opportunity must be XRD");
+        pub fn new(loaner_component_address: ComponentAddress, opportunity: Bucket) -> ComponentAddress {
+            assert!(opportunity.amount() > dec!("1000"), "The amount of the opportunity must be bigger than 1000");
+            assert_eq!(opportunity.resource_address(), RADIX_TOKEN, "The tokens for the opportunity must be XRD");
 
             Self {
                 loaner_component: loaner_component_address,
@@ -26,18 +26,18 @@ blueprint! {
                 opportunity: Vault::with_bucket(opportunity)
             }
             .instantiate()
+            .globalize()
         }
 
-        pub fn call(&self, this_component_address: Address) -> Bucket {
+        pub fn call(&self, this_component_address: ComponentAddress) -> Bucket {
             // Get a loan of 1000 XRD
             let amount:Decimal = dec!("1000");
-            let args = vec![
-                scrypto_encode(&amount),
-                scrypto_encode(&this_component_address)
-            ];
 
             // Call request loan and return the change back to the user
-            Component::from(self.loaner_component).call::<Bucket>("request_loan", args).into()
+            borrow_component!(self.loaner_component).call::<Bucket>("request_loan", args![
+                amount, 
+                this_component_address
+            ]).into()
         }
 
         // Used to simulate an opportunity to make some XRD by paying 1000 XRD

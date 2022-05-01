@@ -4,11 +4,11 @@ version = "0.3.0"
 edition = "2021"
 
 [dependencies]
-sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
+sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
+scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
 
 [dev-dependencies]
-radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
+radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.0" }
 scrypto-unit = { git = "https://github.com/backyard-coder/scrypto-unit.git", rev = "590cac0c9d0dc06c77be9976e3baca4e05d98f3f" }
 
 [profile.release]
@@ -16,6 +16,7 @@ opt-level = 's'     # Optimize for size.
 lto = true          # Enable Link Time Optimization.
 codegen-units = 1   # Reduce number of codegen units to increase optimizations.
 panic = 'abort'     # Abort on panic.
+strip = 'debuginfo'
 
 [lib]
 crate-type = ["cdylib", "lib"]

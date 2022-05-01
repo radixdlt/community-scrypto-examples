@@ -1,0 +1,7 @@
+# Put the admin badge on the auth zone
+CALL_METHOD ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "create_proof" ResourceAddress("038862c2e4a06ac66bf7228f6664be953bd6786acea7e95503bf53");
+
+# Withdraw the payments
+CALL_METHOD ComponentAddress("02f302b380934b2291c58a42e87fc8f82481bdde062f86cb411fed") "withdraw_payments";
+
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "deposit_batch";

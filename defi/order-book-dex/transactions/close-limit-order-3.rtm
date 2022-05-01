@@ -1,5 +1,7 @@
-CLONE_BUCKET_REF BucketRef(1u32) BucketRef("badge1");
-CALL_METHOD Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") "withdraw_non_fungibles" TreeSet<NonFungibleKey>(NonFungibleKey("065e65613d8cd6adfe0e342a72356ce7")) Address("0399831190d6da2f44d863596f4fbd8daacb9715575bb640259d8c") BucketRef("badge1");
-TAKE_NON_FUNGIBLES_FROM_WORKTOP TreeSet<NonFungibleKey>(NonFungibleKey("065e65613d8cd6adfe0e342a72356ce7")) Address("0399831190d6da2f44d863596f4fbd8daacb9715575bb640259d8c") Bucket("bucket1");
-CALL_METHOD Address("02b81699c913b9b5fb1887b498bca59e964f9f38c916faa585da32") "close_limit_order" Bucket("bucket1");
-CALL_METHOD_WITH_ALL_RESOURCES Address("0236ca00316c8eb5ad51b0cb5e3f232cb871803a85ec3847b36bb4") "deposit_batch";
+CALL_METHOD ComponentAddress("02e0905317d684478c275540e2ed7170f217e0c557805f7fd2a0d3") "withdraw_by_ids" TreeSet<NonFungibleId>(NonFungibleId("191ce90531e2e59a2790c00930a3f501")) ResourceAddress("03a4a76be1dc1d3fc343c82d082eb8de0fb45821b807cbbeab1922");
+
+TAKE_FROM_WORKTOP_BY_IDS TreeSet<NonFungibleId>(NonFungibleId("191ce90531e2e59a2790c00930a3f501")) ResourceAddress("03a4a76be1dc1d3fc343c82d082eb8de0fb45821b807cbbeab1922") Bucket("bucket1");
+
+CALL_METHOD ComponentAddress("02b9af5270cc62a2c357ec93bbc231aa910443ac04d05ad16f942a") "close_limit_order" Bucket("bucket1");
+
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("02e0905317d684478c275540e2ed7170f217e0c557805f7fd2a0d3") "deposit_batch";

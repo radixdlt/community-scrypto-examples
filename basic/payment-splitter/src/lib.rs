@@ -82,7 +82,7 @@ blueprint! {
 
             // Creating the admin badge which will allow for adding shareholders and locking of the payment splitter
             let admin_badge: Bucket = ResourceBuilder::new_fungible()
-                .divisibility(1)
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Admin Badge")
                 .metadata("description", "This is a PaymentSplitter admin badge used to authenticate the admin.")
                 .initial_supply(dec!("1"));
@@ -140,7 +140,7 @@ blueprint! {
             
             // Creating the internal admin badge which we will use for the minting and burning of the shareholder tokens
             let internal_admin_badge: Bucket = ResourceBuilder::new_fungible()
-                .divisibility(1)
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Internal Admin Badge")
                 .metadata("description", "An internal admin badge used for internal functionality of the PaymentSplitter.")
                 .initial_supply(dec!("1"));

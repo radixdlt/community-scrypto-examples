@@ -105,7 +105,7 @@ export BENEFICIARY_ADDRESS=$(echo "$OP2" | sed -nr "s/Account component address:
 
 With two accounts now created, we now need to ensure that the first account is being used as the default account as this is the account which we will be using to publish the package and eventually create the `Vesting` component.
 ```sh
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 ```
 
 The token which we will be using for the vesting examples is an example token we're calling USDT. To create the token and deposit it back into the admin's account, run the following command:
@@ -151,7 +151,7 @@ resim run "./transactions/add_beneficiary.rtm"
 
 Since the cliff epoch has been set to be 20 epochs in the future let's test out the component by going 10 epochs into the future and seeing if the component would return any tokens or not when the beneficiary attempts to withdraw. The expected behavior is that an empty bucket should be returned as the cliff epoch as not yet passed. The file [`withdraw_funds.rtm`](./transactions/withdraw_funds.rtm) contains the instructions needed to withdraw funds from the beneficiary's account.
 ```sh
-$ resim set-default-account $BENEFICIARY_ADDRESS $BENEFICIARY_PUB_KEY $BENEFICIARY_PRIV_KEY
+$ resim set-default-account $BENEFICIARY_ADDRESS $BENEFICIARY_PRIV_KEY
 $ resim set-current-epoch 10
 $ resim run "./transactions/withdraw_funds.rtm"
 Logs: 1
@@ -171,9 +171,9 @@ New Entities: 0
 That's the amount that we were expecting! We can now try to terminate the beneficiary's account to see how the component behaves when that happens. The [`terminate_beneficiary.rtm`](./transactions/terminate_beneficiary.rtm) file contains the instructions required to terminate the beneficiary.
 
 ```sh
-$ resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+$ resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 $ resim run "$SCRIPT_DIR/transactions/terminate_beneficiary.rtm"
-$ resim set-default-account $BENEFICIARY_ADDRESS $BENEFICIARY_PUB_KEY $BENEFICIARY_PRIV_KEY
+$ resim set-default-account $BENEFICIARY_ADDRESS $BENEFICIARY_PRIV_KEY
 $ resim run "./transactions/withdraw_funds.rtm"
 Logs: 1
 └─ [ERROR] Panicked at '[Withdraw Funds]: Vesting has been terminated. Contact your admin for more information.', src/vesting.rs:267:13

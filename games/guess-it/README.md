@@ -1,5 +1,8 @@
 # Guess It: A dice roll game 
 
+| **Note** | This example does not use the Public Tets Envirnoment and the official tools for its frontend. Instead, other tools are used to achieve similar functionality.    |
+| -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+
 ### Objective: Guess the closest number from a dice roll
 Two players will enter a game and a dice is rolled. The player with the closest guess to the actual dice roll is the winner!
 

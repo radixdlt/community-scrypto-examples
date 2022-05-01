@@ -78,7 +78,7 @@ blueprint! {
             // Creating the internal admin badge which we will give authority to mint and burn the admin and beneficiary
             // badges.
             let internal_admin_badge: Bucket = ResourceBuilder::new_fungible()
-                .divisibility(1)
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Vesting Internal Admin Badge")
                 .metadata(
                     "description",
@@ -89,7 +89,7 @@ blueprint! {
             // Creating the admin badge and setting its auth. The admin badge may be burned by the internal admin badge
             // in the caste of the admin giving up their termination rights
             let admin_badge: Bucket = ResourceBuilder::new_fungible()
-                .divisibility(1)
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Vesting Admin Badge")
                 .metadata(
                     "description",

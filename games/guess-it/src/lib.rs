@@ -6,7 +6,6 @@ use sbor::{Encode,Decode,TypeId, Describe};
 use serde::{Serialize, Deserialize};
 use unescape::unescape;
 use std::cmp;
-mod context;
 
 #[derive(Debug, Copy, Clone, TypeId, Encode, Decode, Describe, PartialEq, Eq, Deserialize, Serialize)]
 #[repr(u32)]
@@ -61,13 +60,13 @@ impl fmt::Display for State {
     }
 }
 
-#[derive(TypeId, Decode, Encode)]
+#[derive(TypeId, Decode, Encode, Describe)]
 pub struct Game {
     name: String,
     state: State,
     bet: i128,
-    players: HashMap<NonFungibleKey, Player>,
-    winner: NonFungibleKey,
+    players: HashMap<NonFungibleId, Player>,
+    winner: NonFungibleId,
     last_roll: u128,
 }
 impl fmt::Debug for Game {
@@ -77,33 +76,34 @@ impl fmt::Debug for Game {
     }
 }
 impl Game {
-    pub fn new(players: Option<HashMap<NonFungibleKey, Player>>, name: String, bet: u128) -> Self {
+    pub fn new(players: Option<HashMap<NonFungibleId, Player>>, name: String, bet: u128) -> Self {
         Self {
             name,
             state: State::AcceptingChallenger,
             bet: bet as i128,
             players: players.unwrap_or(HashMap::new()),
-            winner: NonFungibleKey::from(0),
+            winner: NonFungibleId::from_u64(0),
             last_roll: 0u128,
         }
     }
 
+    // This is a pseudorandom function and not a true random number function.
     pub fn get_random(&self) -> u128 {
         let multiplier = self.players.clone().into_iter()
             .map(|(_,p)| p.guess)
             .reduce(|a,b| a * b).unwrap_or(1);
 
-        Uuid::generate() / multiplier
+        Runtime::generate_uuid() / multiplier
     }
 
-    pub fn get_winner(&self, random_number: u128) -> NonFungibleKey {
-        let player_ids: Vec<NonFungibleKey> = self.players.clone().into_iter().map(|(k,_)| k).collect();
+    pub fn get_winner(&self, random_number: u128) -> NonFungibleId {
+        let player_ids: Vec<NonFungibleId> = self.players.clone().into_iter().map(|(k,_)| k).collect();
         let p1 = random_number - self.players.get(&player_ids[0]).unwrap_or(&Player::empty()).guess;
         let p2 = random_number - self.players.get(&player_ids[1]).unwrap_or(&Player::empty()).guess;
         let closest_guess = cmp::min(p1, p2);
 
         // Deal with a tie
-        if p1 == p2 { return NonFungibleKey::from(0); }
+        if p1 == p2 { return NonFungibleId::from_u64(0); }
         let winner = if p1 == closest_guess { &player_ids[0] } else { &player_ids[1] };
 
         return winner.to_owned();
@@ -139,7 +139,7 @@ impl Game {
         match self.state {
             State::AcceptingChallenger => if self.players.len() == 2 { self.state = State::MakeGuess; },
             State::MakeGuess => if self.has_guessed() { self.state = State::WinnerSelection; self.check_winner(); },
-            State::WinnerSelection => if self.winner != NonFungibleKey::from(0) { self.state = State::Payout; },
+            State::WinnerSelection => if self.winner != NonFungibleId::from_u64(0) { self.state = State::Payout; },
             State::Payout => { self.state = State::Destroyed; }
             _ => ()
         }
@@ -186,7 +186,7 @@ impl GameSerialized {
             state: State::AcceptingChallenger,
             bet: 0i128,
             players: players.unwrap_or(HashMap::new()),
-            winner: NonFungibleKey::from(0).to_string(),
+            winner: NonFungibleId::from_u64(0).to_string(),
             last_roll: 0u128,
         }
     }
@@ -216,33 +216,35 @@ blueprint! {
     struct GuessIt {
         bank: Vault,
         badges: Vault,
-        badge_ref: ResourceDef,
+        badge_address: ResourceAddress,
         game: Game,
     }
 
     impl GuessIt {
-        pub fn create(name: String, bet: u128) -> Component {
+        pub fn create(name: String, bet: u128) -> ComponentAddress {
             let player_badges: Bucket = ResourceBuilder::new_non_fungible()
                 .metadata("name", "Guess-It Game")
                 .metadata("symbol", "GIG")
-                .initial_supply_non_fungible([
+                .initial_supply([
                     (
-                        NonFungibleKey::from(Uuid::generate()),
+                        NonFungibleId::random(),
                         PlayerNft {name: "Player 1".to_string()},
                     ),
                     (
-                        NonFungibleKey::from(Uuid::generate()),
+                        NonFungibleId::random(),
                         PlayerNft {name: "Player 2".to_string()},
                     ),
                 ]);
-            let player_badge_def = player_badges.resource_def();
+            let player_badge_address = player_badges.resource_address();
 
             Self {
                 bank: Vault::new(RADIX_TOKEN),
                 badges: Vault::with_bucket(player_badges),
-                badge_ref: player_badge_def,
+                badge_address: player_badge_address,
                 game: Game::new(None, name, bet),
-            }.instantiate()
+            }
+            .instantiate()
+            .globalize()
         }
 
         pub fn join(&mut self, mut payment: Bucket) -> (Bucket, Bucket, String) {
@@ -251,7 +253,7 @@ blueprint! {
 
             let player: Player = Player::empty();
             let badge: Bucket = self.badges.take(Decimal::one());
-            let nft_id: NonFungibleKey = badge.get_non_fungible_key();
+            let nft_id: NonFungibleId = badge.non_fungible::<PlayerNft>().id();
             // Secure the funds
             self.bank.put(payment.take(Decimal::from(self.game.bet)));
             // Add the player's details
@@ -265,12 +267,14 @@ blueprint! {
             Game::serialize(&self.game)
         }
 
-        #[auth(badge_ref)]
-        pub fn make_guess(&mut self, guess: u128) -> String {
+        pub fn make_guess(&mut self, guess: u128, auth: Proof) -> String {
+            assert_eq!(auth.resource_address(), self.badge_address, "Invalid badge provided");
+            assert_eq!(auth.amount(), dec!("1"), "Invalid badge amount provided");
+
             assert_eq!(self.game.state, State::MakeGuess, "Not ready to make a guess!");
             assert!(guess <= 6 && guess >= 1, "You can only guess 1-6!");
 
-            let key = auth.get_non_fungible_key();
+            let key = auth.non_fungible::<PlayerNft>().id();
             let player = self.game.players.get_mut(&key).unwrap();
             player.guess = guess;
 
@@ -278,11 +282,12 @@ blueprint! {
             format!("Your guess '{}' was accepted", guess)
         }
 
-        #[auth(badge_ref)]
-        pub fn withdraw_funds(&mut self) -> (Bucket, String) {
+        pub fn withdraw_funds(&mut self, auth: Proof) -> (Bucket, String) {
+            assert_eq!(auth.resource_address(), self.badge_address, "Invalid badge provided");
+            assert_eq!(auth.amount(), dec!("1"), "Invalid badge amount provided");
             assert_eq!(self.game.state, State::Payout, "It's not time to get paid!");
 
-            let nft_id: NonFungibleKey = auth.get_non_fungible_key();
+            let nft_id: NonFungibleId = auth.non_fungible::<PlayerNft>().id();
             assert!(nft_id == self.game.winner, "You cannot withdraw funds!");
 
             let amt = self.bank.amount();
@@ -290,10 +295,6 @@ blueprint! {
 
             self.game.update_state();
             (payout, format!("You withdrew {:?} XRD!", amt))
-        }
-
-        pub fn get_context(&self) -> (Actor, Address, H256, u64, u128) {
-            context::ContextTest::query()
         }
     }
 }

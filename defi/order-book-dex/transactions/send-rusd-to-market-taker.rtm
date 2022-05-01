@@ -1,0 +1,2 @@
+CALL_METHOD ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "withdraw" ResourceAddress("0346c82723645afa14855dba6592974ca2ec943c0cb965cb5f43ad");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("02b61acea4378e307342b2b684fc35acf0238a4accb9f91e8a4364") "deposit_batch";

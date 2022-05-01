@@ -27,7 +27,7 @@ export SHAREHOLDER3_PUB_KEY=$(echo "$OP4" | sed -nr "s/Public key: ([[:alnum:]_]
 export SHAREHOLDER3_ADDRESS=$(echo "$OP4" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
 
 # Setting the first account as the default account
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 
 # Publishing the package
 PK_OP=$(resim publish ".")

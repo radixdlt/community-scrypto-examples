@@ -23,7 +23,7 @@ echo "[•] Beneficiary Public Key: $BENEFICIARY_PUB_KEY"
 echo "[•] Beneficiary Address: $BENEFICIARY_ADDRESS"
 
 # Create a new vesting component through the admin account
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 
 # Creating a new token to use for the vesting contract
 TK_OP=$(resim run $SCRIPT_DIR/transactions/token_creation.rtm)
@@ -46,7 +46,7 @@ resim run "$SCRIPT_DIR/transactions/add_beneficiary.rtm"
 # Checking if the beneficiary can withdraw any funds before the cliff epoch
 echo "[•] Setting the current epoch to 10."
 resim set-current-epoch 10
-resim set-default-account $BENEFICIARY_ADDRESS $BENEFICIARY_PUB_KEY $BENEFICIARY_PRIV_KEY
+resim set-default-account $BENEFICIARY_ADDRESS $BENEFICIARY_PRIV_KEY
 resim run "$SCRIPT_DIR/transactions/withdraw_funds.rtm"
 
 # Checking if the beneficiary can withdraw the correct amount of tokens on cliff
@@ -63,7 +63,7 @@ resim run "$SCRIPT_DIR/transactions/withdraw_funds.rtm"
 resim run "$SCRIPT_DIR/transactions/withdraw_funds.rtm # Returned balance should be zero because we have withdrawn all."
 
 # Terminating the beneficiary's vesting schedule
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 resim run "$SCRIPT_DIR/transactions/terminate_beneficiary.rtm"
 
 # Giving-up admin rights to vesting termination

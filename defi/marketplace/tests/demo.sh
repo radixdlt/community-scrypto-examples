@@ -29,7 +29,7 @@ function Get-Resource-Amount {
 }
 
 function Get-New-Def {
-  grep 'ResourceDef' | cut -d: -f 2 | xargs
+  grep 'Resource' | cut -d: -f 2 | xargs
 }
 
 function Get-Market-Price {
