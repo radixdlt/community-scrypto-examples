@@ -45,17 +45,17 @@ blueprint! {
                 .metadata("name", "system")
                 .divisibility(DIVISIBILITY_NONE)
                 .initial_supply(200000000);
+            
+            let system_rule: AccessRule = rule!(require(system_badge.resource_address()));
 
             // NFT for character data
             let character_nft = ResourceBuilder::new_non_fungible()
                 .metadata("type", "Substradix character NFT")
-                .mintable(AccessRule::AllowAll, LOCKED)
-                .burnable(AccessRule::AllowAll, LOCKED)
-                .restrict_withdraw(rule!(require(system_badge.resource_address())), LOCKED)
-                .restrict_deposit(rule!(require(system_badge.resource_address())), LOCKED)
-                .updateable_non_fungible_data(AccessRule::AllowAll, LOCKED)
-
-                .restrict_withdraw(AccessRule::DenyAll, LOCKED)
+                .mintable(system_rule.clone(), LOCKED)
+                .burnable(system_rule.clone(), LOCKED)
+                //.restrict_deposit(system_rule.clone(), MUTABLE(system_rule.clone()))
+                .restrict_withdraw(system_rule.clone(), MUTABLE(system_rule.clone()))
+                .updateable_non_fungible_data(system_rule.clone(), MUTABLE(system_rule.clone()))
                 .no_initial_supply();
 
             // Gold for ingame currency
@@ -102,9 +102,9 @@ blueprint! {
         // Creates character
         pub fn create_character_gladiator(&mut self,
             mut payment: Bucket,
-            ) -> (Bucket, Bucket) {
+            ) -> (Bucket, Bucket, ) {
             
-            let mut key_bucket: Bucket = self.system_vault.take(1);
+            let key_bucket: Bucket = self.system_vault.take(1);
 
             let character_data = Account {  
                 class: 1,
@@ -116,15 +116,18 @@ blueprint! {
                 speed: 10,
             };
 
-            let new_character = self.system_vault.authorize(|| 
+            let new_character = self.system_vault.authorize(||
                 borrow_resource_manager!(self.character_nft)
-                    .mint_non_fungible(&NonFungibleId::from_u64(self.character_number), character_data)
-            );
-
+                    .mint_non_fungible(&NonFungibleId::from_u64(self.character_number), character_data));
+            
+            
             self.character_number += 1;
             self.collected_xrd.put(payment.take(self.game_price));
-            self.system_vault.put(key_bucket.take(1));
-            (new_character, payment)
+
+            let whyyy:Bucket = new_character;
+            self.system_vault.put(key_bucket);
+            (whyyy, payment,)
+
         }
 
         // Owner only, collects all XRD from sold Personal Tokens
@@ -151,7 +154,7 @@ blueprint! {
             let mut nft_data: Account = nft_character.non_fungible().data();
             nft_data.exp += exp_gain;
 
-            self.system_vault.authorize(|| nft_character.non_fungible().update_data(nft_data));
+            nft_character.non_fungible().update_data(nft_data);
 
             println!("Your seed is {}", seed);
 
@@ -172,45 +175,15 @@ blueprint! {
             let enemy_magic: u32 = 10;
             let enemy_defense: u32 = 10;
             let enemy_speed: u32 = 10;
-
-            loop {
-                if speed <= enemy_speed {
-                    let enemy_health = enemy_health - ((attack - enemy_defense) * 1);
-                    let health = health - ((enemy_attack - defense) * 1);
-                }
-                else {
-                    let health = health - ((enemy_attack - defense) * 1);
-                    let enemy_health = enemy_health - ((attack - enemy_defense) * 1);
-                }
-
-                if health <= 1 {
-                    println!("You Died");
-                    break;
-
-                }
-        
-                if enemy_health <=1 {
-                    println!("Victory!");
-                    nft_data.exp += 15;
-                    break;
-                }
-            }
-
-                loop {
-                    if speed <= enemy_speed {
-                        let enemy_health = enemy_health - ((attack - enemy_defense) * 1);
-                        let health = health - ((enemy_attack - defense) * 1);
-                    }
-                    else {
-                        let health = health - ((enemy_attack - defense) * 1);
-                        let enemy_health = enemy_health - ((attack - enemy_defense) * 1);
-                    }
-
+            // Fight simulator
+            if speed <= enemy_speed {
+                loop{
+                    let enemy_health = enemy_health - (attack - enemy_defense);
+                    let health = health - (enemy_attack - defense);
                     if health <= 1 {
                         println!("You Died");
-                        break;
+                        return nft_character
                     }
-
                     if enemy_health <=1 {
                         println!("Victory!");
                         nft_data.exp += 15;
@@ -218,28 +191,24 @@ blueprint! {
                     }
                 }
 
-                    loop {
-                        if speed <= enemy_speed {
-                            let enemy_health = enemy_health - ((attack - enemy_defense) * 1);
-                            let health = health - ((enemy_attack - defense) * 1);
-                        }
-                        else {
-                            let health = health - ((enemy_attack - defense) * 1);
-                            let enemy_health = enemy_health - ((attack - enemy_defense) * 1);
-                        }
-        
-                        if health <= 1 {
-                            println!("You Died");
-                            break;
-                        }
-                
-                        if enemy_health <=1 {
-                            println!("Victory!");
-                            nft_data.exp += 15;
-                            break;
-                        }
+            }
+            else {
+                loop{
+                    let health = health - (enemy_attack - defense);
+                    let enemy_health = enemy_health - (attack - enemy_defense);
+                    if health <= 1 {
+                        println!("You Died");
+                        return nft_character
                     }
-        nft_character            
+                    if enemy_health <=1 {
+                        println!("Victory!");
+                        nft_data.exp += 15;
+                        break;
+                    }
+                }
+            }
+
+            nft_character            
         }
     }
 }
