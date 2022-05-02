@@ -178,7 +178,7 @@ blueprint! {
             self.developer_vault.authorize(||self.game_price = new_price);
         }
 
-        pub fn level_1(&mut self, nft_proof: Proof) -> Proof {
+        pub fn level_1(&mut self, nft_proof: Proof) {
             assert!(
                 nft_proof.amount() == dec!("1"),
                 "You can only fight with one character at once!"
@@ -189,7 +189,7 @@ blueprint! {
                 "Wrong resource address!"
             );
 
-            //let key_bucket: Bucket = self.system_vault.take(1);
+            let key_bucket: Bucket = self.system_vault.take(1);
 
             let _seed = Runtime::generate_uuid();
             let mut nft_data: Account = nft_proof.non_fungible().data();
@@ -205,51 +205,110 @@ blueprint! {
             let mut enemy_speed: i32 = 8;
             // Fight simulator
             // Enemy 1:
-            if enemy_speed < speed {
-                loop {
-                    enemy_health -= attack - enemy_defense;
-                    if enemy_health <=0 {
-                        self.system_vault.authorize(||nft_data.exp += 15);
-                        break
-                    }
-                    health -= enemy_attack - defense;
-                    if health <= 0 {
-                        self.system_vault.authorize(||nft_data.exp += 1);
-                        return nft_proof
-                    }
-                };
-            }
-            else if speed < enemy_speed {
+            if speed < enemy_speed {
                 loop{
                     health -= enemy_attack - defense;
-                    if health <= 1 {
-                        self.system_vault.authorize(||nft_data.exp += 1);
-                        return nft_proof
+                    if health <= 0 {
+                        nft_data.exp += 1;
+                        self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+                        self.system_vault.put(key_bucket);
+                        return
                     }
                     enemy_health -= attack - enemy_defense;
-                    if enemy_health <=1 {
-                        self.system_vault.authorize(||nft_data.exp += 15);
+                    if enemy_health <= 0 {
+                        nft_data.exp += 15;
                         break
         
                     }
                 };
             }
             else {
-                loop{
+                loop {
                     enemy_health -= attack - enemy_defense;
-                    if enemy_health <=1 {
-                        self.system_vault.authorize(||nft_data.exp += 15);
+                    if enemy_health <=0 {
+                        nft_data.exp += 15;
                         break
-        
                     }
                     health -= enemy_attack - defense;
-                    if health <= 1 {
-                        self.system_vault.authorize(||nft_data.exp += 1);
-                        return nft_proof
+                    if health <= 0 {
+                        nft_data.exp += 1;
+                        self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+                        self.system_vault.put(key_bucket);
+                        return
                     }
                 };
             }
-            return nft_proof
+            // Enemy 2:
+            if speed < enemy_speed {
+                loop{
+                    health -= enemy_attack - defense;
+                    if health <= 0 {
+                        nft_data.exp += 1;
+                        self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+                        self.system_vault.put(key_bucket);
+                        return
+                    }
+                    enemy_health -= attack - enemy_defense;
+                    if enemy_health <= 0 {
+                        nft_data.exp += 15;
+                        break
+        
+                    }
+                };
+            }
+            else {
+                loop {
+                    enemy_health -= attack - enemy_defense;
+                    if enemy_health <= 0 {
+                        nft_data.exp += 15;
+                        break
+                    }
+                    health -= enemy_attack - defense;
+                    if health <= 0 {
+                        nft_data.exp += 1;
+                        self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+                        self.system_vault.put(key_bucket);
+                        return
+                    }
+                };
+            }
+            // Enemy 3:
+            if speed < enemy_speed {
+                loop{
+                    health -= enemy_attack - defense;
+                    if health <= 0 {
+                        nft_data.exp += 1;
+                        self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+                        self.system_vault.put(key_bucket);
+                        return
+                    }
+                    enemy_health -= attack - enemy_defense;
+                    if enemy_health <= 0 {
+                        nft_data.exp += 15;
+                        break
+        
+                    }
+                };
+            }
+            else {
+                loop {
+                    enemy_health -= attack - enemy_defense;
+                    if enemy_health <= 0 {
+                        nft_data.exp += 15;
+                        break
+                    }
+                    health -= enemy_attack - defense;
+                    if health <= 0 {
+                        nft_data.exp += 1;
+                        self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+                        self.system_vault.put(key_bucket);
+                        return
+                    }
+                };
+            }
+            self.system_vault.authorize(|| nft_proof.non_fungible().update_data(nft_data));
+            self.system_vault.put(key_bucket);
+            return
         }
     }
 }
