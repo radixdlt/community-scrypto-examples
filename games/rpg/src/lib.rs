@@ -10,7 +10,9 @@ pub struct Account {
     // #5 = Vanguard: High Health, High Defense. Can be built towards risky Counter Identity(attack burst damage) or Suffocation Identity(magic dps damage + max tanky)
     // More Classes can be added later
     #[scrypto(mutable)]
-    class: u8, 
+    class: u8,
+    #[scrypto(mutable)]
+    level: u32, 
     #[scrypto(mutable)]
     exp: u128,
     #[scrypto(mutable)]
