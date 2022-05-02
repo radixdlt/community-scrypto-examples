@@ -124,6 +124,7 @@ blueprint! {
 
             let character_data = Account {  
                 class: 1,
+                level: 1,
                 exp: 0,
                 health: 11,
                 attack: 11,
@@ -150,6 +151,7 @@ blueprint! {
 
             let character_data = Account {  
                 class: 2,
+                level: 1,
                 exp: 0,
                 health: 9,
                 attack: 11,
