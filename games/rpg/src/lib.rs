@@ -1,7 +1,5 @@
 use scrypto::prelude::*;
 
-pub mod combat;
-
 #[derive(NonFungibleData)]
 pub struct Account {
     // Classes are: 
