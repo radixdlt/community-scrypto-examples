@@ -41,7 +41,7 @@ resim show <admin_account_address>
 resim new-account
 ```
 
-6. Note the `<account_address>` and `<account_pubkey>`. Send tokens to the new account (with burn).
+6. Note the `<account_address>` and `<account_privkey>`. Send tokens to the new account (with burn).
 
 ```
 resim call-method <ubi_component> send_tokens <account_address> 10,<ubi_token_address>
@@ -53,7 +53,7 @@ resim show <admin_account_address>
 
 ```
 resim call-method <ubi_component> register <account_address> 1,<admin_badge_address>
-resim set-default-account <account_address> <account_pubkey>
+resim set-default-account <account_address> <account_privkey>
 resim set-current-epoch 20
 resim call-method <ubi_component> collect_ubi 1,<person_badge_address>
 ```

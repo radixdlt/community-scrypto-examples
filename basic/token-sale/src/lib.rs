@@ -4,11 +4,11 @@ use scrypto::prelude::*;
 
 blueprint! {
     struct TokenSale {
-        admin_badge: ResourceDef,
+        admin_badge: ResourceAddress,
         tokens_for_sale: Vault,
         payment_vault: Vault,
         sale_ticket_minter: Vault,
-        sale_tickets: ResourceDef,
+        sale_tickets: ResourceAddress,
         price_per_token: Decimal,
         max_personal_allocation: Decimal,
         sale_started: bool,
@@ -17,30 +17,32 @@ blueprint! {
     impl TokenSale {
         pub fn new(
             tokens_for_sale: Bucket,
-            payment_token: Address,
+            payment_token: ResourceAddress,
             price_per_token: Decimal,
             max_personal_allocation: Decimal,
-        ) -> (Component, Bucket) {
-            let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+        ) -> (ComponentAddress, Bucket) {
+            let admin_badge = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "admin_badge")
-                .initial_supply_fungible(1);
+                .initial_supply(1);
 
-            let sale_ticket_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let sale_ticket_minter = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "sale_ticket_minter")
-                .initial_supply_fungible(1);
+                .initial_supply(1);
 
-            let sale_tickets = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let sale_tickets = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Sale Ticket Token")
                 .metadata("symbol", "STT")
-                .flags(MINTABLE | BURNABLE)
-                .badge(sale_ticket_minter.resource_def(), MAY_MINT | MAY_BURN)
-                .badge(admin_badge.resource_def(), MAY_TRANSFER | MAY_BURN)
+                .mintable(rule!(require(sale_ticket_minter.resource_address())), LOCKED)
+                .burnable(rule!(require(sale_ticket_minter.resource_address())), LOCKED)
                 .no_initial_supply();
 
             let component = Self {
-                admin_badge: admin_badge.resource_def(),
+                admin_badge: admin_badge.resource_address(),
                 tokens_for_sale: Vault::with_bucket(tokens_for_sale),
-                payment_vault: Vault::new(ResourceDef::from(payment_token)),
+                payment_vault: Vault::new(payment_token),
                 sale_ticket_minter: Vault::with_bucket(sale_ticket_minter),
                 sale_tickets,
                 price_per_token,
@@ -49,21 +51,24 @@ blueprint! {
             }
             .instantiate();
 
-            (component, admin_badge)
+            let access_rules = AccessRules::new()
+                .method("create_tickets", rule!(require(admin_badge.resource_address())))
+                .method("start_sale", rule!(require(admin_badge.resource_address())))
+                .method("withdraw_payments", rule!(require(admin_badge.resource_address())))
+                .default(rule!(allow_all));
+
+            (component.add_access_check(access_rules).globalize(), admin_badge)
         }
 
-        #[auth(admin_badge)]
         pub fn create_tickets(&mut self, amount: i32) -> Bucket {
             self.sale_ticket_minter
-                .authorize(|minter| self.sale_tickets.mint(amount, minter))
+                .authorize(|| borrow_resource_manager!(self.sale_tickets).mint(amount))
         }
 
-        #[auth(admin_badge)]
         pub fn start_sale(&mut self) {
             self.sale_started = true
         }
 
-        #[auth(admin_badge)]
         pub fn withdraw_payments(&mut self) -> Bucket {
             self.payment_vault.take_all()
         }
@@ -83,7 +88,7 @@ blueprint! {
                 "You need to send exactly one ticket in order to participate in the sale"
             );
             self.sale_ticket_minter
-                .authorize(|minter| ticket.burn_with_auth(minter));
+                .authorize(|| ticket.burn());
 
             // Calculate the actual amount of tokens that the user can buy
             let payment_amount = min(payment.amount(), self.max_personal_allocation);

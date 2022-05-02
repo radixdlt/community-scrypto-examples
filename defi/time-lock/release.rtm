@@ -1,0 +1,8 @@
+# Create a proof of the tl_minter_badge
+CALL_METHOD ComponentAddress("021025cfda90adea21506170be47c67ec169e41dbbdd063d54d409") "create_proof" ResourceAddress("03ec7f6a58d128fc46c39ad296e819e8897d85e7e17a9e010237c2");
+
+# Call the claim method
+CALL_METHOD ComponentAddress("02fb4110ae27a373c396d5b50ed42d78c22679777880084f1a0f13") "claim";
+
+# Deposit everything back into the account
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("021025cfda90adea21506170be47c67ec169e41dbbdd063d54d409") "deposit_batch";

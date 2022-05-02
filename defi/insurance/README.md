@@ -42,7 +42,7 @@ Unlocked XRD will be added to the org assets for withdrawal or making new polici
 
 ## Burn unsold policies
 The org may need to release locked assets by burning unsold policies
-1. `resim call-method $component burn_policies $acc1`
+1. `resim call-method $component burn_policies $policy1`
 
 ## Org Supporting Methods
 Deposit more XRD to the assets

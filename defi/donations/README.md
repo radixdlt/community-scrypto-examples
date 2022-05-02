@@ -32,5 +32,10 @@
  1. `resim call-method $component donate $acc1 $badge 5,$xrd `
 
  ## Admin Supporting Methods
- Withdraw some free assets 
- 1. `resim call-method $component withdraw 4`
+ The withdraw method is the only method which is currently only allowed for the admin. All of the other methods are allowed for all users. This method requires that an admin badge be present in the auth zone for a call to be successful and to be considered authenticated. You can use the following transaction manifest instructions with the addresses of your components to perform this action.
+
+```sh
+CALL_METHOD ComponentAddress("<Account Address>") "create_proof_by_amount" Decimal("1") ResourceAddress("<Admin Badge Resource Address>");
+CALL_METHOD ComponentAddress("<Component Address>") "withdraw" Decimal("<Amount to Withdraw>");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("<Account Address>") "deposit_batch";
+```

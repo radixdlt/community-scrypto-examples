@@ -4,27 +4,35 @@ blueprint! {
     struct Bank {
         bank_account: Vault,
         cash: Vault,
-        owner_badge: ResourceDef,
+        owner_badge: ResourceAddress,
     }
 
     impl Bank {
-        pub fn start() -> (Component, Bucket) {
-            let mut initial_cash: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+        pub fn instantiate_bank() -> (ComponentAddress, Bucket) {
+            let mut initial_cash: Bucket = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_MAXIMUM)
                 .metadata("description", "USD")
-                .initial_supply_fungible(1000);
+                .initial_supply(1000);
 
-            let owner_badge: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let owner_badge: Bucket = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "owner authorization")
-                .initial_supply_fungible(1);
+                .initial_supply(1);
 
+            // Add an access check for the withdraw
+            let access_check = AccessRules::new()
+                .method("bank_withdraw", rule!(require(owner_badge.resource_address())))
+                .default(rule!(allow_all));
 
             // Fill the bank account and the pocket
             let instantiate_accounts = Self {
                 bank_account: Vault::with_bucket(initial_cash.take(dec!(500))),
                 cash: Vault::with_bucket(initial_cash),
-                owner_badge: owner_badge.resource_def(),
+                owner_badge: owner_badge.resource_address(),
             }
-            .instantiate();
+            .instantiate()
+            .add_access_check(access_check)
+            .globalize();
 
             (instantiate_accounts, owner_badge)
         }
@@ -43,7 +51,6 @@ blueprint! {
         
         }
         
-        #[auth(owner_badge)]
         pub fn bank_withdraw(&mut self, exchange: Decimal) {
             assert!(exchange < self.cash.amount(),
             "You don't have that much of cash. Your current balance is {}", self.cash.amount());

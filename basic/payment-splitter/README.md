@@ -164,7 +164,7 @@ export SHAREHOLDER3_ADDRESS=$(echo "$OP4" | sed -nr "s/Account component address
 Now that we have created four different accounts, let's set the first account to be the default account by running the following command:
 
 ```sh
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 ```
 
 Let's now publish the package to our local radix engine simulator by running the following:
@@ -197,7 +197,7 @@ $ resim run ./transactions/funding_the_splitter.rtm
 We may now switch to account 2 and try to withdraw the funds.
 
 ```sh
-$ resim set-default-account $SHAREHOLDER1_ADDRESS $SHAREHOLDER1_PUB_KEY $SHAREHOLDER1_PRIV_KEY
+$ resim set-default-account $SHAREHOLDER1_ADDRESS $SHAREHOLDER1_PRIV_KEY
 $ resim run ./transactions/withdrawing_owed_amount.rtm 
 ```
 

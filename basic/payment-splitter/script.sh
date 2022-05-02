@@ -31,7 +31,7 @@ export SHAREHOLDER3_ADDRESS=$(echo "$OP4" | sed -nr "s/Account component address
 echo "[•] Created Admin Account: $SHAREHOLDER3_ADDRESS"
 
 # Setting the first account as the default account
-resim set-default-account $ADMIN_ADDRESS $ADMIN_PUB_KEY $ADMIN_PRIV_KEY
+resim set-default-account $ADMIN_ADDRESS $ADMIN_PRIV_KEY
 
 # Publishing the package
 PK_OP=$(resim publish ".")
@@ -48,5 +48,5 @@ resim run "$SCRIPT_DIR/transactions/adding_shareholders.rtm"
 resim run "$SCRIPT_DIR/transactions/funding_the_splittter.rtm"
 
 # Switching to the first shareholder' account and withdrawing the funds.
-resim set-default-account $SHAREHOLDER1_ADDRESS $SHAREHOLDER1_PUB_KEY $SHAREHOLDER1_PRIV_KEY
+resim set-default-account $SHAREHOLDER1_ADDRESS $SHAREHOLDER1_PRIV_KEY
 resim run "$SCRIPT_DIR/transactions/withdrawing_owed_amount.rtm"

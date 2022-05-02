@@ -5,20 +5,22 @@ This example implements a simple digital library of books.
 There are two user types:
 
 ```rust
-let librarian_badge_bucket = ResourceBuilder::new()
-    .metadata("name", "Librarian Badge")
-    .metadata("symbol", "LB")
-    .new_badge_fixed(1);
+let librarian_badge_bucket = ResourceBuilder::new_fungible()
+  .divisibility(DIVISIBILITY_NONE)
+  .metadata("name", "Librarian Badge")
+  .metadata("symbol", "LB")
+  .initial_supply(1);
 ```
 
 - single librarian user
 - can withdraw all funds from the library
 
 ```rust
-let member_badges_bucket = ResourceBuilder::new()
-    .metadata("name", "Library Membership Badge")
-    .metadata("symbol", "LMB")
-    .new_badge_fixed(member_badge_count);
+let member_badges_bucket = ResourceBuilder::new_fungible()
+  .divisibility(DIVISIBILITY_NONE)
+  .metadata("name", "Library Membership Badge")
+  .metadata("symbol", "LMB")
+  .initial_supply(member_badge_count);
 ```
 
 - library member user
@@ -28,7 +30,7 @@ let member_badges_bucket = ResourceBuilder::new()
 ## Resources and Data
 
 ```rust
-#[derive(TypeId, Encode, Decode)]
+#[derive(TypeId, Encode, Decode, Describe)]
 struct Book {
     title: String,
     author: String,
@@ -36,11 +38,11 @@ struct Book {
 ```
 
 ```rust
-#[derive(TypeId, Encode, Decode)]
+#[derive(TypeId, Encode, Decode, Describe)]
 struct BorrowedBook {
     // when the user borrowed the book
     epoch: u64,
-    user_id: Address,
+    user_id: ResourceAddress,
 }
 ```
 

@@ -1,3 +1,6 @@
+# Warning: The code was upgraded to v0.4, but the indications in this file were not
+
+
 -------------------------------------------------------------------------------------------
 # Part 1.Let's test "stock/restock/unstock" candy methods.
 -------------------------------------------------------------------------------------------
@@ -24,9 +27,9 @@ Publish CandyDex Blueprint & Component instantiate
 ---
 >resim call-function $Package CandyDex new 1 
 
-├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
+├─ Resource: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
 
-├─ ResourceDef: 0347dfe3a58e8a630305f2f3df82949cd70ce49e2cde097b259f8d = $OwnerBadge
+├─ Resource: 0347dfe3a58e8a630305f2f3df82949cd70ce49e2cde097b259f8d = $OwnerBadge
 
 └─ Component: 02ac00a15a87df7c43b55e49d5d229bc770136c108586a9d7b38b5   = $CandyDex
 
@@ -46,12 +49,12 @@ Let's create some candy tokens.
 
 >resim new-token-fixed --name "THETAGUM" 100000 --symbol "THG"
 
-└─ ResourceDef: 034c9bafe1e39e4a695e617202eddffb954b6b19c3c21fcd9a7677 = $THG
+└─ Resource: 034c9bafe1e39e4a695e617202eddffb954b6b19c3c21fcd9a7677 = $THG
 
 ---
 >resim new-token-fixed --name "OMICRONGUM" 100000 --symbol "OMG"
 
-└─ ResourceDef: 033f8829bea3d849592fb5dfba1f94d4a95c5683d43f09e78a56d7 = $OMG
+└─ Resource: 033f8829bea3d849592fb5dfba1f94d4a95c5683d43f09e78a56d7 = $OMG
 
 -------------------------------------------------------------------------------------------
 Let's check out our Default-account.
@@ -73,18 +76,18 @@ Let's stock candies, inspect resturned resources and Default-account balances.
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 THETAGUM candy, THG symbol @2XRD price
 
-├─ ResourceDef: 0308c9a9f364730bfe280db8543feb06540aa240a54d4274cd3d73  = $mTHETAGUM
+├─ Resource: 0308c9a9f364730bfe280db8543feb06540aa240a54d4274cd3d73  = $mTHETAGUM
 
-└─ ResourceDef: 03411b8e24f4acfd9b8f35d6089fa892521ddaf86d7a07aa75dbd5  = $mBadgeTHG_0
+└─ Resource: 03411b8e24f4acfd9b8f35d6089fa892521ddaf86d7a07aa75dbd5  = $mBadgeTHG_0
 
 ---
 >resim call-method $CandyDex stock_candy 10000,$OMG 2  
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 OMICRONGUM candy, OMG symbol @2XRD price
 
-├─ ResourceDef: 03f7c9f4e360270a74b3d90207272eda123ae05df1f35aab17d20e  = $mOMICRONGUM
+├─ Resource: 03f7c9f4e360270a74b3d90207272eda123ae05df1f35aab17d20e  = $mOMICRONGUM
 
-└─ ResourceDef: 03634189be8ce5e3a50bcc95ff7291669b8f7666e86008ab827692  = $mBadgeOMG_0
+└─ Resource: 03634189be8ce5e3a50bcc95ff7291669b8f7666e86008ab827692  = $mBadgeOMG_0
 
 ---
 >resim show $Default-account
@@ -124,7 +127,7 @@ Let's try to stock same candies again using "restock_candy" method.
 
 └─ [←[32mINFO ←[0m] ←[32m entry_fee 10.10101010101010101 
 
-└─ ResourceDef: 0395c6abce3ea0ea35e88cc157ef1acf483fb9f3043ee038991734 = $mBadgeTHG_1
+└─ Resource: 0395c6abce3ea0ea35e88cc157ef1acf483fb9f3043ee038991734 = $mBadgeTHG_1
 
 ---
 >resim call-method $CandyDex restock_candy 10000,$OMG 
@@ -133,7 +136,7 @@ Let's try to stock same candies again using "restock_candy" method.
 
 └─ [←[32mINFO ←[0m] ←[32m entry_fee 10.10101010101010101 
 
-└─ ResourceDef: 032a51d207b03508eebfa7a758901e1129cfc6178cb1ca3f009c76 = $mBadgeOMG_1
+└─ Resource: 032a51d207b03508eebfa7a758901e1129cfc6178cb1ca3f009c76 = $mBadgeOMG_1
 
 -------------------------------------------------------------------------------------------
 Let's swap some candies to gain some accrued fee profit.  
@@ -157,7 +160,7 @@ Let's try to stock same candies again using "restock_candy" method.
 
 └─ [←[32mINFO ←[0m] ←[32m entry_fee 20.20202020202020202 
 
-└─ ResourceDef: 036bdf5a7892cb113b83621a2718bb69047490e8a8f6819b28a07d = $mBadgeTHG_2
+└─ Resource: 036bdf5a7892cb113b83621a2718bb69047490e8a8f6819b28a07d = $mBadgeTHG_2
 
 ---
 >resim call-method $CandyDex restock_candy 10000,$OMG 
@@ -166,7 +169,7 @@ Let's try to stock same candies again using "restock_candy" method.
 
 └─ [←[32mINFO ←[0m] ←[32m entry_fee 20.20202020202020202 
 
-└─ ResourceDef: 03a021cd3cde156353af7ebb97f4d81c09aca3d5ded91eea38e4a6 = $mBadgeOMG_2
+└─ Resource: 03a021cd3cde156353af7ebb97f4d81c09aca3d5ded91eea38e4a6 = $mBadgeOMG_2
 
 -------------------------------------------------------------------------------------------
 Let's swap some candies to gain some accrued fee profit.  
@@ -352,16 +355,16 @@ Let's issue another candy token, stock it & swap some candies to rebalance Candy
 
 >resim new-token-fixed --name "ETAGUM" 100000 --symbol "ETG"
 
-└─ ResourceDef: 03a78cfec3dac583cc2394d14452099892a5af4a5201d771d918a2 = $ETG
+└─ Resource: 03a78cfec3dac583cc2394d14452099892a5af4a5201d771d918a2 = $ETG
 
 ---
 >resim call-method $CandyDex stock_candy 10000,$ETG 2 
 
 └─ [←[32mINFO ←[0m] ←[32m Added 10000 ETAGUM candy, ETG symbol @2XRD price
 
-├─ ResourceDef: 03be62f5e91b4697231a63826c86ec1a597a0e1738e8c5a3ab9ab6
+├─ Resource: 03be62f5e91b4697231a63826c86ec1a597a0e1738e8c5a3ab9ab6
 
-└─ ResourceDef: 034342e2f24c45cc8f34affff1ef96cdeee275ebc19da28d80fe1a
+└─ Resource: 034342e2f24c45cc8f34affff1ef96cdeee275ebc19da28d80fe1a
 
 ---
 >resim call-method $CandyDex buy_exact_candy_sell_candy 500 $ETG 2000,$OMG
@@ -466,9 +469,9 @@ Publish CandyDex Blueprint & Component instantiate
 ---
 >resim call-function $Package CandyDex new 1 
 
-├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
+├─ Resource: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
 
-├─ ResourceDef: 0399d3f4678fbf0ec6abb57bb17af7ddcc48ce1370e65eb99f8e13 = $OwnerBadge
+├─ Resource: 0399d3f4678fbf0ec6abb57bb17af7ddcc48ce1370e65eb99f8e13 = $OwnerBadge
 
 └─ Component: 02ac00a15a87df7c43b55e49d5d229bc770136c108586a9d7b38b5   = $CandyDex
 
@@ -488,12 +491,12 @@ Let's create some candy tokens.
 
 >resim new-token-fixed --name "ALPHAGUM" 100000 --symbol "ALG"
 
-└─ ResourceDef: $THG = $ALG
+└─ Resource: $THG = $ALG
 
 ---
 >resim new-token-fixed --name "BETAGUM" 100000 --symbol "BTG"
 
-└─ ResourceDef: $OMG = $BTG
+└─ Resource: $OMG = $BTG
 
 -------------------------------------------------------------------------------------------
 Let's check out our Default-account balances.
@@ -518,18 +521,18 @@ Let's stock candies and check Default-account balances.
 
 └─ [←[32mINFO ←[0m] ←[32m Added 50000 ALPHAGUM candy, ALG symbol @2XRD price
 
-├─ ResourceDef: 0378a3b15108515504b4a9682eaaa43d4b13417ce6840fb5bf1fa2
+├─ Resource: 0378a3b15108515504b4a9682eaaa43d4b13417ce6840fb5bf1fa2
 
-└─ ResourceDef: 03570bd52401c8b3e6a6e551549f64199cc5c629726627e83211e1
+└─ Resource: 03570bd52401c8b3e6a6e551549f64199cc5c629726627e83211e1
 
 ---
 >resim call-method $CandyDex stock_candy 50000,$BTG 1.5  
 
 └─ [←[32mINFO ←[0m] ←[32m Added 50000 BETAGUM candy, BTG symbol @1.5XRD price
 
-├─ ResourceDef: 032387943b7cd89d99ee07d672fd9945029c99300282931690ddab
+├─ Resource: 032387943b7cd89d99ee07d672fd9945029c99300282931690ddab
 
-└─ ResourceDef: 033af09cc79097add03aa9614eadb005e61874681545a1ac2b8caf
+└─ Resource: 033af09cc79097add03aa9614eadb005e61874681545a1ac2b8caf
 
 ---
 >resim show $Default-account
@@ -819,9 +822,9 @@ Publish CandyDex Blueprint & Component instantiate
 ---
 >resim call-function $Package-CandyDex CandyDex new 1 
 
-├─ ResourceDef: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
+├─ Resource: 03eb23d0867f32265935d93970aded9033cc868d31795f27d8cb62 = $MinterBadge
 
-├─ ResourceDef: 03d527faee6d0b91e7c1bab500c6a986e5777a25d704acc288d542 = $OwnerBadge
+├─ Resource: 03d527faee6d0b91e7c1bab500c6a986e5777a25d704acc288d542 = $OwnerBadge
 
 └─ Component: 02ac00a15a87df7c43b55e49d5d229bc770136c108586a9d7b38b5	= $CandyDex
 
@@ -831,17 +834,17 @@ Create some candy resources
 
 >resim new-token-fixed --name "GAMMAGUM" 100000 --symbol "GMG"
 
-└─ ResourceDef: 037395fc4a92210f3c576bd5e621a46f49643ef9b9e093828874e8 = $GMG
+└─ Resource: 037395fc4a92210f3c576bd5e621a46f49643ef9b9e093828874e8 = $GMG
 
 ---
 >resim new-token-fixed --name "DELTAGUM" 100000 --symbol "DTG"
 
-└─ ResourceDef: 03d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c = $DTG
+└─ Resource: 03d1f50010e4102d88aacc347711491f852c515134a9ecf67ba17c = $DTG
 
 ---
 >resim new-token-fixed --name "SIGMAGUM" 100000 --symbol "SGG"
 
-└─ ResourceDef: 03c29248a0d4c7d4da7b323adfeb4b4fbe811868eb637725ebb7c1 = $SGG
+└─ Resource: 03c29248a0d4c7d4da7b323adfeb4b4fbe811868eb637725ebb7c1 = $SGG
 
 ----------------------------------------------------------------------------------------------------------
 Stock candies resources in CandyDex Blueprint from Default-account 

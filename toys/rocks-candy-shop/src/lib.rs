@@ -24,16 +24,16 @@ blueprint! {
 
     impl CandyShop {
         
-        pub fn new() -> Component {
+        pub fn new() -> ComponentAddress {
             // This constructor sets up an empty candy shop
             let tagged_vaults: Vec<(String,Vault)> = Vec::new();
             Self {
                 candy_vaults: tagged_vaults
             }
-            .instantiate()
+            .instantiate().globalize()
         }
 
-        pub fn initial_supply( supply_size: u32 ) -> Component {
+        pub fn initial_supply( supply_size: u32 ) -> ComponentAddress {
             // This constructor sets up a variety of candies with the specified amount.
             let mut tagged_vaults: Vec<(String,Vault)> = Vec::new();
             // Now define the meta data for each type of candy.
@@ -46,17 +46,18 @@ blueprint! {
             metas.push(("Gummy Bear", "BEAR", "Gummy Bears rules!"));
             // Create a supply 
             for tup in metas {
-                let bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+                let bucket = ResourceBuilder::new_fungible()
+                    .divisibility(DIVISIBILITY_NONE)
                     .metadata("name", tup.0.to_string())
                     .metadata("symbol", tup.1.to_string())
                     .metadata("description", tup.2.to_string())
-                    .initial_supply_fungible(supply_size);
+                    .initial_supply(supply_size);
                 tagged_vaults.push((tup.1.to_string(), Vault::with_bucket(bucket)));
             }
             Self {
                 candy_vaults: tagged_vaults
             }
-            .instantiate()
+            .instantiate().globalize()
         }
 
         fn take_from_vault(&mut self, symbol: String, quantity: Decimal) -> Bucket {
@@ -98,14 +99,15 @@ blueprint! {
         }
 
         pub fn add_candy(&mut self, name: String, symbol: String, description: String, supply_size: Decimal) {
-            assert!(supply_size >= 1.into(), "Not enough initial candy");
+            assert!(supply_size >= Decimal::one(), "Not enough initial candy");
             assert!(self.contains(&symbol) == false, "That type of candy is already available.");
             // Add a new kind of candy to the CandyShop
-            let bucket = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+            let bucket = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", name)
                 .metadata("symbol", symbol.to_string())
                 .metadata("description", description)
-                .initial_supply_fungible(supply_size);
+                .initial_supply(supply_size);
             self.candy_vaults.push((symbol, Vault::with_bucket(bucket)));
         }
     }

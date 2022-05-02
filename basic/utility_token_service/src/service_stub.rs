@@ -21,16 +21,17 @@ blueprint! {
         // Create a UtilityTokenFactory using the simulator and pass it into this constructor.
         // See the README.md file for an example of how to do this.
         //
-        pub fn new( comp:Address ) -> Component {
+        pub fn new(comp: ComponentAddress) -> ComponentAddress {
             let my_utf: UtilityTokenFactory = UtilityTokenFactory::from(comp);
             let my_utf_address = my_utf.address();
             Self {  
                 utf: my_utf,
-                used_tokens: Vault::new(ResourceDef::from(my_utf_address)),
+                used_tokens: Vault::new(my_utf_address),
                 simple_service_count: 0,
                 premium_service_count: 0
             }
             .instantiate()
+            .globalize()
         }
 
         // Send the collected UT coins out to be burned.
@@ -52,9 +53,9 @@ blueprint! {
 
         // Now we define our services
         pub fn simple_service(&mut self, mut payment: Bucket) -> Bucket {
-            assert!(payment.resource_def().address() == self.utf.address(), "Simple service requires 1 util token");
-            assert!(payment.amount() >= 1.into(), "Simple service requires 1 util token");
-            assert!(self.utf.address() == self.used_tokens.resource_def().address(), "Mismatch in Vault setup.");
+            assert!(payment.resource_address() == self.utf.address(), "Simple service requires 1 util token");
+            assert!(payment.amount() >= Decimal::one(), "Simple service requires 1 util token");
+            assert!(self.utf.address() == self.used_tokens.resource_address(), "Mismatch in Vault setup.");
             self.used_tokens.put(payment.take(1));
             info!("Performing Simple Service now.");
             self.simple_service_count += 1;
@@ -63,7 +64,7 @@ blueprint! {
         }
 
         pub fn premium_service(&mut self, mut payment: Bucket) -> Bucket {
-            assert!(payment.resource_def().address() == self.utf.address(), "Premium service requires 3 util tokens");
+            assert!(payment.resource_address() == self.utf.address(), "Premium service requires 3 util tokens");
             assert!(payment.amount() >= 3.into(), "Premium service requires 3 util tokens");
             self.used_tokens.put(payment.take(3));
             info!("Performing Premium Service now.");

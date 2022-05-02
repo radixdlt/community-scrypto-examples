@@ -4,11 +4,11 @@ resim reset
 
 $BUYER_OUT = resim new-account
 $BUYER_ACC = Write-Output "$BUYER_OUT" | Get-Account-Address
-$BUYER_PUB = Write-Output "$BUYER_OUT" | Get-Public-Key
+$BUYER_PRIV = Write-Output "$BUYER_OUT" | Get-Public-Key
 
 $SELLER_OUT = resim new-account
 $SELLER_ACC = Write-Output "$SELLER_OUT" | Get-Account-Address
-$SELLER_PUB = Write-Output "$SELLER_OUT" | Get-Public-Key
+$SELLER_PRIV = Write-Output "$SELLER_OUT" | Get-Public-Key
 
 $XRD = resim show $BUYER_ACC | Get-Resource-Def "Radix"
 $USDT = resim new-token-fixed --name Tether --symbol USDT 1000 | Get-New-Def
@@ -25,18 +25,18 @@ $XRD_MARKET = resim call-function $PACKAGE Market open $XRD | Get-Component
 
 # Create orders
 
-resim set-default-account $BUYER_ACC $BUYER_PUB
+resim set-default-account $BUYER_ACC $BUYER_PRIV
 
 resim call-method $XRD_MARKET limit_buy $USDT 3.21 1000,$XRD # BO-1, not filled
 resim call-method $XRD_MARKET limit_buy $USDT 3.27 200,$XRD # BO-2, not filled
 #
-resim set-default-account $SELLER_ACC $SELLER_PUB
+resim set-default-account $SELLER_ACC $SELLER_PRIV
 
 resim call-method $XRD_MARKET limit_sell 90,$USDT 3.26 # SO-3, partly filled (fills BO-2 fully)
 resim call-method $XRD_MARKET limit_sell 100,$USDT 3.29 # SO-4, not filled
 resim call-method $XRD_MARKET limit_sell 400,$USDT 3.33 # SO-5, not filled
 #
-resim set-default-account $BUYER_ACC $BUYER_PUB
+resim set-default-account $BUYER_ACC $BUYER_PRIV
 
 resim call-method $XRD_MARKET market_buy $USDT 400,$XRD # BO-6, fills rest of SO-3 and most part of SO-4, SO-5 remains unfilled
 
@@ -47,12 +47,12 @@ resim call-method $XRD_MARKET print_order_book
 
 Wait-For-User 'Press any key to withdraw filled order ...'
 
-resim set-default-account $BUYER_ACC $BUYER_PUB
+resim set-default-account $BUYER_ACC $BUYER_PRIV
 
 # "#2,$ADDR" takes the NFT with the ID 2 of the NFT with the given address from the current account's vault
 resim call-method $XRD_MARKET withdraw_order "#2,$ORDER_TICKET"
 
-resim set-default-account $SELLER_ACC $SELLER_PUB
+resim set-default-account $SELLER_ACC $SELLER_PRIV
 
 resim call-method $XRD_MARKET withdraw_order "#3,$ORDER_TICKET"
 
@@ -64,7 +64,7 @@ Write-Output ""
 
 Exit-Unless-Equal $BOUGHT_USDT "61" "Failure... (wrong limit buy amount) :("
 
-resim set-default-account $BUYER_ACC $BUYER_PUB
+resim set-default-account $BUYER_ACC $BUYER_PRIV
 
 resim call-method $XRD_MARKET withdraw_order "#6,$ORDER_TICKET"
 

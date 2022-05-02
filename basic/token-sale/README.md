@@ -7,11 +7,11 @@ platforms that sell new project tokens to a select group of whitelisted users.
 
 ```rust
 struct TokenSale {
-    admin_badge: ResourceDef,
+    admin_badge: ResourceAddress,
     tokens_for_sale: Vault,
     payment_vault: Vault,
     sale_ticket_minter: Vault,
-    sale_tickets: ResourceDef,
+    sale_tickets: ResourceAddress,
     price_per_token: Decimal,
     max_personal_allocation: Decimal,
     sale_started: bool,
@@ -36,39 +36,47 @@ See the next section below for a typical test scenario.
 ```rust
 pub fn new(
     tokens_for_sale: Bucket,
-    payment_token: Address,
+    payment_token: ResourceAddress,
     price_per_token: Decimal,
     max_personal_allocation: Decimal,
-) -> (Component, Bucket) {
-    let admin_badge = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+) -> (ComponentAddress, Bucket) {
+    let admin_badge = ResourceBuilder::new_fungible()
+        .divisibility(DIVISIBILITY_NONE)
         .metadata("name", "admin_badge")
-        .initial_supply_fungible(1);
+        .initial_supply(1);
 
-    let sale_ticket_minter = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+    let sale_ticket_minter = ResourceBuilder::new_fungible()
+        .divisibility(DIVISIBILITY_NONE)
         .metadata("name", "sale_ticket_minter")
-        .initial_supply_fungible(1);
+        .initial_supply(1);
 
-    let sale_tickets = ResourceBuilder::new_fungible(DIVISIBILITY_NONE)
+    let sale_tickets = ResourceBuilder::new_fungible()
+        .divisibility(DIVISIBILITY_NONE)
         .metadata("name", "Sale Ticket Token")
         .metadata("symbol", "STT")
-        .flags(MINTABLE | BURNABLE)
-        .badge(sale_ticket_minter.resource_def(), MAY_MINT | MAY_BURN)
-        .badge(admin_badge.resource_def(), MAY_TRANSFER | MAY_BURN)
+        .mintable(rule!(require(sale_ticket_minter.resource_address())), LOCKED)
+        .burnable(rule!(require(sale_ticket_minter.resource_address())), LOCKED)
         .no_initial_supply();
 
     let component = Self {
-        admin_badge: admin_badge.resource_def(),
+        admin_badge: admin_badge.resource_address(),
         tokens_for_sale: Vault::with_bucket(tokens_for_sale),
-        payment_vault: Vault::new(ResourceDef::from(payment_token)),
+        payment_vault: Vault::new(payment_token),
         sale_ticket_minter: Vault::with_bucket(sale_ticket_minter),
         sale_tickets,
         price_per_token,
         max_personal_allocation,
         sale_started: false,
     }
-        .instantiate();
+    .instantiate();
 
-    (component, admin_badge)
+    let access_rules = AccessRules::new()
+        .method("create_tickets", rule!(require(admin_badge.resource_address())))
+        .method("start_sale", rule!(require(admin_badge.resource_address())))
+        .method("withdraw_payments", rule!(require(admin_badge.resource_address())))
+        .default(rule!(allow_all));
+
+    (component.add_access_check(access_rules).globalize(), admin_badge)
 }
 ```
 
@@ -89,9 +97,9 @@ process is external to our component and may contain steps such as KYC etc. Give
 we now need to mint 10 corresponding token sale tickets that we can issue to them:
 
 ```rust
-#[auth(admin_badge)]
-pub fn create_tickets(&self, amount: i32) -> Bucket {
-    self.sale_ticket_minter.authorize(|minter| self.sale_tickets.mint(amount, minter))
+pub fn create_tickets(&mut self, amount: i32) -> Bucket {
+    self.sale_ticket_minter
+        .authorize(|| borrow_resource_manager!(self.sale_tickets).mint(amount))
 }
 ```
 
@@ -106,7 +114,6 @@ There are many examples of launch platforms that employ a first come, first serv
 communicate a sale date and time to our customers at which we start the sale.
 
 ```rust
-#[auth(admin_badge)]
 pub fn start_sale(&mut self) {
     self.sale_started = true
 }
@@ -117,7 +124,7 @@ The `start_sale` method may again only be called by an admin of the component.
 ## Step 4 - Customers buying tokens:
 
 ```rust
-pub fn buy_tokens(&mut self, payment: Bucket, ticket: Bucket) -> (Bucket, Bucket) {
+pub fn buy_tokens(&mut self, mut payment: Bucket, ticket: Bucket) -> (Bucket, Bucket) {
     // Check the sale has already started and is not over yet
     assert!(self.sale_started, "The sale has not started yet");
     assert!(self.has_tokens_left(), "The sale has ended already");
@@ -128,7 +135,7 @@ pub fn buy_tokens(&mut self, payment: Bucket, ticket: Bucket) -> (Bucket, Bucket
         "You need to send exactly one ticket in order to participate in the sale"
     );
     self.sale_ticket_minter
-        .authorize(|minter| ticket.burn_with_auth(minter));
+        .authorize(|| ticket.burn());
 
     // Calculate the actual amount of tokens that the user can buy
     let payment_amount = min(payment.amount(), self.max_personal_allocation);
@@ -164,7 +171,6 @@ bought SHINY tokens to the customer. It also returns any amount the customer mig
 After the sale is over, all that is left to do, is to withdraw the payment tokens.
 
 ```rust
-#[auth(admin_badge)]
 pub fn withdraw_payments(&mut self) -> Bucket {
     self.payment_vault.take_all()
 }
@@ -185,8 +191,8 @@ resim reset
 # Save the XRD token address into env variable $xrd
 export xrd=030000000000000000000000000000000000000000000000000004
 
-resim new-account # Save the public key and account address into $admin_pubkey and $admin_account resp.
-resim new-account # Save the public key and account address into $customer_pubkey and $customer_account resp.
+resim new-account # Save the private key and account address into $admin_private_key and $admin_account resp.
+resim new-account # Save the private key and account address into $customer_private_key and $customer_account resp.
 
 
 # Create some tokens that we can put up for sale
@@ -203,9 +209,9 @@ resim publish . # Save the package address into $package
 # - the maximum personal allocation: 500 XRD
 # 
 # The new call results in the creating of 4 new components.
-# The first new ResourceDef is the admin_badge address. Save that into $admin_badge
-# Ignore the second new ResourceDef.
-# The third new ResourceDef is the address of the sale ticket. Save that into $ticket
+# The first new ResourceAddress is the admin_badge address. Save that into $admin_badge
+# Ignore the second new ResourceAddress.
+# The third new ResourceAddress is the address of the sale ticket. Save that into $ticket
 # Also, save the component address into $component
 resim call-function $package TokenSale new 10000,$shiny $xrd 0.1 500
 
@@ -213,20 +219,19 @@ resim call-function $package TokenSale new 10000,$shiny $xrd 0.1 500
 resim show $component
 
 # Mint some sale tickets. We need to specify the number of tickets we wish to create. 
-# We also need to flash our admin_badge
-resim call-method $component create_tickets 10 1,$admin_badge
+resim run create_tickets.rtm
 
 # Let's check our account. We should have 10 "Sale Ticket Token"s in there.
 resim show $admin_account
 
 # Next, let's transfer a ticket to a whitelisted user:
-resim transfer 1,$ticket $customer_account
+resim transfer 1 $ticket $customer_account
 
-# Finally, let's start the sale. Remember that we need to flash our admin_badge.
-resim call-method $component start_sale 1,$admin_badge
+# Finally, let's start the sale
+resim run start_sale.rtm
 
 # Now we step into the shoes of our customer:
-resim set-default-account $customer_account $customer_pubkey
+resim set-default-account $customer_account $customer_private_key
 
 # Because we are a sneaky customer, we will try to get a few more tokens than we have been allocated. 
 # We specify a bucket with 600 XRD as payment and we also pass our sale ticket.
@@ -238,14 +243,13 @@ resim call-method $component buy_tokens 600,$xrd 1,$ticket
 resim show $customer_account
 
 # Let's switch back to our admin user.
-resim set-default-account $admin_account $admin_pubkey
+resim set-default-account $admin_account $admin_private_key
 
 # Checking on our component, we see that some SHINY tokens have been sold and some XRD tokens have been deposited.
 resim show $component
 
 # Even if the token sale has not yet ended, we may withdraw payments received up to this point.
-# Of course, we must not forget to present our admin_badge!
-resim call-method $component withdraw_payments 1,$admin_badge
+resim run withdraw_payments.rtm
 ```
 
 
