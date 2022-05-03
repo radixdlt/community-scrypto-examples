@@ -314,5 +314,294 @@ blueprint! {
             self.system_vault.put(key_bucket);
             return
         }
+        // Level up EXP is straight up coppied from MapleStory lmao
+        pub fn level_up_class1(&mut self, nft_proof: Proof) {
+            assert!(
+                nft_proof.amount() == dec!("1"),
+                "You can only level up one character at once!"
+            );
+        
+            assert!(
+                nft_proof.resource_address() == self.character_nft,
+                "Wrong resource address!"
+            );
+            let mut nft_data: Account = nft_proof.non_fungible().data();
+            assert!(
+                nft_data.class == 1,
+                "Wrong class!"
+            );
+            let total_exp = nft_data.exp;
+            // Copied exp per level from Maplestory. Idk if this is good, the level scaling seems wack af lmao
+            match total_exp {
+                0..=14 =>  { return },
+                15..=48 => { 
+                    if nft_data.level < 2 {
+                    nft_data.level = 2;
+                    // + 3 stats
+                    nft_data.health = 13;
+                    nft_data.attack = 12;
+                    nft_data.magic = 8;
+                    nft_data.defense = 10;
+                    nft_data.speed = 10;
+                    }
+                    else {
+                        return
+                    }
+                },
+                49..=105 => { 
+                    if nft_data.level < 3 {
+                    nft_data.level = 3;
+                    // + 3 stats
+                    nft_data.health = 14;
+                    nft_data.attack = 13;
+                    nft_data.magic = 8;
+                    nft_data.defense = 10;
+                    nft_data.speed = 11;
+                    }
+                    else {
+                        return
+                    }
+                },
+                106..=197 => { 
+                    if nft_data.level < 4 {
+                    nft_data.level = 4;
+                    // + 3 stats
+                    nft_data.health = 14;
+                    nft_data.attack = 14;
+                    nft_data.magic = 8;
+                    nft_data.defense = 11;
+                    nft_data.speed = 12;
+                    }
+                    else {
+                        return
+                    }
+                },
+                198..=332 => { 
+                    if nft_data.level < 5 {
+                    nft_data.level = 5;
+                    // + 4 stats
+                    nft_data.health = 15;
+                    nft_data.attack = 16;
+                    nft_data.magic = 8;
+                    nft_data.defense = 12;
+                    nft_data.speed = 12;
+                    }
+                    else {
+                        return
+                    }
+                },
+                333..=704 => { 
+                    if nft_data.level < 6 {
+                    nft_data.level = 6;
+                    // + 5 stats
+                    nft_data.health = 16;
+                    nft_data.attack = 17;
+                    nft_data.magic = 9;
+                    nft_data.defense = 13;
+                    nft_data.speed = 13;
+                    }
+                    else {
+                        return
+                    }
+                },
+                705..=1264 => { 
+                    if nft_data.level < 7 {
+                    nft_data.level = 7;
+                    // + 5 stats
+                    nft_data.health = 18;
+                    nft_data.attack = 20;
+                    nft_data.magic = 9;
+                    nft_data.defense = 13;
+                    nft_data.speed = 13;
+                    }
+                    else {
+                        return
+                    }
+                },
+                1265..=2104 => { 
+                    if nft_data.level < 8 {
+                    nft_data.level = 8;
+                    // + 5 stats
+                    nft_data.health = 18;
+                    nft_data.attack = 22;
+                    nft_data.magic = 9;
+                    nft_data.defense = 14;
+                    nft_data.speed = 15;
+                    }
+                    else {
+                        return
+                    }
+                },
+                2105..=3346 => { 
+                    if nft_data.level < 9 {
+                    nft_data.level = 9;
+                    // + 5 stats
+                    nft_data.health = 20;
+                    nft_data.attack = 23;
+                    nft_data.magic = 10;
+                    nft_data.defense = 15;
+                    nft_data.speed = 15;
+                    }
+                    else {
+                        return
+                    }
+                },
+                3347..=4588 => { 
+                    if nft_data.level < 10 {
+                    nft_data.level = 10;
+                    // + 6 stats
+                    nft_data.health = 22;
+                    nft_data.attack = 25;
+                    nft_data.magic = 9;
+                    nft_data.defense = 14;
+                    nft_data.speed = 17;
+                    }
+                    else {
+                        return
+                    }
+                },
+                4589..=5830 => { 
+                    if nft_data.level < 11 {
+                    nft_data.level = 11;
+                    // + 7 stats
+                    nft_data.health = 24;
+                    nft_data.attack = 25;
+                    nft_data.magic = 9;
+                    nft_data.defense = 16;
+                    nft_data.speed = 20;
+                    }
+                    else {
+                        return
+                    }
+                },
+                5831..=7072 => { 
+                    if nft_data.level < 12 {
+                    nft_data.level = 12;
+                    // + 7 stats
+                    nft_data.health = 24;
+                    nft_data.attack = 27;
+                    nft_data.magic = 11;
+                    nft_data.defense = 18;
+                    nft_data.speed = 21;
+                    }
+                    else {
+                        return
+                    }
+                },
+                7073..=8314 => { 
+                    if nft_data.level < 13 {
+                    nft_data.level = 13;
+                    // + 7 stats
+                    nft_data.health = 25;
+                    nft_data.attack = 30;
+                    nft_data.magic = 11;
+                    nft_data.defense = 20;
+                    nft_data.speed = 22;
+                    }
+                    else {
+                        return
+                    }
+                },
+                8315..=9556 => { 
+                    if nft_data.level < 14 {
+                    nft_data.level = 14;
+                    // + 7 stats
+                    nft_data.health = 28;
+                    nft_data.attack = 34;
+                    nft_data.magic = 11;
+                    nft_data.defense = 20;
+                    nft_data.speed = 22;
+                    }
+                    else {
+                        return
+                    }
+                },
+                9557..=11046 => { 
+                    if nft_data.level < 15 {
+                    nft_data.level = 15;
+                    // + 8 stats
+                    nft_data.health = 32;
+                    nft_data.attack = 36;
+                    nft_data.magic = 11;
+                    nft_data.defense = 21;
+                    nft_data.speed = 23;
+                    }
+                    else {
+                        return
+                    }
+                },
+                11047..=12834 => { 
+                    if nft_data.level < 16 {
+                    nft_data.level = 16;
+                    // + 9 stats
+                    nft_data.health = 35;
+                    nft_data.attack = 38;
+                    nft_data.magic = 13;
+                    nft_data.defense = 23;
+                    nft_data.speed = 23;
+                    }
+                    else {
+                        return
+                    }
+                },
+                12835..=14979 => { 
+                    if nft_data.level < 17 {
+                    nft_data.level = 17;
+                    // + 9 stats
+                    nft_data.health = 35;
+                    nft_data.attack = 38;
+                    nft_data.magic = 15;
+                    nft_data.defense = 26;
+                    nft_data.speed = 27;
+                    }
+                    else {
+                        return
+                    }
+                },
+                14980..=17553 => { 
+                    if nft_data.level < 18 {
+                    nft_data.level = 18;
+                    // + 9 stats
+                    nft_data.health = 36;
+                    nft_data.attack = 41;
+                    nft_data.magic = 15;
+                    nft_data.defense = 29;
+                    nft_data.speed = 29;
+                    }
+                    else {
+                        return
+                    }
+                },
+                17554..=20641 => { 
+                    if nft_data.level < 19 {
+                    nft_data.level = 19;
+                    // + 9 stats
+                    nft_data.health = 39;
+                    nft_data.attack = 44;
+                    nft_data.magic = 15;
+                    nft_data.defense = 30;
+                    nft_data.speed = 31;
+                    }
+                    else {
+                        return
+                    }
+                },
+                20642..=1000000 => { 
+                    if nft_data.level < 20 {
+                    nft_data.level = 20;
+                    // + 10 stats
+                    nft_data.health = 41;
+                    nft_data.attack = 47;
+                    nft_data.magic = 15;
+                    nft_data.defense = 32;
+                    nft_data.speed = 34;
+                    }
+                    else {
+                        return
+                    }
+                },
+                _ =>  { return }
+            };
+        }
     }
 }
