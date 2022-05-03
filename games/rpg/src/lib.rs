@@ -220,7 +220,7 @@ blueprint! {
                     }
                     enemy_health -= attack - enemy_defense;
                     if enemy_health <= 0 {
-                        nft_data.exp += 15;
+                        nft_data.exp += 5;
                         break
         
                     }
@@ -230,7 +230,7 @@ blueprint! {
                 loop {
                     enemy_health -= attack - enemy_defense;
                     if enemy_health <=0 {
-                        nft_data.exp += 15;
+                        nft_data.exp += 5;
                         break
                     }
                     health -= enemy_attack - defense;
@@ -254,7 +254,7 @@ blueprint! {
                     }
                     enemy_health -= attack - enemy_defense;
                     if enemy_health <= 0 {
-                        nft_data.exp += 15;
+                        nft_data.exp += 5;
                         break
         
                     }
@@ -264,7 +264,7 @@ blueprint! {
                 loop {
                     enemy_health -= attack - enemy_defense;
                     if enemy_health <= 0 {
-                        nft_data.exp += 15;
+                        nft_data.exp += 5;
                         break
                     }
                     health -= enemy_attack - defense;
@@ -288,7 +288,7 @@ blueprint! {
                     }
                     enemy_health -= attack - enemy_defense;
                     if enemy_health <= 0 {
-                        nft_data.exp += 15;
+                        nft_data.exp += 5;
                         break
         
                     }
@@ -298,7 +298,7 @@ blueprint! {
                 loop {
                     enemy_health -= attack - enemy_defense;
                     if enemy_health <= 0 {
-                        nft_data.exp += 15;
+                        nft_data.exp += 5;
                         break
                     }
                     health -= enemy_attack - defense;
