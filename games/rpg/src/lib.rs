@@ -257,7 +257,7 @@ blueprint! {
             self.developer_vault.authorize(||self.game_price = new_price);
         }
 
-        // Level up EXP is straight up coppied from MapleStory lmao
+        // Level up EXP is straight up copied from MapleStory lmao
         pub fn level_up_class1(&mut self, nft_proof: Proof) {
             assert!(
                 nft_proof.amount() == dec!("1"),
