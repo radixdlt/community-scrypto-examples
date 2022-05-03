@@ -331,7 +331,7 @@ blueprint! {
                 "Wrong class!"
             );
             let total_exp = nft_data.exp;
-            // Copied exp per level from Maplestory. Idk if this is good, the level scaling seems wack af lmao
+            // Idk if this is good, the level scaling seems wack af lmao
             match total_exp {
                 0..=14 =>  { return },
                 15..=48 => { 
