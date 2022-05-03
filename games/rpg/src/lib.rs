@@ -3,11 +3,11 @@ use scrypto::prelude::*;
 #[derive(NonFungibleData)]
 pub struct Account {
     // Classes are: 
-    // #1 = Gladiator: High attack damage, medium defense, medium speed. Can be built towards Lifesteal identity (Heal from damage, stronger activates <50% HP), or Perfect Warrior identity (attacks can combo, stronger >50% HP)
-    // #2 = Rogue: Hybrid attack/magic damage, High Speed. All rounder, able to be built towards both max attack (crit burst identity) or max magic (shadow magic dps identity)
-    // #3 = Ranger: Ranged Attack Damage, medium attack medium speed. Single-target ranged dps identity. 
-    // #4 = Mystic: Ranged Magic Damage, High magic low defense, low speed. AOE ranged burst identity.
-    // #5 = Vanguard: High Health, High Defense. Can be built towards risky Counter Identity(attack burst damage) or Suffocation Identity(magic dps damage + max tanky)
+    // #1 = Gladiator: High attack damage, medium defense, medium speed. Can be built towards Bloodfeaster identity (Lifesteal, stronger activates <50% HP), or GodSlayer identity (Beeg crits)
+    // #2 = Rogue: Hybrid attack/magic damage, High Speed. All rounder, able to be built towards Combo-starter Identity (Max speed, attacks in a row deal more damage) or Shadow Assassin Identity (Magic dps + self buffs)
+    // #3 = Ranger: Ranged Attack Damage, medium attack medium. Can be built Wildwalker identity (Dodge tank + shapeshifting) or Beast Conquerer Identity (Summons, fast mixed dps)
+    // #4 = Mystic: Ranged Magic Damage, High magic low defense, low speed. Can be built Crimson Majesty (Big damage AOE fire damage + burn) or Foresworn Riptide (Versitile Magic)
+    // #5 = Vanguard: High Health, High Defense. Can be built towards risky Thornguard Identity(counter damage) or Earthen Suffocation Identity(magic, debuffs, + max tanky)
     // More Classes can be added later
     #[scrypto(mutable)]
     class: u8,
