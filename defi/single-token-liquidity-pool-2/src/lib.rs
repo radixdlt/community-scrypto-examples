@@ -8,7 +8,6 @@ blueprint! {
         lp_resource_address: ResourceAddress,
         total_lp: Decimal,
         total_liquidity: Decimal,
-        lp_divisibility: u8,
     }
 
     impl LiquidityPool {
@@ -21,6 +20,11 @@ blueprint! {
             lp_divisibility: u8,
         ) -> (ComponentAddress,Bucket) {
 
+            // Check arguments
+            assert!(
+                !tokens.is_empty(),
+                "You must pass in an initial supply of token"
+            );
             // Check arguments
             assert!(
                 !tokens.is_empty(),
@@ -39,11 +43,10 @@ blueprint! {
                 .metadata("symbol", lp_symbol)
                 .metadata("name", lp_name)
                 .mintable(rule!(require(lp_mint_badge.resource_address())), LOCKED)
-                .burnable(rule!(require(lp_mint_badge.resource_address())), LOCKED)
                 .initial_supply(tokens.amount());
             let lp_resource_address = lp_tokens.resource_address();
 
-            let total_lp  = tokens.amount();
+            let total_lp  = lp_tokens.amount();
             let total_liquidity = tokens.amount();
             
             let liquidity_pool = Self {
@@ -54,7 +57,6 @@ blueprint! {
 
                 total_lp,
                 total_liquidity,
-                lp_divisibility,
             }
             .instantiate()
             .globalize();
@@ -74,7 +76,7 @@ blueprint! {
 
             // Mint LP tokens according to the share the provider is contributing 
             let mut supply_to_mint = tokens.amount() * (self.total_lp / self.total_liquidity);
-            supply_to_mint = supply_to_mint.round(self.lp_divisibility,RoundingMode::TowardsNearestAndHalfTowardsZero);
+            supply_to_mint = supply_to_mint.round(DIVISIBILITY_MAXIMUM,RoundingMode::TowardsNearestAndHalfTowardsZero);
 
             let lp_tokens = self.lp_mint_badge.authorize(|| {
                return lp_resource_manager.mint(supply_to_mint);
@@ -88,7 +90,7 @@ blueprint! {
         }
 
         /// Collect fee for liquidity provider. will be added to the pool and LP/Token will be ajusted accordingly
-        pub fn collect_fee(&mut self, 
+        pub fn add_collected_fee(&mut self, 
             mut tokens: Bucket
         ) -> Bucket {
 
@@ -115,7 +117,7 @@ blueprint! {
 
             // Withdraw the correct amounts of tokens A and B from reserves
             let  mut to_remove = lp_tokens.amount()/(self.total_lp/self.total_liquidity);
-            to_remove = to_remove.round(self.lp_divisibility,RoundingMode::TowardsNearestAndHalfTowardsZero); 
+            to_remove = to_remove.round(DIVISIBILITY_MAXIMUM,RoundingMode::TowardsNearestAndHalfTowardsZero); 
 
             // Remain residual liquidity will be withdrawl on the last withdrawal  
             let withdrawn = self.pool.take(std::cmp::min(to_remove, self.pool.amount()));

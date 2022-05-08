@@ -1,7 +1,7 @@
 #!/usr/bin/env zx
 
 /**
- * run following commands
+ * run following commands for test
  *      npm i -g zx
  *      zx ./script.mjs
  *      source .env      
@@ -65,27 +65,27 @@ setEnvValue('component',component);
 setEnvValue('lp_token',lp_token);
 
 // Add liquidity from account1
-await e($`resim set-default-account ${account2} ${privkey2}`)
+await e($`resim set-default-account ${account1} ${privkey1}`)
 await e($`resim call-method ${component} add_liquidity 1000,${tokenXRD}`)
 
 // simulate pool fee collection
 await e($`resim set-default-account ${account} ${privkey}`)
-await e($`resim call-method ${component} collect_fee 300,${tokenXRD}`)
+await e($`resim call-method ${component} add_collected_fee 300,${tokenXRD}`)
 
 // add same amount fo liquidity from account2
-await e($`resim set-default-account ${account1} ${privkey1}`)
+await e($`resim set-default-account ${account2} ${privkey2}`)
 await e($`resim call-method ${component} add_liquidity 1000,${tokenXRD}`)
 
 // simulate pool fee collection
 await e($`resim set-default-account ${account} ${privkey}`)
-await e($`resim call-method ${component} collect_fee 500,${tokenXRD}`)
+await e($`resim call-method ${component} add_collected_fee 500,${tokenXRD}`)
 
 // Rome liquidity from both account
-await e($`resim set-default-account ${account2} ${privkey2}`)
-await e($`resim call-method ${component} remove_liquidity 1000,${lp_token}`)
+// await e($`resim set-default-account ${account1} ${privkey1}`)
+// await e($`resim call-method ${component} remove_liquidity 1000,${lp_token}`)
 
-await e($`resim set-default-account ${account1} ${privkey1}`)
-await e($`resim call-method ${component} remove_liquidity 869.5652173913,${lp_token}`)
+// await e($`resim set-default-account ${account2} ${privkey2}`)
+// await e($`resim call-method ${component} remove_liquidity 500,${lp_token}`)
 
 
 // Show component and accounts state: we see more fee earn by account1 as he started eaning fee before account2 joins
