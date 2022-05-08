@@ -81,7 +81,7 @@ blueprint! {
             });
 
             // Add tokens to the liquidity pool
-            self.pool.put(tokens.take(tokens.amount()));
+            self.pool.put(tokens);
 
             // Return the LP tokens along with any remainder
             (lp_tokens,tokens)
