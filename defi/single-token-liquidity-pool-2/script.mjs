@@ -55,7 +55,7 @@ setEnvValue('privkey2',privkey2);
 const pub_package = (await e($`resim publish .`))[0]
 setEnvValue('package',pub_package);
 
-output = await e($`resim call-function  ${pub_package} LiquidityPool new 1000,${tokenXRD} "LPT" "LP_Token" 10`)
+output = await e($`resim call-function  ${pub_package} LiquidityPool new 1000,${tokenXRD} "LPT" "LP_Token"`)
 const component= output[0]
 const lp_mint_bage= output[1]
 const lp_token = output[2]
@@ -80,17 +80,26 @@ await e($`resim call-method ${component} add_liquidity 1000,${tokenXRD}`)
 await e($`resim set-default-account ${account} ${privkey}`)
 await e($`resim call-method ${component} add_collected_fee 500,${tokenXRD}`)
 
-// Rome liquidity from both account
-// await e($`resim set-default-account ${account1} ${privkey1}`)
-// await e($`resim call-method ${component} remove_liquidity 1000,${lp_token}`)
+// Removee all liquidity in the pool
 
-// await e($`resim set-default-account ${account2} ${privkey2}`)
-// await e($`resim call-method ${component} remove_liquidity 500,${lp_token}`)
+await e($`resim set-default-account ${account} ${privkey}`)
+await e($`resim call-method ${component} remove_liquidity 1000,${lp_token}`)
 
+await e($`resim set-default-account ${account1} ${privkey1}`)
+await e($`resim call-method ${component} remove_liquidity 1000,${lp_token}`)
+
+await e($`resim set-default-account ${account2} ${privkey2}`)
+await e($`resim call-method ${component} remove_liquidity 869.565217391304347,${lp_token}`)
+
+// Add liquidity to th empty pool
+
+await e($`resim set-default-account ${account} ${privkey}`)
+await e($`resim call-method ${component} add_liquidity 1000,${tokenXRD}`)
 
 // Show component and accounts state: we see more fee earn by account1 as he started eaning fee before account2 joins
 await e($`resim show ${component}`,false)
 await e($`resim show ${account1}`,false)
 await e($`resim show ${account2}`,false)
+await e($`resim show ${account}`,false)
 
 
