@@ -22,10 +22,10 @@ blueprint! {
                 !tokens.is_empty(),
                 "You must pass in an initial supply of token"
             );
-            // Check arguments
-            assert!(
-                !tokens.is_empty(),
-                "You must pass in an initial supply of token"
+            assert_ne!(
+                borrow_resource_manager!(tokens.resource_address()).resource_type(),
+                ResourceType::NonFungible,
+                "A liquidity pool can only have fungible tokens."
             );
 
             // Mint the badge needed to mint LP Tokens
@@ -69,8 +69,7 @@ blueprint! {
             let lp_resource_manager = borrow_resource_manager!(self.lp_resource_address);
 
             // Mint LP tokens according to the share the provider is contributing 
-            let mut supply_to_mint = tokens.amount() * self.lp_per_asset_ratio;
-            supply_to_mint = supply_to_mint.round(DIVISIBILITY_MAXIMUM,RoundingMode::TowardsNearestAndHalfTowardsZero);
+            let  supply_to_mint = tokens.amount() * self.lp_per_asset_ratio;
 
             let lp_tokens = self.lp_mint_badge.authorize(|| {
                return lp_resource_manager.mint(supply_to_mint);
@@ -108,8 +107,7 @@ blueprint! {
             );
 
             // Withdraw the correct amounts of tokens A and B from reserves
-            let mut  to_remove = lp_tokens.amount()/(self.lp_per_asset_ratio);
-            to_remove = to_remove.round(DIVISIBILITY_MAXIMUM,RoundingMode::TowardsNearestAndHalfTowardsZero); 
+            let  to_remove = lp_tokens.amount()/(self.lp_per_asset_ratio);
 
             // Remain residual liquidity will be withdrawl on the last withdrawal  
             let withdrawn = self.pool.take(std::cmp::min(to_remove, self.pool.amount()));
