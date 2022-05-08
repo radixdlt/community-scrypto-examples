@@ -69,7 +69,7 @@ blueprint! {
         /// along with any remainder.
         pub fn add_liquidity(&mut self,
              mut tokens: Bucket
-        ) -> (Bucket,Bucket) {
+        ) -> Bucket {
 
             // Get the resource manager of the lp tokens
             let lp_resource_manager = borrow_resource_manager!(self.lp_resource_address);
