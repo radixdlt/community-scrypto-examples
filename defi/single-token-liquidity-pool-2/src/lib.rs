@@ -94,7 +94,7 @@ blueprint! {
             mut tokens: Bucket
         ) -> Bucket {
 
-            self.pool.put(tokens.take(tokens.amount()));
+            self.pool.put(tokens);
 
             let lp_resource_manager = borrow_resource_manager!(self.lp_resource_address);
             if self.pool.amount() != 0.into() && lp_resource_manager.total_supply() != 0.into() {
