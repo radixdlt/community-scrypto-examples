@@ -64,9 +64,18 @@ blueprint! {
 
         }
 
-        pub fn buy_keys(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {
+        pub fn buy_keys(&mut self, mut payment: Bucket, amount: u32) -> (Bucket, Bucket) {
             let key_bucket: Bucket = self.system_vault.take(1);
+            let cost = amount * 25;
+            let xrd = payment.take(cost);
+            self.collected_xrd.put(xrd);
+            let new_keys = self.system_vault.authorize(||
+                borrow_resource_manager!(self.key)
+                    .mint(amount));
             self.system_vault.put(key_bucket);
+            (new_keys, payment)
+        }
+            
 
 }
         
