@@ -15,6 +15,7 @@ blueprint! {
         skin_nft: ResourceAddress,
         collected_xrd: Vault,
         developer_vault: Vault,
+        key: ResourceAddress,
     }
     impl Case {
         pub fn new() -> (ComponentAddress, Bucket) {
@@ -41,18 +42,28 @@ blueprint! {
                 .mintable(system_rule.clone(), MUTABLE(developer_rule.clone()))
                 .burnable(system_rule.clone(), MUTABLE(developer_rule.clone()))
                 .updateable_non_fungible_data(system_rule.clone(), MUTABLE(developer_rule.clone()))
-                .no_initial_supply(); 
+                .no_initial_supply();
+
+            let key = ResourceBuilder::new_fungible()
+                .metadata("name", "Case Key")
+                .mintable(system_rule.clone(), MUTABLE(developer_rule.clone()))
+                .burnable(system_rule.clone(), MUTABLE(developer_rule.clone()))
+                .no_initial_supply();
 
             let instantiate = Self {
                 system_vault: Vault::with_bucket(system_badge),
                 developer_vault: Vault::with_bucket(developer_badge.take(9990)),
                 skin_nft,
                 collected_xrd: Vault::new(RADIX_TOKEN),
+                key,
 
          }
             .instantiate()
             .globalize();
             (instantiate, developer_badge)
      }
+        pub fn create_character(&mut self, mut payment: Bucket, class: u8, name: String) -> (Bucket, Bucket, Bucket, Bucket, Bucket, Bucket, Bucket, Bucket, Bucket) {
+            let key_bucket: Bucket = self.system_vault.take(1);
+
 }
         
