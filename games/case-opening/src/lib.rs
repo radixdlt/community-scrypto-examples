@@ -15,9 +15,10 @@ blueprint! {
         system_vault: Vault,
         skin_nft: ResourceAddress,
         xrd_vault: Vault,
+        developer_vault: Vault,
     }
     impl Case {
-        pub fn new() -> ComponentAddress {
+        pub fn new() -> (ComponentAddress, Bucket) {
 
  // Creates developer badge for methods. Necessary to control system_badge
             let mut developer_badge = ResourceBuilder::new_fungible()
@@ -42,6 +43,10 @@ blueprint! {
                 .burnable(system_rule.clone(), MUTABLE(developer_rule.clone()))
                 .updateable_non_fungible_data(system_rule.clone(), MUTABLE(developer_rule.clone()))
                 .no_initial_supply(); 
+
+            let instantiate = Self {
+                system_vault: Vault::with_bucket(system_badge),
+                developer_vault: Vault::with_bucket(developer_badge.take(9990)),
 
     }
         
