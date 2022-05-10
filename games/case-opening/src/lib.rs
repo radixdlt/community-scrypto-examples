@@ -4,6 +4,7 @@ use scrypto::prelude::*;
 pub struct Skin {
     name: String,
     weapon: String,
+    wear: String,
     float: u128,
     pattern: u16,
     
