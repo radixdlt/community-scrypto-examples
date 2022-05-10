@@ -37,10 +37,9 @@ blueprint! {
             let system_rule: AccessRule = rule!(require(system_badge.resource_address()));
 
             let skin_nft = ResourceBuilder::new_non_fungible()
-                .metadata("type", "Substradix character NFT")
+                .metadata("name", "Weapon Skin NFT")
                 .mintable(system_rule.clone(), MUTABLE(developer_rule.clone()))
                 .burnable(system_rule.clone(), MUTABLE(developer_rule.clone()))
-                .restrict_withdraw(AccessRule::DenyAll, MUTABLE(developer_rule.clone()))
                 .updateable_non_fungible_data(system_rule.clone(), MUTABLE(developer_rule.clone()))
                 .no_initial_supply(); 
 
