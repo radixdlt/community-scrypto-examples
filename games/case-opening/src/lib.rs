@@ -49,9 +49,10 @@ blueprint! {
                 skin_nft,
                 collected_xrd: Vault::new(RADIX_TOKEN),
 
-             }
+         }
             .instantiate()
             .globalize();
             (instantiate, developer_badge)
-        }
+     }
+}
         
