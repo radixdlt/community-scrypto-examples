@@ -77,6 +77,20 @@ blueprint! {
             self.system_vault.put(key_bucket);
             (new_keys, payment)
         }
+
+        pub fn open_case(&mut self, mut key: Bucket) -> (Bucket, Bucket) {
+            let key_bucket: Bucket = self.system_vault.take(1);
+            let uuid: Runtime::generate_uuid();
+            
+            let xrd = payment.take(cost);
+            self.collected_xrd.put(xrd);
+            let new_keys = self.system_vault.authorize(||
+                borrow_resource_manager!(self.key)
+                    .mint(amount));
+            self.system_vault.put(key_bucket);
+            (new_keys, payment)
+        }
+
             
 
 }
