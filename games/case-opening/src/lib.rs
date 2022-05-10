@@ -11,10 +11,9 @@ pub struct Skin {
 
 blueprint! {
     struct Case {
-        system_badge: ResourceAddress,
         system_vault: Vault,
         skin_nft: ResourceAddress,
-        xrd_vault: Vault,
+        collected_xrd: Vault,
         developer_vault: Vault,
     }
     impl Case {
@@ -47,6 +46,12 @@ blueprint! {
             let instantiate = Self {
                 system_vault: Vault::with_bucket(system_badge),
                 developer_vault: Vault::with_bucket(developer_badge.take(9990)),
+                skin_nft,
+                collected_xrd: Vault::new(RADIX_TOKEN),
 
-    }
+             }
+            .instantiate()
+            .globalize();
+            (instantiate, developer_badge)
+        }
         
