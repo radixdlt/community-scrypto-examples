@@ -57,13 +57,16 @@ blueprint! {
                 collected_xrd: Vault::new(RADIX_TOKEN),
                 key,
 
-         }
+            }
             .instantiate()
             .globalize();
             (instantiate, developer_badge)
-     }
-        pub fn create_character(&mut self, mut payment: Bucket, class: u8, name: String) -> (Bucket, Bucket, Bucket, Bucket, Bucket, Bucket, Bucket, Bucket, Bucket) {
+
+        }
+
+        pub fn buy_keys(&mut self, mut payment: Bucket) -> (Bucket, Bucket) {
             let key_bucket: Bucket = self.system_vault.take(1);
+            self.system_vault.put(key_bucket);
 
 }
         
