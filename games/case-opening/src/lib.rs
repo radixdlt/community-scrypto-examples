@@ -7,6 +7,7 @@ pub struct Skin {
     wear: String,
     float: u128,
     pattern: u16,
+    stat_track: bool,
     
 }
 
