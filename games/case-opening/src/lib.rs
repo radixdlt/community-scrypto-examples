@@ -16,6 +16,7 @@ blueprint! {
         collected_xrd: Vault,
         developer_vault: Vault,
         key: ResourceAddress,
+        key_price: u8,
     }
     impl Case {
         pub fn new() -> (ComponentAddress, Bucket) {
@@ -56,6 +57,7 @@ blueprint! {
                 skin_nft,
                 collected_xrd: Vault::new(RADIX_TOKEN),
                 key,
+                key_price: 25,
 
             }
             .instantiate()
