@@ -92,7 +92,7 @@ blueprint! {
             self.system_vault.put(key_bucket);
             (new_keys, payment)
         }
-        pub fn seed_10(&mut self) -> Decimal {
+        pub fn seed_10(&self) -> u8 {
             let mut digits = Vec::new();
             let mut seed = Runtime::generate_uuid();
             while seed > 9 {
