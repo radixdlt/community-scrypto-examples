@@ -107,4 +107,5 @@ For fusing Weapons, `number` = 1. For fusing Armor, `number` = 2 For fusing Acce
 resim call-method $c fuse_items number "#$Weapon1NFTID,#$Weapon2NFTID,$item"
 ```
 The stats of the upgraded weapon is based on the NFT ID of the first Weapon. `Weapon1NFTID`
+
 11. Repeat steps 7-10, and enjoy! You can also test battles without NFTs, using the `combat` method. 
