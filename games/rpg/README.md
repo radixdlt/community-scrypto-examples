@@ -78,9 +78,8 @@ resim show $a
 By fighting stages, your character will naturally accumulate EXP and level up after combat. This will boost your stats. But how do you get better gear?
 You craft it. Once you have enough materials from stages, craft some gear.
 Each piece of gear costs 1 gold, 1 greavite, and 1 wood for now.
-#Make sure you re-export the NFTID of that gear if you want to use it!
 
-|**NOTE**| The last parameter refers to which piece you are crafting. Weapon 1 = Sword, Armor 1 = Helmet, etc. Try and get every piece|
+|**NOTE**| Make sure you re-export the NFTID of that gear if you want to use it!|
 |----|-----|
 
 ```
