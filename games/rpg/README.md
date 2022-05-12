@@ -109,7 +109,7 @@ resim show $a
 Crafting stats are randomized between 75% and 125% of base, so craft multiple items for good rolls!
 
 10. Get EVEN Stronger!
-Items can be fused together, granting a 20% increase to stats. This Stacks! Make sure the items you're fusing together are the same type, and the same level.
+Items can be fused together, granting a 20% increase to stats. This stacks! Make sure the items you're fusing together are the same type, and the same level.
 
 For example, a lvl 2 weapon requires two lvl 1 weapons. A lvl 5 weapon requires 2 lvl 4s, which is 4 lvl 3s, which is 8 lvl 2s, which is 16 lvl 1 weapons.
 
