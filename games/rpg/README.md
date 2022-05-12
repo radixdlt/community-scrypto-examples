@@ -60,7 +60,7 @@ gloves=[ResourceAddress of the NFT with string "Gloves"]
 belt=[ResourceAddress of the NFT with string "Belt"]
 shoes=[ResourceAddress of the NFT with string "Shoes"]
 ```
-6. Okay nowww you can fight.
+8. Okay nowww you can fight.
 Upon running the transaction, your character will simulate fighting the enemies with their stats set earlier as of step 5
 You will return with your NFT having gotten some EXP according to their preformance, as well as some tokens. Those tokens will be used to craft better gear.
 Because damage is randomly generated within a range on each attack, repeating the same stage can have a different outcome!
@@ -74,7 +74,7 @@ Want to do other stages? Simply change the last parameter of the method. Stage 2
 resim call-method $c stage 1,$char "#$weapon,#$helmet,#$chest,#$pants,#$gloves,#$belt,#$shoes,$item" 2
 resim show $a
 ```
-6. Get Stronger!
+9. Get Stronger!
 By fighting stages, your character will naturally accumulate EXP and level up after combat. This will boost your stats. But how do you get better gear?
 You craft it. Once you have enough materials from stages, craft some gear.
 Each piece of gear costs 1 gold, 1 greavite, and 1 wood for now.
@@ -108,7 +108,7 @@ resim show $a
 ```
 Crafting stats are randomized between 75% and 125% of base, so craft multiple items for good rolls!
 
-6. Get EVEN Stronger!
+10. Get EVEN Stronger!
 Items can be fused together, granting a 20% increase to stats. This Stacks! Make sure the items you're fusing together are the same type, and the same level.
 
 For example, a lvl 2 weapon requires two lvl 1 weapons. A lvl 5 weapon requires 2 lvl 4s, which is 4 lvl 3s, which is 8 lvl 2s, which is 16 lvl 1 weapons.
