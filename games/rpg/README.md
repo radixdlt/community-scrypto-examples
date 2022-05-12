@@ -34,6 +34,7 @@ greavite=[Sixth Resource Address generated]
 wood=[Seventh Resource Address generated]
 ```
 5. Input the data for characters and stages. Sample methods/commands are provided, but you are welcome to change anything of your own.
+  This generates data for a character of class 1, as well as stage data for the first six stages. Simply alter the digits according to the comments to add more stages/change stages.
 ```
 resim call-method $c upload_test_data
 resim call-method $c upload_stage_data 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
