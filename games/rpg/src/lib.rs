@@ -203,13 +203,19 @@ blueprint! {
             pub fn change_price(&mut self, new_price: Decimal) {
             self.developer_vault.authorize(||self.game_price = new_price);
         }
-        // Sample stage info for first 6 stages:
-        // stage#1 = resim call-method $c upload_stage_data 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
-        // stage#2 = resim call-method $c upload_stage_data 2 15 10 11 12 15 10 11 12 15 10 11 12 0 0 0 6 0 0 0 6 0 0 0 1 1 1 7
-        // stage#3 = resim call-method $c upload_stage_data 3 17 12 12 15 17 12 12 15 17 12 12 15 0 0 0 8 0 0 0 8 0 1 1 1 1 1 10
-        // stage#4 = resim call-method $c upload_stage_data 4 20 15 14 15 20 15 14 15 20 15 14 15 0 0 0 11 0 0 0 11 0 1 1 1 2 2 12
-        // stage#5 = resim call-method $c upload_stage_data 5 25 15 18 17 25 15 18 17 25 15 18 17 0 0 0 13 0 0 0 14 0 1 1 2 2 2 15
-        // stage#6 = resim call-method $c upload_stage_data 6 75 18 30 22 0 0 0 0 0 0 0 0 0 0 0 50 0 0 0 0 0 0 0 2 2 2 0
+        // Test stage data
+        pub fn sample_stage_data(&mut self) {
+            self.upload_stage_data(1, 10, 7, 10, 10, 10, 7, 10, 10, 10, 7, 10, 10, 0, 0, 0, 5, 0, 0, 0, 5, 0, 0, 0, 0, 1, 1, 6);
+            self.upload_stage_data(2, 15, 10, 11, 12, 15, 10, 11, 12, 15, 10, 11, 12, 0, 0, 0, 6, 0, 0, 0, 6, 0, 0, 0, 1, 1, 1, 7);
+            self.upload_stage_data(3, 17, 12, 12, 15, 17, 12, 12, 15, 17, 12, 12, 15, 0, 0, 0, 8, 0, 0, 0, 8, 0, 1, 1, 1, 1, 1, 10,);
+            self.upload_stage_data(4, 20, 15, 14, 15, 20, 15, 14, 15, 24, 15, 14, 15, 0, 0, 0, 11, 0, 0, 0, 11, 0, 1, 1, 1, 1, 2, 12);
+            self.upload_stage_data(5, 22, 15, 18, 17, 22, 15, 18, 17, 27, 15, 18, 17, 0, 0, 0, 13, 0, 0, 0, 14, 0, 1, 1, 1, 2, 1, 15);
+            self.upload_stage_data(6, 30, 16, 20, 20, 30, 16, 20, 20, 32, 16, 20, 20, 0, 0, 0, 15, 0, 0, 0, 16, 0, 1, 1, 1, 2, 2, 17);
+            self.upload_stage_data(7, 16, 17, 15, 18, 16, 17, 15, 18, 33, 17, 21, 21, 0, 0, 0, 18, 0, 0, 0, 19, 0, 1, 1, 2, 2, 2, 20);
+            self.upload_stage_data(8, 18, 18, 15, 18, 18, 18, 15, 18, 35, 19, 22, 22, 0, 0, 0, 21, 0, 0, 0, 22, 0, 1, 1, 2, 2, 3, 25);
+            self.upload_stage_data(9, 20, 20, 15, 20, 20, 20, 15, 20, 40, 20, 22, 23, 0, 0, 0, 25, 0, 0, 0, 25, 0, 1, 1, 2, 3, 3, 30);
+            self.upload_stage_data(10, 10, 10, 10, 10, 100, 22, 30, 25, 0, 0, 0, 0, 0, 0, 0, 100, 0, 0, 0, 0, 0, 0, 0, 3, 3, 3, 0);
+        }
         pub fn upload_stage_data(&mut self,
             // Stage number
             stage_number: u64,
