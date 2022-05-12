@@ -49,7 +49,7 @@ You must pass in xrd according to your set game.price as of instantiation. I'd a
 ```
 resim call-method $c create_character 100,$xrd 1
 ```
-7. Take your character and fight! But first, export the NFT IDs of everything you got when you created a character.
+7. Before you fight, export the NFT IDs of everything you got when you created a character.
 ```
 resim show $a
 weapon=[ResourceAddress of the NFT with string "Stick"]
@@ -60,7 +60,7 @@ gloves=[ResourceAddress of the NFT with string "Gloves"]
 belt=[ResourceAddress of the NFT with string "Belt"]
 shoes=[ResourceAddress of the NFT with string "Shoes"]
 ```
-8. Okay nowww you can fight.
+8. Okay now you can fight.
 Upon running the transaction, your character will simulate fighting the enemies with their stats set earlier as of step 5
 You will return with your NFT having gotten some EXP according to their preformance, as well as some tokens. Those tokens will be used to craft better gear.
 Because damage is randomly generated within a range on each attack, repeating the same stage can have a different outcome!
@@ -79,7 +79,22 @@ By fighting stages, your character will naturally accumulate EXP and level up af
 You craft it. Once you have enough materials from stages, craft some gear.
 Each piece of gear costs 1 gold, 1 greavite, and 1 wood for now.
 Make sure you re-export the NFTID of that gear if you want to use it!
+|**NOTE**| Lines are as follows: 
 
+Crafts Sword
+
+Crafts Helmet
+
+Crafts Chest
+
+Crafts Pants
+
+Crafts Gloves
+
+Crafts Belt
+
+Crafts Shoes|
+|----|-----|
 Lines are as follows: 
 
 Crafts Sword
