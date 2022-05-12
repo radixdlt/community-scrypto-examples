@@ -34,7 +34,7 @@ greavite=[Sixth Resource Address generated]
 wood=[Seventh Resource Address generated]
 ```
 5. Input the data for characters and stages. Sample methods/commands are provided, but you are welcome to change anything of your own.
-6. This generates data for a character of class 1, as well as stage data for the first six stages. Simply alter the digits according to the comments to add more stages/change stages.
+This generates data for a character of class 1, as well as stage data for the first six stages. Simply alter the digits according to the comments to add more stages/change stages.
 ```
 resim call-method $c upload_test_data
 resim call-method $c upload_stage_data 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
@@ -43,4 +43,24 @@ resim call-method $c upload_stage_data 3 17 12 12 15 17 12 12 15 17 12 12 15 0 0
 resim call-method $c upload_stage_data 4 20 15 14 15 20 15 14 15 20 15 14 15 0 0 0 11 0 0 0 11 0 1 1 1 2 2 12
 resim call-method $c upload_stage_data 5 25 15 18 17 25 15 18 17 25 15 18 17 0 0 0 13 0 0 0 14 0 1 1 2 2 2 15
 resim call-method $c upload_stage_data 6 75 18 30 22 0 0 0 0 0 0 0 0 0 0 0 50 0 0 0 0 0 0 0 2 2 2 0
+```
+5. Create your character. Since only the data for class 1 is uploaded, use that. (Making more classes is too much work)
+You must pass in xrd according to your set game.price as of instantiation. I'd avoid making more than one charcter as it'll confuse you a lot.
+```
+resim call-method $c create_character 100,$xrd 1
+```
+5. Take your character and fight! But first, export the NFT IDs of everything you got when you created a character.
+```
+resim show $a
+weapon=[ResourceAddress of the NFT with string "Stick"]
+helmet=[ResourceAddress of the NFT with string "Helmet"]
+chest=[ResourceAddress of the NFT with string "Chest"]
+pants=[ResourceAddress of the NFT with string "Pants"]
+gloves=[ResourceAddress of the NFT with string "Gloves"]
+belt=[ResourceAddress of the NFT with string "Belt"]
+shoes=[ResourceAddress of the NFT with string "Shoes"]
+```
+6. Okay nowww you can fight. 
+```
+resim call-method $c stage 1,$char "#$weapon,#$helmet,#$chest,#$pants,#$gloves,#$belt,#$shoes,$item" 1
 ```
