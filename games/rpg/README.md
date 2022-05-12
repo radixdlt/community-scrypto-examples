@@ -33,7 +33,7 @@ gold=[Fifth Resource Address generated]
 greavite=[Sixth Resource Address generated]
 wood=[Seventh Resource Address generated]
 ```
-5. Input the data for characters and stages. Sample methods/commands are provided, but you are welcome to change anything of your own.
+5. Input the data for characters and stages. Sample methods are provided, but you are welcome to change anything of your own.
 This generates data for a character of class 1, as well as stage data for the first ten stages. Simply alter the digits according to the comments to add more stages/change stages.
 ```
 resim call-method $c upload_test_data
