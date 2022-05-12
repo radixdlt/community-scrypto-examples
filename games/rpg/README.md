@@ -113,8 +113,8 @@ Items can be fused together, granting a 20% increase to stats. This Stacks! Make
 
 For example, a lvl 2 weapon requires two lvl 1 weapons. A lvl 5 weapon requires 2 lvl 4s, which is 4 lvl 3s, which is 8 lvl 2s, which is 16 lvl 1 weapons.
 
-For fusing Weapons, [number] = 1. For fusing Armor, [number] = 2 For fusing Accessories, [number] = 3
+For fusing Weapons, `number` = 1. For fusing Armor, `number` = 2 For fusing Accessories, `number` = 3
 ```
-resim call-method $c fuse_items [number] "#$Weapon1NFTID,#$Weapon2NFTID,$item"
+resim call-method $c fuse_items number "#$Weapon1NFTID,#$Weapon2NFTID,$item"
 ```
-The stats of the upgraded weapon is based on the NFT ID of the first Weapon. `[Weapon1NFTID]`
+The stats of the upgraded weapon is based on the NFT ID of the first Weapon. `Weapon1NFTID`
