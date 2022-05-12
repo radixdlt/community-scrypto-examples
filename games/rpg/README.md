@@ -21,4 +21,19 @@ xrd=030000000000000000000000000000000000000000000000000004
 ```
 resim publish .
 ```
-
+4. Instantiate a Substradix Component. You must specific the price to create a character as a parameter.
+  Save the necessary ResourceAddresses for later 
+  The first two ResourceAddresses generated are for the developer badge (to control system badges)
+  and the system badge (too authorize changing, minting, and burning all NFTs)
+```
+resim call-function $p Substradix new 100
+char=[Third Resource Address generated]
+item=[Fourth Resource Address generated]
+gold=[Fifth Resource Address generated]
+greavite=[Sixth Resource Address generated]
+wood=[Seventh Resource Address generated]
+```
+5. Input the data for characters and stages. Sample methods/commands are provided, but you are welcome to change anything of your own.
+```
+resim call-method $p Substradix new 100
+```
