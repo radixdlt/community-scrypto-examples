@@ -204,15 +204,15 @@ blueprint! {
             self.developer_vault.authorize(||self.game_price = new_price);
         }
         // Sample stage info for first 6 stages:
-        // stage#1 = resim call-method $c upload_stage_data 1 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
-        // stage#2 = resim call-method $c upload_stage_data 2 2 15 10 11 12 15 10 11 12 15 10 11 12 0 0 0 6 0 0 0 6 0 0 0 1 1 1 7
-        // stage#3 = resim call-method $c upload_stage_data 3 3 17 12 12 15 17 12 12 15 17 12 12 15 0 0 0 8 0 0 0 8 0 1 1 1 1 1 10
-        // stage#4 = resim call-method $c upload_stage_data 4 4 20 15 14 15 20 15 14 15 20 15 14 15 0 0 0 11 0 0 0 11 0 1 1 1 2 2 12
-        // stage#5 = resim call-method $c upload_stage_data 5 5 25 15 18 17 25 15 18 17 25 15 18 17 0 0 0 13 0 0 0 14 0 1 1 2 2 2 15
-        // stage#6 = resim call-method $c upload_stage_data 6 6 75 18 30 22 0 0 0 0 0 0 0 0 0 0 0 50 0 0 0 0 0 0 0 2 2 2 0
+        // stage#1 = resim call-method $c upload_stage_data 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
+        // stage#2 = resim call-method $c upload_stage_data 2 15 10 11 12 15 10 11 12 15 10 11 12 0 0 0 6 0 0 0 6 0 0 0 1 1 1 7
+        // stage#3 = resim call-method $c upload_stage_data 3 17 12 12 15 17 12 12 15 17 12 12 15 0 0 0 8 0 0 0 8 0 1 1 1 1 1 10
+        // stage#4 = resim call-method $c upload_stage_data 4 20 15 14 15 20 15 14 15 20 15 14 15 0 0 0 11 0 0 0 11 0 1 1 1 2 2 12
+        // stage#5 = resim call-method $c upload_stage_data 5 25 15 18 17 25 15 18 17 25 15 18 17 0 0 0 13 0 0 0 14 0 1 1 2 2 2 15
+        // stage#6 = resim call-method $c upload_stage_data 6 75 18 30 22 0 0 0 0 0 0 0 0 0 0 0 50 0 0 0 0 0 0 0 2 2 2 0
         pub fn upload_stage_data(&mut self,
-            // Key and stage number (make these the same!)
-            key: u64, stage_number: u64,
+            // Stage number
+            stage_number: u64,
             // Stats of Enemy 1
             enemy1hp: u64, enemy1dmg: u64, enemy1def: u64, enemy1spd: u64,
             // Stats of Enemy 2
@@ -228,10 +228,10 @@ blueprint! {
             // Rewards on clearing entire stage
             reward1_win: u64, reward2_win: u64, reward3_win: u64, enemy3_exp: u64,
             ) {
-            let vec = vec![stage_number, enemy1hp, enemy1dmg, enemy1def, enemy1spd, enemy2hp, enemy2dmg, enemy2def, enemy2spd,
+            let vec = vec![enemy1hp, enemy1dmg, enemy1def, enemy1spd, enemy2hp, enemy2dmg, enemy2def, enemy2spd,
             enemy3hp, enemy3dmg, enemy3def, enemy3spd, reward1_loss1, reward2_loss1, reward3_loss1, enemy1_exp, reward1_loss2, reward2_loss2, 
                 reward3_loss2, enemy2_exp, reward1_loss3, reward2_loss3, reward3_loss3, reward1_win, reward2_win, reward3_win, enemy3_exp];		                       			
-            self.stage_data.insert(key, vec);
+            self.stage_data.insert(stage_number, vec);
         }
         // To easily upload data for class 1. For testing
         pub fn upload_test_data(&mut self) {
@@ -825,7 +825,7 @@ blueprint! {
             // Assertions so no cheating
             assert!(nft_proof.amount() == dec!("1"));
             assert!(nft_proof.resource_address() == self.character_nft,);
-            assert!(nft_data.stage >= data[0].into() || nft_data.stage == data[0].into());
+            assert!(nft_data.stage >= stage.into() || nft_data.stage == stage.into());
             assert!(gear.resource_address() == self.item_nft,);
             assert!(helmet_data.part == String::from("Helmet"));
             assert!(chest_data.part == String::from("Chest"));
