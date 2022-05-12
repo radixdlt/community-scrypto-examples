@@ -37,16 +37,7 @@ wood=[Seventh Resource Address generated]
 This generates data for a character of class 1, as well as stage data for the first ten stages. Simply alter the digits according to the comments to add more stages/change stages.
 ```
 resim call-method $c upload_test_data
-resim call-method $c upload_stage_data 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
-resim call-method $c upload_stage_data 2 15 10 11 12 15 10 11 12 15 10 11 12 0 0 0 6 0 0 0 6 0 0 0 1 1 1 7
-resim call-method $c upload_stage_data 3 17 12 12 15 17 12 12 15 17 12 12 15 0 0 0 8 0 0 0 8 0 1 1 1 1 1 10
-resim call-method $c upload_stage_data 4 20 15 14 15 20 15 14 15 20 15 14 15 0 0 0 11 0 0 0 11 0 1 1 1 2 2 12
-resim call-method $c upload_stage_data 5 25 15 18 17 25 15 18 17 25 15 18 17 0 0 0 13 0 0 0 14 0 1 1 2 2 2 15
-resim call-method $c upload_stage_data 6 30 15 20 20 30 15 20 20 30 15 20 20 0 0 0 15 0 0 0 16 0 1 1 2 2 2 17
-resim call-method $c upload_stage_data 7 33 17 21 21 33 17 21 21 33 17 21 21 0 0 0 18 0 0 0 19 0 1 1 2 2 2 20
-resim call-method $c upload_stage_data 8 35 20 22 22 35 20 22 22 35 20 22 22 0 0 0 21 0 0 0 22 0 1 1 2 2 2 25
-resim call-method $c upload_stage_data 9 40 20 22 23 40 20 22 23 40 20 22 23 0 0 0 25 0 0 0 25 0 1 1 2 2 2 30
-resim call-method $c upload_stage_data 10 100 22 30 25 0 0 0 0 0 0 0 0 0 0 0 100 0 0 0 0 0 0 0 2 2 2 0
+resim call-method $c sample_stage_data 
 ```
 6. Create your character. Since only the data for class 1 is uploaded, use that. (Making more classes is too much work)
 You must pass in xrd according to your set game.price as of instantiation. I'd avoid making more than one charcter as it'll confuse you a lot.
