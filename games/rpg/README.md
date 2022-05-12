@@ -79,6 +79,14 @@ By fighting stages, your character will naturally accumulate EXP and level up af
 You craft it. Once you have enough materials from stages, craft some gear.
 Each piece of gear costs 1 gold, 1 greavite, and 1 wood for now.
 Make sure you re-export the NFTID of that gear if you want to use it!
+Lines are as follows: 
+Crafts Sword
+Crafts Helmet
+Crafts Chest
+Crafts Pants
+Crafts Gloves
+Crafts Belt
+Crafts Shoes
 ```
 resim call-method $c create_weapon_1 1,$gold 1,$greavite 1,$wood 1
 resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 1
