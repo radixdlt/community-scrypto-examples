@@ -44,12 +44,12 @@ resim call-method $c upload_stage_data 4 20 15 14 15 20 15 14 15 20 15 14 15 0 0
 resim call-method $c upload_stage_data 5 25 15 18 17 25 15 18 17 25 15 18 17 0 0 0 13 0 0 0 14 0 1 1 2 2 2 15
 resim call-method $c upload_stage_data 6 75 18 30 22 0 0 0 0 0 0 0 0 0 0 0 50 0 0 0 0 0 0 0 2 2 2 0
 ```
-5. Create your character. Since only the data for class 1 is uploaded, use that. (Making more classes is too much work)
+6. Create your character. Since only the data for class 1 is uploaded, use that. (Making more classes is too much work)
 You must pass in xrd according to your set game.price as of instantiation. I'd avoid making more than one charcter as it'll confuse you a lot.
 ```
 resim call-method $c create_character 100,$xrd 1
 ```
-5. Take your character and fight! But first, export the NFT IDs of everything you got when you created a character.
+7. Take your character and fight! But first, export the NFT IDs of everything you got when you created a character.
 ```
 resim show $a
 weapon=[ResourceAddress of the NFT with string "Stick"]
@@ -60,7 +60,18 @@ gloves=[ResourceAddress of the NFT with string "Gloves"]
 belt=[ResourceAddress of the NFT with string "Belt"]
 shoes=[ResourceAddress of the NFT with string "Shoes"]
 ```
-6. Okay nowww you can fight. 
+6. Okay nowww you can fight.
+Upon running the transaction, your character will simulate fighting the enemies with their stats set earlier as of step 5
+You will return with your NFT having gotten some EXP according to their preformance, as well as some tokens. Those tokens will be used to craft better gear.
+Because damage is randomly generated within a range on each attack, repeating the same stage can have a different outcome!
+These early test stages are really easy though so you shouldn't be losing
 ```
 resim call-method $c stage 1,$char "#$weapon,#$helmet,#$chest,#$pants,#$gloves,#$belt,#$shoes,$item" 1
+resim show $a
 ```
+Want to do other stages? Simply change the last parameter of the method. Stage 2:
+```
+resim call-method $c stage 1,$char "#$weapon,#$helmet,#$chest,#$pants,#$gloves,#$belt,#$shoes,$item" 2
+resim show $a
+```
+
