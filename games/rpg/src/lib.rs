@@ -203,7 +203,7 @@ blueprint! {
             pub fn change_price(&mut self, new_price: Decimal) {
             self.developer_vault.authorize(||self.game_price = new_price);
         }
-        // Sample stage info for first 5 stages:
+        // Sample stage info for first 6 stages:
         // stage#1 = resim call-method $c upload_stage_data 1 1 10 7 10 10 10 7 10 10 10 7 10 10 0 0 0 5 0 0 0 5 0 0 0 0 1 1 6
         // stage#2 = resim call-method $c upload_stage_data 2 2 15 10 11 12 15 10 11 12 15 10 11 12 0 0 0 6 0 0 0 6 0 0 0 1 1 1 7
         // stage#3 = resim call-method $c upload_stage_data 3 3 17 12 12 15 17 12 12 15 17 12 12 15 0 0 0 8 0 0 0 8 0 1 1 1 1 1 10
