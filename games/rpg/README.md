@@ -115,6 +115,6 @@ For example, a lvl 2 weapon requires two lvl 1 weapons. A lvl 5 weapon requires 
 
 For fusing Weapons, [number] = 1. For fusing Armor, [number] = 2 For fusing Accessories, [number] = 3
 ```
-resim call-method $c fuse_items [number] "#$[Weapon1NFTID],#$[Weapon2NFTID],$item"
+resim call-method $c fuse_items [number] "#$Weapon1NFTID,#$Weapon2NFTID,$item"
 ```
 The stats of the upgraded weapon is based on the NFT ID of the first Weapon. `[Weapon1NFTID]`
