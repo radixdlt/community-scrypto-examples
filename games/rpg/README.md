@@ -74,4 +74,21 @@ Want to do other stages? Simply change the last parameter of the method. Stage 2
 resim call-method $c stage 1,$char "#$weapon,#$helmet,#$chest,#$pants,#$gloves,#$belt,#$shoes,$item" 2
 resim show $a
 ```
+6. Get Stronger!
+By fighting stages, your character will naturally accumulate EXP and level up after combat. This will boost your stats. But how do you get better gear?
+You craft it. Once you have enough materials from stages, craft some gear.
+Each piece of gear costs 1 gold, 1 greavite, and 1 wood for now.
+Make sure you re-export the NFTID of that gear if you want to use it!
+```
+resim call-method $c create_weapon_1 1,$gold 1,$greavite 1,$wood 1
+resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 1
+resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 2
+resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 3
+resim call-method $c create_accessory_1 1,$gold 1,$greavite 1,$wood 1
+resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 2
+resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 3
+resim show $a
+```
+Crafting stats are randomized between 75% and 125% of base, so craft multiple items for good rolls!
 
+6. Get EVEN Stronger!
