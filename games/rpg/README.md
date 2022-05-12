@@ -85,8 +85,8 @@ resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 1
 resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 2
 resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 3
 resim call-method $c create_accessory_1 1,$gold 1,$greavite 1,$wood 1
-resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 2
-resim call-method $c create_armor_1 1,$gold 1,$greavite 1,$wood 3
+resim call-method $c create_accessory_1 1,$gold 1,$greavite 1,$wood 2
+resim call-method $c create_accessory_1 1,$gold 1,$greavite 1,$wood 3
 resim show $a
 ```
 Crafting stats are randomized between 75% and 125% of base, so craft multiple items for good rolls!
