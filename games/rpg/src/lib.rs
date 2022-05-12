@@ -105,6 +105,8 @@ blueprint! {
         character_number: u64,
         character_nft: ResourceAddress,
         system_vault: Vault,
+        // If a gamebreaking bug ever happens with NFTs, or a severe balance change is required, 
+        // the version can be updated and methods can require NFTs to be updated to ensure changes are properly implemented.
         version:  Decimal,
         developer_vault: Vault,
         item_nft: ResourceAddress,
