@@ -12,7 +12,7 @@ In a terminal:
 ```
 resim reset
 ```
-2. Create a new account to administer the component. Save the account address to `$a`. Additionally, save the radix token address 030000000000000000000000000000000000000000000000000004 as $xrd 'xrd=030000000000000000000000000000000000000000000000000004'
+2. Create a new account to administer the component. Save the account address to `$a`. Additionally, save the radix token address 030000000000000000000000000000000000000000000000000004 as $xrd `xrd=030000000000000000000000000000000000000000000000000004`
 ```
 resim new-account
 ```
