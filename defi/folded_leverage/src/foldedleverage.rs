@@ -3,9 +3,9 @@ use crate::lending_pool::*;
 
 #[derive(NonFungibleData)]
 pub struct User {
-    #[scrypto(mutable)]
+
     deposit_balance: HashMap<ResourceAddress, Decimal>,
-    #[scrypto(mutable)]
+
     borrow_balance: HashMap<ResourceAddress, Decimal>,
 }
 

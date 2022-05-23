@@ -1,5 +1,5 @@
 use scrypto::prelude::*;
-
+use crate::foldedleverage::*;
 
 blueprint! {
     struct LendingPool {
@@ -7,6 +7,8 @@ blueprint! {
         fees: Vault,
         tracking_token_admin_badge: Vault,
         tracking_token_address: ResourceAddress,
+        users: HashMap<(ResourceAddress,Decimal), User>
+
     }
 
     impl LendingPool {
