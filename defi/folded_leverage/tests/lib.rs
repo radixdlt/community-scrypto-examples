@@ -3,7 +3,7 @@ use radix_engine::ledger::*;
 use radix_engine::transaction::*;
 use scrypto::prelude::*;
 
-use auto_lend::User;
+use FoldedLeverage::User;
 
 struct TestEnv<'a, L: SubstateStore> {
     executor: TransactionExecutor<'a, L>,

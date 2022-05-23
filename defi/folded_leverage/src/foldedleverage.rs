@@ -3,6 +3,7 @@ use crate::lending_pool::*;
 
 #[derive(NonFungibleData, Describe, Encode, Decode, TypeId)]
 pub struct User {
+    // NFT to record user data
     #[scrypto(mutable)]
     deposit_balance: HashMap<ResourceAddress, Decimal>,
     #[scrypto(mutable)]
@@ -41,7 +42,6 @@ blueprint! {
 
         lending_pools: HashMap<ResourceAddress, LendingPool>,
 
-        tracking_token_address_mapping: HashMap<ResourceAddress, ResourceAddress>,
         //Flash loan
         auth_vault: Vault,
         transient_resource_address: ResourceAddress,
@@ -90,7 +90,6 @@ blueprint! {
             // Difference between using return Self and just Self?
             return Self {
                 lending_pools: HashMap::new(),
-                tracking_token_address_mapping: HashMap::new(),
                 auth_vault: Vault::with_bucket(auth_token),
                 transient_resource_address: address,
                 user_badge_vault: Vault::with_bucket(lending_protocol_user_badge),
@@ -135,7 +134,7 @@ blueprint! {
             assert!(self.deposit_resource_exists(user_auth, address), "[{}]: No resource exists for user.", label);
         }
 
-        pub fn assert_deposit_resouce_deosnt_exists(&self, user_auth: Proof, address: ResourceAddress, label: String) {
+        pub fn assert_deposit_resouce_doesnt_exists(&self, user_auth: Proof, address: ResourceAddress, label: String) {
             assert!(!self.deposit_resource_exists(user_auth, address), "[{}]: Resource exists for user.", label);
         }
 
@@ -202,7 +201,7 @@ blueprint! {
             }
 
 
-        pub fn new_lending_pool(&mut self, user_auth: Proof, deposit: Bucket) -> Bucket {
+        pub fn new_lending_pool(&mut self, user_auth: Proof, deposit: Bucket) {
             // Checking if a liquidity pool already exists between these two tokens
             self.assert_pool_doesnt_exists(
                 deposit.resource_address(), 
@@ -213,24 +212,16 @@ blueprint! {
 
 
             let address: ResourceAddress = deposit.resource_address();
-            let (lending_pool, tracking_tokens): (ComponentAddress, Bucket) = LendingPool::new(user_auth,
-                deposit
-            );
+            let lending_pool: ComponentAddress = LendingPool::new(user_auth, deposit);
             // Inserts into lending pool hashmap
             self.lending_pools.insert(
                 address,
                 lending_pool.into()
             );
-            // Inserts tracking token hashmap
-            self.tracking_token_address_mapping.insert(
-                tracking_tokens.resource_address(),
-                address
-            );
 
-            return tracking_tokens;
         }
 
-        pub fn deposit(&mut self, user_auth: Proof, deposit_amount: Bucket) -> Bucket 
+        pub fn deposit(&mut self, user_auth: Proof, deposit_amount: Bucket) 
         {
             // Checks resource address of the deposit
             let address: ResourceAddress = deposit_amount.resource_address(); 
@@ -240,7 +231,7 @@ blueprint! {
             let clone_user_auth: Proof = user_auth.clone();
 
             // Checks if user NFT contains resources
-            self.assert_deposit_resouce_deosnt_exists(clone_user_auth, address, 
+            self.assert_deposit_resouce_doesnt_exists(clone_user_auth, address, 
             String::from("Adding resource to account"));
 
             // Attempting to get the lending pool component associated with the provided address pair.
@@ -248,10 +239,10 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
-                    let returns: Bucket = lending_pool.deposit(deposit_amount); // Does this need auth?
+                    lending_pool.deposit(deposit_amount); // Does this need auth?
                     // Update user state
                     self.add_deposit_balance(user_auth, address, amount);
-                    returns
+
                 }
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
@@ -264,26 +255,28 @@ blueprint! {
             }
         }
 
-        pub fn borrow(&mut self, user_auth: Proof, token_requested: ResourceAddress, deposit_amount: Bucket) -> Bucket 
+        pub fn borrow(&mut self, user_auth: Proof, token_requested: ResourceAddress, borrow_amount: Bucket) 
         {
             // Checks if user exists
 
 
             // Checks resource address of the deposit
-            let address: ResourceAddress = deposit_amount.resource_address(); 
+            let address: ResourceAddress = borrow_amount.resource_address(); 
+            
+            let amount = borrow_amount.amount();
 
-            let amount = deposit_amount.amount();
-
+            
+            assert_eq!(token_requested, address, "Amount sent must be the same token as the token requested");
 
             // Attempting to get the lending pool component associated with the provided address pair.
             let optional_lending_pool: Option<&LendingPool> = self.lending_pools.get(&address);
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
-                    let returns: Bucket = lending_pool.deposit(deposit_amount); // Does this need auth?
+                    lending_pool.deposit(borrow_amount); // Does this need auth?
                     // Update user state
                     self.add_borrow_balance(user_auth, address, amount);
-                    returns
+
                 }
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
@@ -291,17 +284,33 @@ blueprint! {
                     // terms of the two empty buckets being returned, but this is done to allow for the add liquidity
                     // method to be general and allow for the possibility of the liquidity pool not being there.
                     info!("[DEX Add Liquidity]: Pool for {:?} doesn't exist. Creating a new one.", address);
-                    self.new_lending_pool(user_auth, deposit_amount)
+                    self.new_lending_pool(user_auth, borrow_amount)
                 }
             }
         }
 
         // Still need to finish
-        pub fn redeem(&mut self, user_auth: Proof, token_reuqested: ResourceAddress, amount: Decimal) -> Bucket {
+        pub fn redeem(&mut self, user_auth: Proof, token_reuqested: ResourceAddress, amount: Decimal) {
             // Check if deposit withdrawal request has no lien
             let user_badge_data: User = user_auth.non_fungible().data();
             assert!(user_badge_data.borrow_balance.get(&token_requested) > 0, "Need to fully repay loan");
+            let optional_lending_pool: Option<&LendingPool> = self.lending_pools.get(&token_reuqested);
+            match optional_lending_pool {
+                Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
+                    info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
+                    lending_pool.redeem(user_auth, token_reuqested, amount); // Does this need auth?
+                    // Update user state
+                    self.add_borrow_balance(user_auth, token_reuqested, amount);
 
+                }
+                None => { // If this matches then there does not exist a liquidity pool for this token pair
+                    // In here we are creating a new liquidity pool for this token pair since we failed to find an 
+                    // already existing liquidity pool. The return statement below might seem somewhat redundant in 
+                    // terms of the two empty buckets being returned, but this is done to allow for the add liquidity
+                    // method to be general and allow for the possibility of the liquidity pool not being there.
+                    info!("[DEX Add Liquidity]: Pool for {:?} doesn't exist. Creating a new one.", token_reuqested);
+                }
+            }
 
         }
         
