@@ -1,11 +1,11 @@
 use scrypto::prelude::*;
 use crate::lending_pool::*;
 
-#[derive(NonFungibleData)]
+#[derive(NonFungibleData, Describe, Encode, Decode, TypeId)]
 pub struct User {
-
+    #[scrypto(mutable)]
     deposit_balance: HashMap<ResourceAddress, Decimal>,
-
+    #[scrypto(mutable)]
     borrow_balance: HashMap<ResourceAddress, Decimal>,
 }
 
@@ -126,6 +126,24 @@ blueprint! {
             );
         }
 
+        pub fn deposit_resource_exists(&self, user_auth: Proof, address: ResourceAddress) -> bool {
+            let user_badge_data: User = user_auth.non_fungible().data();
+            return user_badge_data.deposit_balance.contains_key(&address);
+        }
+
+        pub fn assert_deposit_resouce_exists(&self, user_auth: Proof, address: ResourceAddress, label: String) {
+            assert!(self.deposit_resource_exists(user_auth, address), "[{}]: No resource exists for user.", label);
+        }
+
+        pub fn assert_deposit_resouce_deosnt_exists(&self, user_auth: Proof, address: ResourceAddress, label: String) {
+            assert!(!self.deposit_resource_exists(user_auth, address), "[{}]: Resource exists for user.", label);
+        }
+
+        pub fn borrow_resource_exists(&self, user_auth: Proof, address: ResourceAddress) -> bool {
+            let user_badge_data: User = user_auth.non_fungible().data();
+            return user_badge_data.borrow_balance.contains_key(&address);
+        }
+        
         pub fn new_user(&mut self) -> Bucket {
 
             // Mint NFT to give to users as identification 
@@ -145,26 +163,46 @@ blueprint! {
             return user
         }
 
-        fn add_deposit_balance(&mut self, user_auth: Bucket, address: ResourceAddress, amount: Decimal) -> Bucket {
+        // Adds the deposit balance
+        // Checks if the user already a record of the resource or not
+        fn add_deposit_balance(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
 
             let mut non_fungible_data: User = user_auth.non_fungible().data();
+                if non_fungible_data.deposit_balance.contains_key(&address) {
+                    *non_fungible_data.deposit_balance.get_mut(&address).unwrap() += amount;
+                }     
+                else {
+                    self.insert_deposit(user_auth, address, amount);
+                    
+                }
+            }
+        
 
-            *non_fungible_data.deposit_balance.get_mut(&address).unwrap() += amount;
-
-            return user_auth
-        }
-
-        fn add_borrow_balance(&mut self, user_auth: Bucket, address: ResourceAddress, amount: Decimal) -> Bucket {
+        fn insert_deposit(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
 
             let mut non_fungible_data: User = user_auth.non_fungible().data();
-
-            *non_fungible_data.borrow_balance.get_mut(&address).unwrap() += amount;
-
-            return user_auth
+            non_fungible_data.deposit_balance.insert(address, amount);
         }
 
+        fn insert_borrow(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
 
-        pub fn new_lending_pool(&mut self, deposit: Bucket) -> Bucket {
+            let mut non_fungible_data: User = user_auth.non_fungible().data();
+            non_fungible_data.borrow_balance.insert(address, amount);
+        }
+
+        fn add_borrow_balance(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
+
+            let mut non_fungible_data: User = user_auth.non_fungible().data();
+                if non_fungible_data.borrow_balance.contains_key(&address) {
+                    *non_fungible_data.borrow_balance.get_mut(&address).unwrap() += amount;
+                }     
+                else {
+                    self.insert_borrow(user_auth, address, amount);
+                }
+            }
+
+
+        pub fn new_lending_pool(&mut self, user_auth: Proof, deposit: Bucket) -> Bucket {
             // Checking if a liquidity pool already exists between these two tokens
             self.assert_pool_doesnt_exists(
                 deposit.resource_address(), 
@@ -175,7 +213,7 @@ blueprint! {
 
 
             let address: ResourceAddress = deposit.resource_address();
-            let (lending_pool, tracking_tokens): (ComponentAddress, Bucket) = LendingPool::new(
+            let (lending_pool, tracking_tokens): (ComponentAddress, Bucket) = LendingPool::new(user_auth,
                 deposit
             );
             // Inserts into lending pool hashmap
@@ -192,16 +230,18 @@ blueprint! {
             return tracking_tokens;
         }
 
-        pub fn deposit(&mut self, user_auth: Bucket, deposit_amount: Bucket) -> Bucket 
+        pub fn deposit(&mut self, user_auth: Proof, deposit_amount: Bucket) -> Bucket 
         {
-            // Checks if user exists
-
-
             // Checks resource address of the deposit
             let address: ResourceAddress = deposit_amount.resource_address(); 
 
             let amount = deposit_amount.amount();
 
+            let clone_user_auth: Proof = user_auth.clone();
+
+            // Checks if user NFT contains resources
+            self.assert_deposit_resouce_deosnt_exists(clone_user_auth, address, 
+            String::from("Adding resource to account"));
 
             // Attempting to get the lending pool component associated with the provided address pair.
             let optional_lending_pool: Option<&LendingPool> = self.lending_pools.get(&address);
@@ -219,12 +259,12 @@ blueprint! {
                     // terms of the two empty buckets being returned, but this is done to allow for the add liquidity
                     // method to be general and allow for the possibility of the liquidity pool not being there.
                     info!("[DEX Add Liquidity]: Pool for {:?} doesn't exist. Creating a new one.", address);
-                    self.new_lending_pool(deposit_amount)
+                    self.new_lending_pool(user_auth, deposit_amount)
                 }
             }
         }
 
-        pub fn borrow_supply(&mut self, user_auth: Bucket, deposit_amount: Bucket) -> Bucket 
+        pub fn borrow(&mut self, user_auth: Proof, token_requested: ResourceAddress, deposit_amount: Bucket) -> Bucket 
         {
             // Checks if user exists
 
@@ -251,9 +291,18 @@ blueprint! {
                     // terms of the two empty buckets being returned, but this is done to allow for the add liquidity
                     // method to be general and allow for the possibility of the liquidity pool not being there.
                     info!("[DEX Add Liquidity]: Pool for {:?} doesn't exist. Creating a new one.", address);
-                    self.new_lending_pool(deposit_amount)
+                    self.new_lending_pool(user_auth, deposit_amount)
                 }
             }
+        }
+
+        // Still need to finish
+        pub fn redeem(&mut self, user_auth: Proof, token_reuqested: ResourceAddress, amount: Decimal) -> Bucket {
+            // Check if deposit withdrawal request has no lien
+            let user_badge_data: User = user_auth.non_fungible().data();
+            assert!(user_badge_data.borrow_balance.get(&token_requested) > 0, "Need to fully repay loan");
+
+
         }
         
     }
