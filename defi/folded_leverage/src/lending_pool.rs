@@ -1,5 +1,6 @@
 use scrypto::prelude::*;
-use crate::foldedleverage::*;
+use crate::foldedleverage::User;
+use crate::user_management::*;
 
 // Still need to figure out how to calculate fees and interest rate
 
@@ -8,7 +9,8 @@ blueprint! {
     struct LendingPool {
         vaults: HashMap<ResourceAddress, Vault>,
         fees: Vault,
-        users: LazyMap<NonFungibleId, User>,
+        users: HashMap<ResourceAddress, User>,
+        user_management_address: ComponentAddress,
     }
 
     impl LendingPool {
@@ -38,16 +40,22 @@ blueprint! {
             let lending_pool: ComponentAddress = Self {
                 vaults: vaults,
                 fees: Vault::new(funds_resource_def),
-                users: LazyMap::new(),
-
+                users: HashMap::new(),
+                user_management_address: UserManagement::new(),
             }
             .instantiate().globalize();
             return lending_pool;
         }
 
         // Contribute tokens to the pool in exchange of an LP token
-        pub fn deposit(&mut self, deposit_amount: Bucket) {
+        pub fn deposit(&mut self, user_auth: Proof, deposit_amount: Bucket) {
 
+            let user_management: UserManagement = self.user_management_address.into();
+            user_management.assert_user_exists(user_auth, String::from("User doesn't belong to this lending protocol."));
+
+            assert!(self.users.contains_key(&user_auth.resource_address()), 
+            "User does not belong to this lending protocol."
+        );
 
             // Deposits collateral
             self.vaults.get_mut(&deposit_amount.resource_address()).unwrap().put(deposit_amount);
@@ -104,6 +112,11 @@ blueprint! {
         // Need to think about how to withdraw
         pub fn borrow(&mut self, user_auth: Proof, borrow_amount: Decimal) -> Bucket {
 
+            // Check if the NFT belongs to this lending protocol.
+            assert!(self.users.contains_key(&user_auth.resource_address()), 
+            "User does not belong to this lending protocol."
+        );
+
             // Withdrawing the amount of tokens owed to this liquidity provider
             let addresses: Vec<ResourceAddress> = self.addresses();
             let borrow_amount: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - borrow_amount);
@@ -141,8 +154,15 @@ blueprint! {
             redeem_amount: Decimal,
         ) -> Bucket {
 
-            let user_badge_data: User = user_auth.non_fungible().data();
+            // Check if the NFT belongs to this lending protocol.
+            assert!(self.users.contains_key(&user_auth.resource_address()), 
+            "User does not belong to this lending protocol.");
+            
+            let user_management: UserManagement = self.user_management_address.into();
 
+            // Check if deposit withdrawal request has no lien
+            user_management.check_lien(user_auth, token_requested);
+            
             // Withdrawing the amount of tokens owed to this liquidity provider
             let addresses: Vec<ResourceAddress> = self.addresses();
             let bucket1: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - redeem_amount);
