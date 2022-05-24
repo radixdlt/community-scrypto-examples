@@ -41,14 +41,12 @@ blueprint! {
     struct FoldedLeverage {
 
         lending_pools: HashMap<ResourceAddress, LendingPool>,
-
         //Flash loan
         auth_vault: Vault,
         transient_resource_address: ResourceAddress,
-
         // Vault that holds the authorization badge
         user_badge_vault: Vault,
-        // Collects User Address
+        // Tracks NFT created by this component
         user_address: ResourceAddress,
     }
 
@@ -162,6 +160,11 @@ blueprint! {
             return user
         }
 
+        // Check if the user belongs to this lending protocol
+        pub fn check_user_exist(&self, user_auth: Proof) -> bool {
+            return user_auth.contains(self.user_address);
+        }
+
         // Adds the deposit balance
         // Checks if the user already a record of the resource or not
         fn add_deposit_balance(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
@@ -239,7 +242,7 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
-                    lending_pool.deposit(deposit_amount); // Does this need auth?
+                    lending_pool.deposit(user_auth, deposit_amount); // Does this need auth?
                     // Update user state
                     self.add_deposit_balance(user_auth, address, amount);
 
@@ -273,7 +276,7 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
-                    lending_pool.deposit(borrow_amount); // Does this need auth?
+                    lending_pool.deposit(user_auth, borrow_amount); // Does this need auth?
                     // Update user state
                     self.add_borrow_balance(user_auth, address, amount);
 
@@ -293,11 +296,11 @@ blueprint! {
         pub fn redeem(&mut self, user_auth: Proof, token_reuqested: ResourceAddress, amount: Decimal) {
             // Check if deposit withdrawal request has no lien
             let user_badge_data: User = user_auth.non_fungible().data();
-            assert!(user_badge_data.borrow_balance.get(&token_requested) > 0, "Need to fully repay loan");
+            assert_eq!(user_badge_data.borrow_balance.get(&token_requested) > amount, "Need to fully repay loan");
             let optional_lending_pool: Option<&LendingPool> = self.lending_pools.get(&token_reuqested);
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
-                    info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
+                    info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", token_reuqested);
                     lending_pool.redeem(user_auth, token_reuqested, amount); // Does this need auth?
                     // Update user state
                     self.add_borrow_balance(user_auth, token_reuqested, amount);

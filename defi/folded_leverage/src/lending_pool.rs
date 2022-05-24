@@ -1,18 +1,18 @@
 use scrypto::prelude::*;
 use crate::foldedleverage::*;
 
+// Still need to figure out how to calculate fees and interest rate
+
+
 blueprint! {
     struct LendingPool {
         vaults: HashMap<ResourceAddress, Vault>,
         fees: Vault,
-        tracking_token_admin_badge: Vault,
-        tracking_token_address: ResourceAddress,
-        users: HashMap<(ResourceAddress,Decimal), User>
-
+        users: LazyMap<NonFungibleId, User>,
     }
 
     impl LendingPool {
-        pub fn new(initial_funds: Bucket) -> (ComponentAddress, Bucket) {
+        pub fn new(user_auth: Proof, initial_funds: Bucket) -> ComponentAddress {
 
             assert_ne!(
                 borrow_resource_manager!(initial_funds.resource_address()).resource_type(), ResourceType::NonFungible,
@@ -27,27 +27,6 @@ blueprint! {
             // Define the resource address of the fees collected
             let funds_resource_def = initial_funds.resource_address();
 
-            // Create badge that will be used to mint and burn LP tokens
-            let tracking_token_admin_badge: Bucket = ResourceBuilder::new_fungible()
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", "Tracking Token Admin Badge")
-                .metadata("symbol", "TTAB")
-                .metadata("description", "This is an admin badge that has the authority to mint and burn tracking tokens")
-                .initial_supply(1);
-
-            // Creating token address identifier for tracking_tokens
-            let token_address: ResourceAddress = initial_funds.resource_address();
-
-            // Creating the tracking tokens and minting the amount owed to the initial liquidity provider
-            let tracking_tokens: Bucket = ResourceBuilder::new_fungible()
-                .divisibility(DIVISIBILITY_MAXIMUM)
-                .metadata("name", format!("{} LP Tracking Token", token_address))
-                .metadata("symbol", "TT")
-                .metadata("description", "A tracking token used to track the percentage ownership of liquidity providers over the liquidity pool")
-                .mintable(rule!(require(tracking_token_admin_badge.resource_address())), LOCKED)
-                .burnable(rule!(require(tracking_token_admin_badge.resource_address())), LOCKED)
-                .initial_supply(100);
-
             //Inserting pool info into HashMap
             let lending_pool: Bucket = initial_funds;
 
@@ -55,41 +34,24 @@ blueprint! {
             vaults.insert(lending_pool.resource_address(), Vault::with_bucket(lending_pool));
 
             //Instantiate lending pool component
+
             let lending_pool: ComponentAddress = Self {
                 vaults: vaults,
                 fees: Vault::new(funds_resource_def),
-                tracking_token_admin_badge: Vault::with_bucket(tracking_token_admin_badge),
-                tracking_token_address: tracking_tokens.resource_address(),
+                users: LazyMap::new(),
+
             }
             .instantiate().globalize();
-            return (lending_pool, tracking_tokens);
+            return lending_pool;
         }
 
         // Contribute tokens to the pool in exchange of an LP token
-        pub fn deposit(&mut self, collateral: Bucket) -> Bucket {
+        pub fn deposit(&mut self, deposit_amount: Bucket) {
 
-            // LP Tracking tokens
-            let amount: Decimal = self.vaults[&collateral.resource_address()].amount();
-
-            // Computing the amount of tracking tokens that the liquidity provider is owed and minting them. In the case
-            // that the liquidity pool has been completely emptied out (tracking_tokens_manager.total_supply() == 0)  
-            // then the first person to supply liquidity back into the pool again would be given 100 tracking tokens.
-            let tracking_tokens_manager: &ResourceManager = borrow_resource_manager!(self.tracking_token_address); //Why did he write it this way? What does the resource manager do?
-            let tracking_amount: Decimal = if tracking_tokens_manager.total_supply() == Decimal::zero() { 
-                dec!("100.00") 
-            } else {
-                amount / tracking_tokens_manager.total_supply()
-            };
-            let tracking_tokens: Bucket = self.tracking_token_admin_badge.authorize(|| {
-                tracking_tokens_manager.mint(tracking_amount)
-            });
-            info!("[Add Liquidity]: Owed amount of tracking tokens: {}", tracking_amount);
 
             // Deposits collateral
-            self.vaults.get_mut(&collateral.resource_address()).unwrap().put(collateral);
+            self.vaults.get_mut(&deposit_amount.resource_address()).unwrap().put(deposit_amount);
 
-
-            return tracking_tokens;
         }
 
         /// Gets the resource addresses of the tokens in this liquidity pool and returns them as a `Vec<ResourceAddress>`.
@@ -140,30 +102,52 @@ blueprint! {
 
         // Give LP token back to get portion of the pool and fees
         // Need to think about how to withdraw
-        pub fn borrow(&mut self, user_auth: Bucket, tracking_tokens: Bucket) -> Bucket {
-
-            // Checking the resource address of the tracking tokens passed to ensure that they do indeed belong to this
-            // liquidity pool.
-            assert_eq!(
-                tracking_tokens.resource_address(), self.tracking_token_address,
-                "[Remove Liquidity]: The tracking tokens given do not belong to this liquidity pool."
-            );
-
-            // Calculating the percentage ownership that the tracking tokens amount corresponds to
-            let tracking_tokens_manager: &ResourceManager = borrow_resource_manager!(self.tracking_token_address);
-            let percentage: Decimal = tracking_tokens.amount() / tracking_tokens_manager.total_supply();
-
-            // Burning the tracking tokens
-            self.tracking_token_admin_badge.authorize(|| {
-                tracking_tokens.burn();
-            });
+        pub fn borrow(&mut self, user_auth: Proof, borrow_amount: Decimal) -> Bucket {
 
             // Withdrawing the amount of tokens owed to this liquidity provider
             let addresses: Vec<ResourceAddress> = self.addresses();
-            let collateral: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() * percentage);
+            let borrow_amount: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - borrow_amount);
 
 
-            collateral
+            borrow_amount
+        }
+
+        /// Removes the percentage of the liquidity owed to this liquidity provider.
+        /// 
+        /// This method is used to calculate the amount of tokens owed to the liquidity provider and take them out of
+        /// the liquidity pool and return them to the liquidity provider. If the liquidity provider wishes to only take
+        /// out a portion of their liquidity instead of their total liquidity they can provide a `tracking_tokens` 
+        /// bucket that does not contain all of their tracking tokens (example: if they want to withdraw 50% of their
+        /// liquidity, they can put 50% of their tracking tokens into the `tracking_tokens` bucket.). When the liquidity
+        /// provider is given the tokens that they are owed, the tracking tokens are burned.
+        /// 
+        /// This method performs a number of checks before liquidity removed from the pool:
+        /// 
+        /// * **Check 1:** Checks to ensure that the tracking tokens passed do indeed belong to this liquidity pool.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `tracking_tokens` (Bucket) - A bucket of the tracking tokens that the liquidity provider wishes to 
+        /// exchange for their share of the liquidity.
+        /// 
+        /// # Returns:
+        /// 
+        /// * `Bucket` - A Bucket of the share of the liquidity provider of the first token.
+        /// * `Bucket` - A Bucket of the share of the liquidity provider of the second token.
+        pub fn redeem(
+            &mut self,
+            user_auth: Proof,
+            token_requested: ResourceAddress,
+            redeem_amount: Decimal,
+        ) -> Bucket {
+
+            let user_badge_data: User = user_auth.non_fungible().data();
+
+            // Withdrawing the amount of tokens owed to this liquidity provider
+            let addresses: Vec<ResourceAddress> = self.addresses();
+            let bucket1: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - redeem_amount);
+
+            return bucket1;
         }
     }
 }
