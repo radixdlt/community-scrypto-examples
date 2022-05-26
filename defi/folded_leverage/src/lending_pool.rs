@@ -78,7 +78,7 @@ blueprint! {
             return lending_pool;
         }
 
-        // Mint tracking tokens every time there's a borrow
+        // Mint tracking tokens every time there's a borrow and puts it in the borrowed vault
         fn mint_borrow(&mut self, token_address: ResourceAddress, amount: Decimal) {
             let tracking_tokens_manager: &ResourceManager = borrow_resource_manager!(self.tracking_token_address);
             let tracking_tokens: Bucket = self.tracking_token_admin_badge.authorize(|| {
@@ -151,18 +151,20 @@ blueprint! {
             return vault.take(amount);
         }
 
-        pub fn borrow(&mut self, user_auth: Proof, borrow_amount: Decimal) -> Bucket {
+        pub fn borrow(&mut self, user_auth: Proof, token_address: ResourceAddress, amount: Decimal) -> Bucket {
 
             // Check if the NFT belongs to this lending protocol.
             let user_management: UserManagement = self.user_management_address.into();
             user_management.assert_user_exists(user_auth, String::from("User doesn't belong to this lending protocol."));
 
+            // Minting tracking tokens to be deposited to borrowed_vault to track borrows from this pool
+            self.mint_borrow(token_address, amount);
+
             // Withdrawing the amount of tokens owed to this liquidity provider
             let addresses: Vec<ResourceAddress> = self.addresses();
-            let borrow_amount: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - borrow_amount);
+            let borrow_amount: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - amount);
 
-
-            borrow_amount
+            return borrow_amount
         }
 
         /// Removes the percentage of the liquidity owed to this liquidity provider.
@@ -187,28 +189,33 @@ blueprint! {
         /// 
         /// * `Bucket` - A Bucket of the share of the liquidity provider of the first token.
         /// * `Bucket` - A Bucket of the share of the liquidity provider of the second token.
-        pub fn redeem(&mut self, user_auth: Proof, token_requested: ResourceAddress, redeem_amount: Decimal) -> Bucket {
+        pub fn redeem(&mut self, user_auth: Proof, token_address: ResourceAddress, amount: Decimal) -> Bucket {
 
             // Check if the NFT belongs to this lending protocol.
             let user_management: UserManagement = self.user_management_address.into();
             user_management.assert_user_exists(user_auth, String::from("User doesn't belong to this lending protocol."));
 
             // Check if deposit withdrawal request has no lien
-            user_management.check_lien(user_auth, token_requested);
+            user_management.check_lien(user_auth, token_address);
             
             // Withdrawing the amount of tokens owed to this liquidity provider
             let addresses: Vec<ResourceAddress> = self.addresses();
-            let bucket: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - redeem_amount);
+            let bucket: Bucket = self.withdraw(addresses[0], self.vaults[&addresses[0]].amount() - amount);
 
             return bucket;
         }
 
-        pub fn repay(&mut self, user_auth: Proof, token_requested: ResourceAddress, repay_amount: Bucket) {
+        pub fn repay(&mut self, user_auth: Proof, token_address: ResourceAddress, amount: Bucket) {
             // Check if the NFT belongs to this lending protocol.
             let user_management: UserManagement = self.user_management_address.into();
             user_management.assert_user_exists(user_auth, String::from("User doesn't belong to this lending protocol."));
 
-            self.vaults.get_mut(&repay_amount.resource_address()).unwrap().put(repay_amount);
+            // Burns the tracking token for borrowed amounts
+            {let amount = amount.amount();
+            self.burn_borrow(token_address, amount);}
+
+            // Deposits the repaid loan back into the supply
+            self.vaults.get_mut(&amount.resource_address()).unwrap().put(amount);
         }
 
         pub fn check_liquidity(&self, token_address: ResourceAddress) -> Decimal {
@@ -218,6 +225,24 @@ blueprint! {
             let liquidity_amount: Decimal = borrowed_vault.amount() - vault.amount();
             return liquidity_amount
         }
+
+        pub fn check_utilization_rate(&self, token_address: ResourceAddress) -> Decimal {
+            let vault: &mut Vault = self.vaults.get_mut(&token_address).unwrap();
+            let borrowed_vault: &mut Vault = self.borrowed_vaults.get_mut(&token_address).unwrap();
+            let liquidity_amount: Decimal = borrowed_vault.amount() / vault.amount();
+            return liquidity_amount
+        }
+
+        pub fn check_total_supplied(&self, token_address: ResourceAddress) -> Decimal {
+            let vault: &mut Vault = self.vaults.get_mut(&token_address).unwrap();
+            return vault.amount()
+        }
+        
+        pub fn check_total_borrowed(&self, token_address: ResourceAddress) -> Decimal {
+            let borrowed_vault: &mut Vault = self.borrowed_vaults.get_mut(&token_address).unwrap();
+            return borrowed_vault.amount()
+        }
+
     }
 }
 

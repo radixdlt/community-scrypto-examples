@@ -119,12 +119,11 @@ blueprint! {
                 address,
                 lending_pool.into()
             );
-
         }
 
-        pub fn deposit(&mut self, user_auth: Proof, token_resource: ResourceAddress, deposit_amount: Bucket) 
+        pub fn deposit(&mut self, user_auth: Proof, token_address: ResourceAddress, amount: Bucket) 
         {
-            let address: ResourceAddress = deposit_amount.resource_address(); 
+            let address: ResourceAddress = amount.resource_address(); 
             let user_management: UserManagement = self.user_management_address.into();
 
             // Checks if user exist
@@ -135,16 +134,16 @@ blueprint! {
             String::from("Adding resource to account"));
 
             // Checks if the token resources are the same
-            assert_eq!(token_resource, deposit_amount.resource_address(), "Token requested and token deposited must be the same.");
+            assert_eq!(token_address, amount.resource_address(), "Token requested and token deposited must be the same.");
             
             // Attempting to get the lending pool component associated with the provided address pair.
             let optional_lending_pool: Option<&LendingPool> = self.lending_pools.get(&address);
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
-                    lending_pool.deposit(user_auth, deposit_amount); // Does this need auth?
+                    lending_pool.deposit(user_auth, amount); // Does this need auth?
                     // Update user state
-                    let amount = deposit_amount.amount();
+                    let amount = amount.amount();
                     user_management.add_deposit_balance(user_auth, address, amount);
                 }
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
@@ -153,12 +152,12 @@ blueprint! {
                     // terms of the two empty buckets being returned, but this is done to allow for the add liquidity
                     // method to be general and allow for the possibility of the liquidity pool not being there.
                     info!("[DEX Add Liquidity]: Pool for {:?} doesn't exist. Creating a new one.", address);
-                    self.new_lending_pool(user_auth, deposit_amount)
+                    self.new_lending_pool(user_auth, amount)
                 }
             }
         }
 
-        pub fn borrow(&mut self, user_auth: Proof, token_requested: ResourceAddress, borrow_amount: Decimal) 
+        pub fn borrow(&mut self, user_auth: Proof, token_requested: ResourceAddress, amount: Decimal) 
         {
             let user_management: UserManagement = self.user_management_address.into();
 
@@ -176,9 +175,9 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", token_requested);
-                    lending_pool.borrow(user_auth, borrow_amount);
+                    lending_pool.borrow(user_auth, token_requested, amount);
                     // Update user state
-                    user_management.add_borrow_balance(user_auth, token_requested, borrow_amount);
+                    user_management.add_borrow_balance(user_auth, token_requested, amount);
                 }
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
@@ -220,7 +219,7 @@ blueprint! {
             }
         }
 
-        pub fn repay(&mut self, user_auth: Proof, token_requested: ResourceAddress, repay_amount: Bucket) {
+        pub fn repay(&mut self, user_auth: Proof, token_requested: ResourceAddress, amount: Bucket) {
 
             let user_management: UserManagement = self.user_management_address.into();
 
@@ -228,9 +227,27 @@ blueprint! {
             user_management.assert_user_exists(user_auth, String::from("User does not exist"));
 
             // Checks if the token resources are the same
-            assert_eq!(token_requested, repay_amount.resource_address(), "Token requested and token deposited must be the same.");
+            assert_eq!(token_requested, amount.resource_address(), "Token requested and token deposited must be the same.");
 
             // Repay fully or partial?
+            let optional_lending_pool: Option<&LendingPool> = self.lending_pools.get(&token_requested);
+            match optional_lending_pool {
+                Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
+                    info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", token_requested);
+                    let amount = amount.amount();
+                    lending_pool.redeem(user_auth, token_requested, amount); // Does this need auth?
+                    // Update user state
+                    user_management.add_borrow_balance(user_auth, token_requested, amount);
+                }
+                None => { // If this matches then there does not exist a liquidity pool for this token pair
+                    // In here we are creating a new liquidity pool for this token pair since we failed to find an 
+                    // already existing liquidity pool. The return statement below might seem somewhat redundant in 
+                    // terms of the two empty buckets being returned, but this is done to allow for the add liquidity
+                    // method to be general and allow for the possibility of the liquidity pool not being there.
+                    info!("[DEX Add Liquidity]: Pool for {:?} doesn't exist. Creating a new one.", token_requested);
+                }
+            }
+
         }
     }
 }

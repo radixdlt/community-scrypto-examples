@@ -72,18 +72,14 @@ blueprint! {
 
         // Check if the user belongs to this lending protocol
 
-        pub fn check_user_exist(&self, user_auth: Proof) -> bool {
-            return user_auth.contains(self.user_address);
-        }
-    
-        pub fn assert_user_exists(&self, user_auth: Proof, label: String) {
-           assert!(self.check_user_exist(user_auth),
-           "[{}]: No user exists", label);
-        }
-
-        pub fn assert_user_doesnt_exists(&self, user_auth: Proof, label: String) {
-           assert!(!self.check_user_exist(user_auth),
-           "[{}]: User exists", label);
+        pub fn check_user_exist(&self, user_badge: ResourceAddress) -> bool {
+            if self.user_address == user_badge 
+            {
+                assert!(self.user_address == user_badge);
+                return true 
+            } else {
+                return false
+            };
         }
 
         // Adds the deposit balance
@@ -97,7 +93,9 @@ blueprint! {
             }     
             else {
                 self.insert_deposit_resource(user_auth, address, amount);  
-            }
+            };
+
+            self.user_badge_vault.authorize(|| user_auth.non_fungible().update_data(non_fungible_data));
         }
         
         fn insert_deposit_resource(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
@@ -106,14 +104,13 @@ blueprint! {
             non_fungible_data.deposit_balance.insert(address, amount);
         }
 
-        pub fn check_deposit_balance(&self, user_auth: Proof) -> HashMap<ResourceAddress, Decimal> {
-            let user_badge_data: User = user_auth.non_fungible().data();
-            return info!("The user's balance information is: {:?}", user_badge_data.deposit_balance);
-        }
+        // Checks the user's total tokens and deposit balance of those tokens
 
-        pub fn check_deposit_balance2(&self, token_address: ResourceAddress, user_auth: Proof) -> Decimal {
+
+        // Grabs the deposit balance of a specific token
+        pub fn check_token_deposit_balance(&self, token_address: ResourceAddress, user_auth: Proof) -> Decimal {
             let user_badge_data: User = user_auth.non_fungible().data();
-            return *user_badge_data.deposit_balance.get_mut(&token_address).unwrap();
+            return *user_badge_data.deposit_balance.get(&token_address).unwrap();
         }
 
         pub fn deposit_resource_exists(&self, user_auth: Proof, address: ResourceAddress) -> bool {
@@ -129,6 +126,8 @@ blueprint! {
             assert!(!self.deposit_resource_exists(user_auth, address), "[{}]: Resource exists for user.", label);
         }
 
+        // Adds the borrow balance
+        // Checks if the user already a record of the resource or not
         pub fn add_borrow_balance(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
 
             let mut non_fungible_data: User = user_auth.non_fungible().data();
@@ -137,7 +136,9 @@ blueprint! {
             }     
             else {
                 self.insert_borrow_resource(user_auth, address, amount);
-            }
+            };
+
+            self.user_badge_vault.authorize(|| user_auth.non_fungible().update_data(non_fungible_data));
         }
 
         fn insert_borrow_resource(&mut self, user_auth: Proof, address: ResourceAddress, amount: Decimal) {
@@ -146,16 +147,16 @@ blueprint! {
             non_fungible_data.borrow_balance.insert(address, amount);
         }
 
-        pub fn check_borrow_balance(&self, user_auth: Proof) { // This way or check_depoist_balance?
+        pub fn check_borrow_balance(&self, user_auth: Proof) { // This way or check_deposit_balance?
             let user_badge_data: User = user_auth.non_fungible().data();
             for (token, amount) in &user_badge_data.borrow_balance {
                 println!("{}: \"{}\"", token, amount)
             }
         }
 
-        pub fn check_token_borrow_balance(&self, token_address: ResourceAddress, user_auth: Proof) -> String { // This way or check_token_deposit_balance?
-            let user_badge_data: User = user_auth.non_fungible().data();    
-            return println!("The balance for {} is {}", token_address, user_badge_data.borrow_balance[&token_address]);
+        pub fn check_token_borrow_balance(&self, token_address: ResourceAddress, user_auth: Proof) -> Decimal {
+            let user_badge_data: User = user_auth.non_fungible().data();
+            return *user_badge_data.deposit_balance.get(&token_address).unwrap();
         }
 
         pub fn borrow_resource_exists(&self, user_auth: Proof, address: ResourceAddress) -> bool {
@@ -164,23 +165,26 @@ blueprint! {
         }
 
         pub fn on_repay(&mut self, user_auth: Proof, token_address: ResourceAddress, repay_amount: Decimal) -> Decimal {
-            let user_badge_data: User = user_auth.non_fungible().data();
-            let borrow_balance: Decimal = self.check_token_borrow_balance(token_address, user_auth).parse::<Decimal>().unwrap();
+            let mut user_badge_data: User = user_auth.non_fungible().data();
+            let borrow_balance: Decimal = self.check_token_borrow_balance(token_address, user_auth);
             if borrow_balance < repay_amount {
-                let to_return = repay_amount - user_badge_data.borrow_balance.get_mut(&token_address).unwrap();
-                to_return
+                let to_return = repay_amount - *user_badge_data.borrow_balance.get_mut(&token_address).unwrap();
+                return to_return
             } else {
                 *user_badge_data.borrow_balance.get_mut(&token_address).unwrap() -= repay_amount;
+                Decimal::zero()
             }
-            // Retrieve user ballance
-            let user_badge_data: User = user_auth.non_fungible().data();
-            user_badge_data.borrow_balance.get(&token_address);
         }
 
-        pub fn check_collateral_ratio(&self, user_auth: Proof, token_address: ResourceAddress, amount: Decimal) -> Decimal {
-            
-            let user_badge_data: User = user_auth.non_fungible().data();
-            let collateral_ratio: Decimal = user_badge_data.deposit_balance.get(&token_address) / user_badge_data.deposit_balance.get(&token_address);
+        pub fn check_collateral_ratio(&self, user_auth: Proof, token_address: ResourceAddress) -> Decimal {
+
+            let collateral_ratio: Decimal = self.check_token_borrow_balance(token_address, user_auth) / self.check_token_deposit_balance(token_address, user_auth);
+            return collateral_ratio
+        }
+
+        pub fn check_current_collateral_ratio(&self, user_auth: Proof, token_address: ResourceAddress, amount: Decimal) -> Decimal {
+                  
+            let collateral_ratio: Decimal = (self.check_token_borrow_balance(token_address, user_auth) + amount) / self.check_token_deposit_balance(token_address, user_auth);
             return collateral_ratio
         }
     }
