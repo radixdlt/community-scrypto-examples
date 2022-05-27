@@ -126,9 +126,6 @@ blueprint! {
             let address: ResourceAddress = amount.resource_address(); 
             let user_management: UserManagement = self.user_management_address.into();
 
-            // Checks if user exist
-            user_management.assert_user_exists(user_auth, String::from("User does not exist"));
-
             // Checks if user NFT contains resources. If it doesn't add_deposit_balance will add that to the NFT.
             user_management.assert_deposit_resouce_doesnt_exists(user_auth, address, 
             String::from("Adding resource to account"));
@@ -141,10 +138,22 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", address);
-                    lending_pool.deposit(user_auth, amount); // Does this need auth?
-                    // Update user state
+
+                    let user_id = user_auth.resource_address();
+                    // Check if user exist => 
+                    match user_management.check_user_exist(user_id) {
+                        true => {
+                            lending_pool.deposit(user_auth, amount);
+                        }
+                        false => {
+                            println!("User doesn't exist!");
+                        }
+                    };
+
+                    // Update user state 
                     let amount = amount.amount();
-                    user_management.add_deposit_balance(user_auth, address, amount);
+                    user_management.add_deposit_balance(user_auth, token_address, amount);
+
                 }
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
@@ -161,9 +170,6 @@ blueprint! {
         {
             let user_management: UserManagement = self.user_management_address.into();
 
-            // Checks if user exists
-            user_management.assert_user_exists(user_auth, String::from("User does not exist"));
-
             // Checks if user NFT contains resources. If it doesn't add_deposit_balance will add that to the NFT.
             user_management.assert_deposit_resouce_doesnt_exists(user_auth, token_requested, 
             String::from("Adding resource to account"));
@@ -175,10 +181,22 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", token_requested);
-                    lending_pool.borrow(user_auth, token_requested, amount);
-                    // Update user state
+
+                    let user_id = user_auth.resource_address();
+                    // Check if user exist => 
+                    match user_management.check_user_exist(user_id) {
+                        true => {
+                            lending_pool.borrow(user_auth, token_requested, amount);
+                        }
+                        false => {
+                            println!("User doesn't exist!");
+                        }
+                    };
+
+                    // Update user state 
                     user_management.add_borrow_balance(user_auth, token_requested, amount);
                 }
+
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
                     // already existing liquidity pool. The return statement below might seem somewhat redundant in 
@@ -194,9 +212,6 @@ blueprint! {
 
             let user_management: UserManagement = self.user_management_address.into();
 
-            // Checks if user exists
-            user_management.assert_user_exists(user_auth, String::from("User does not exist"));
-
             // Check if deposit withdrawal request has no lien ----> Should checks be here or in the liquidity pool component?
             user_management.check_lien(user_auth, token_reuqested);
 
@@ -205,10 +220,22 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", token_reuqested);
-                    lending_pool.redeem(user_auth, token_reuqested, amount); // Does this need auth?
-                    // Update user state
+
+                    let user_id = user_auth.resource_address();
+                    // Check if user exist => 
+                    match user_management.check_user_exist(user_id) {
+                        true => {
+                            lending_pool.redeem(user_auth, token_reuqested, amount);
+                        }
+                        false => {
+                            println!("User doesn't exist!");
+                        }
+                    };
+
+                    // Update user state NEED TO FIX!!!
                     user_management.add_borrow_balance(user_auth, token_reuqested, amount);
                 }
+
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
                     // already existing liquidity pool. The return statement below might seem somewhat redundant in 
@@ -223,9 +250,6 @@ blueprint! {
 
             let user_management: UserManagement = self.user_management_address.into();
 
-            // Checks if user exists
-            user_management.assert_user_exists(user_auth, String::from("User does not exist"));
-
             // Checks if the token resources are the same
             assert_eq!(token_requested, amount.resource_address(), "Token requested and token deposited must be the same.");
 
@@ -234,10 +258,21 @@ blueprint! {
             match optional_lending_pool {
                 Some (lending_pool) => { // If it matches it means that the liquidity pool exists.
                     info!("[Lending Protocol Supply Tokens]: Pool for {:?} already exists. Adding supply directly.", token_requested);
-                    let amount = amount.amount();
-                    lending_pool.redeem(user_auth, token_requested, amount); // Does this need auth?
+                    let user_id = user_auth.resource_address();
+                    // Check if user exist => 
+                    match user_management.check_user_exist(user_id) {
+                        true => {
+                            lending_pool.repay(user_auth, token_requested, amount);
+                        }
+                        false => {
+                            println!("User doesn't exist!");
+                        }
+                    };
+
                     // Update user state
+                    let amount = amount.amount();
                     user_management.add_borrow_balance(user_auth, token_requested, amount);
+
                 }
                 None => { // If this matches then there does not exist a liquidity pool for this token pair
                     // In here we are creating a new liquidity pool for this token pair since we failed to find an 
