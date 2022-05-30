@@ -1,5 +1,5 @@
 use scrypto::prelude::*;
-use scrypto::core::Uuid;
+use scrypto::core::Runtime;
 
 const CHERRY: i32 = 0;
 const LEMON:  i32 = 1;
@@ -18,16 +18,17 @@ blueprint! {
 
     impl SlotMachine {
 
-        pub fn new(supply: Decimal) -> Component {
-            let bank_bucket: Bucket = ResourceBuilder::new_fungible(DIVISIBILITY_MAXIMUM)
+        pub fn new(supply: Decimal) -> ComponentAddress {
+            let bank_bucket: Bucket = ResourceBuilder::new_fungible()
                 .metadata("name", "Vegas")
                 .metadata("symbol", "VEG")
-                .initial_supply_fungible(supply);
+                .initial_supply(supply);
 
             Self {
                 casino_bank: Vault::with_bucket(bank_bucket),
             }
             .instantiate()
+            .globalize()
         }
 
         pub fn free_token(&mut self) -> Bucket {
@@ -78,7 +79,7 @@ blueprint! {
 }
 
 fn spin_wheel() -> i32 {
-    let item = Uuid::generate() % NUMBER_OF_ITEMS;
+    let item = Runtime::generate_uuid() % NUMBER_OF_ITEMS;
     dbg!("Generated number: {}", item);
     return i32::try_from(item).unwrap();
 }
