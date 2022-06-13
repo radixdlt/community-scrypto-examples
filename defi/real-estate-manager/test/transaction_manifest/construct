@@ -1,0 +1,8 @@
+CALL_METHOD ComponentAddress("${ADMIN_ACC}") "create_proof" ResourceAddress("${AUTHORITY_BADGE}");
+
+CALL_METHOD ComponentAddress("${USER1_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("${LAND1_ID}")) ResourceAddress("${LAND}");
+POP_FROM_AUTH_ZONE Proof("land_right");
+
+CALL_METHOD ComponentAddress("${COMP}") "add_house_to_land" Proof("land_right") Decimal("${house_size1}") ${house_floor1}u32;
+
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ADMIN_ACC}") "deposit_batch";
