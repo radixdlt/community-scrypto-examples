@@ -1,3 +1,0 @@
-CALL_METHOD ComponentAddress("021025cfda90adea21506170be47c67ec169e41dbbdd063d54d409") "create_proof" ResourceAddress("031b26cc60b0284d0c8435b97d8358d16b8336bafe78914f0d28f7");
-CALL_METHOD ComponentAddress("0235f989036ca4adee3f26679023d4a97c187640a53e2980ab9f92") "new_land" Enum("Land", Decimal("50"), "vietnam");
-CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("021025cfda90adea21506170be47c67ec169e41dbbdd063d54d409") "deposit_batch";
