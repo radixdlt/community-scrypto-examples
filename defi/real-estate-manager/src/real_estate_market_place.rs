@@ -260,13 +260,11 @@ blueprint! {
 
             let order_id = order_badge.non_fungible::<Order>().id();
 
-            let (_price, building, status) = self.book.get(&order_id).unwrap().clone();
+            let (_price, building, status) = self.book.remove(&order_id).unwrap();
 
             assert!(status==false,
                 "This real estate is already bought."
             );
-
-            self.book.remove(&order_id);
 
             self.controller_badge.authorize(|| {
                 borrow_resource_manager!(self.order_badge)

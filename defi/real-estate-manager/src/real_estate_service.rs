@@ -18,7 +18,7 @@ pub enum RealEstate {
 }
 
 /// The data of real estates, can contain both land data and building data (if that land contain a building)
-#[derive(TypeId, Encode, Decode, Describe)]
+#[derive(TypeId, Encode, Decode, Describe, Clone)]
 pub enum RealEstateData {
     Land(Decimal, String),
     LandandBuilding(Decimal, String, Decimal, u32)
@@ -31,7 +31,7 @@ pub enum RealEstateProof {
     LandandBuilding(Proof, Proof)
 }
 
-/// The oracle data show that the new construction, new land is ok or not.
+/// The oracle data show that the new construction, new land, modified land is ok or not.
 /// IsNextTo: oracle data show that the two queried real estate entity is next to each other.
 /// IsNotOverLap: oracle data show that the queried real estate entity is not overlap with existed real estate or any other construction entity.
 /// IsOk: oracle data (or manually feeded data) show that the queried construction will not cause bad effect to society.
@@ -42,54 +42,39 @@ pub enum Feasible {
     IsOk(bool)
 }
 
-/// The land divide structure with needed input.
-/// input: land 1 data, land 2 data, all this must be RealEstateData::Land type.
-#[derive(TypeId, Encode, Decode, Describe)]
-pub struct Divide {
-    land1_data: RealEstateData, 
-    land2_data: RealEstateData
-}
-
 /// The oracle data show where the building will belong to after divide a real estate (if that real estate contain a building).
 #[derive(TypeId, Encode, Decode, Describe)]
 pub enum BuildingOnLand {
+    None,
     Land1,
     Land2
-}
-
-/// The land merge structure with needed input
-/// input: land 2 data, this must be RealEstateData::Land type.
-#[derive(TypeId, Encode, Decode, Describe)]
-pub struct Merge {
-    land2_data: RealEstateData
 }
 
 /// The type of modifying a land
 #[derive(TypeId, Encode, Decode, Describe)]
 pub enum LandModifyType {
-    Divide(Divide),
-    Merge(Merge)
+    Divide(RealEstateData, RealEstateData, BuildingOnLand),
+    Merge(RealEstateData)
 }
 
-/// The data return to citizens to show that their request is rejected or not
+/// The return to citizens after solved the request, return a bucket if their request passed.
 #[derive(TypeId, Encode, Decode, Describe)]
-pub enum SolvedRequest {
+pub enum RequestReturn {
     Rejected,
     Passed(Bucket),
 }
 
 /// The land modify right's NFT. This NFT is an authorized badge to divide a land, merge lands, constructe a building, re-constructe a building,...
-/// Making change to any real estate NFTs need a construction NFT badge, show that the change can happend or has happened.
-/// Authorities, organizations in charge of providing construction badge also need to make sure the change is feasible and won't cause bad effect to society.
+/// Making change to any real estate NFTs need a land modify NFT badge, show that the change can happend or has happened.
+/// Authorities, organizations in charge of providing land modify badge also need to make sure the change is feasible.
 #[derive(NonFungibleData)]
 pub struct LandModify {
     land_modify: LandModifyType
 }
 
-/// The NFT keep track of land modify request
+/// The NFT keep track of land modify or construction request
 #[derive(NonFungibleData)]
 pub struct Request {
-    request_id: NonFungibleId
 }
 
 /// The building right's NFT
@@ -194,7 +179,7 @@ blueprint! {
         /// Land modify request badge NFT resource address.
         request_badge: ResourceAddress,
         /// Request book, contain in-queue land modify request of citizens. Struct: Request Id, (the requested real estate data, status)
-        request_book: HashMap<NonFungibleId, (RealEstateData, bool)>,
+        request_book: HashMap<NonFungibleId, (RealEstateData, LandModifyType)>,
         /// Land modify badge vault, contain solved land modify request of citizens.
         land_modify_badge_vault: Vault,
         /// Request id counter
@@ -306,10 +291,9 @@ blueprint! {
         }
 
         /// This method is for authority to create and distribute new real estate right's NFTs with the input data
-        /// Input: real estate data: input Enum("Land", Decimal("${land_size}"), "${location}");
-        /// is_overlap: 
-        /// - data from Oracle > see if the land is overlap with an existed real estate or not.
-        /// - input: Enum("IsNotOverLap", Decimal("${land_size}"), "${location}")
+        /// Input: 
+        /// - real estate data: Enum("Land", Decimal("${land_size}"), "${location}");
+        /// - is_overlap: data from Oracle > see if the land is overlap with an existed real estate or not: Enum("IsNotOverLap", Decimal("${land_size}"), "${location}")
         /// Output: The land right's NFT
         pub fn new_land(&self, data: RealEstateData, is_not_overlap: Feasible) -> Bucket {
 
@@ -319,10 +303,6 @@ blueprint! {
 
             assert!(matches!(is_not_overlap, Feasible::IsNotOverLap(true)),
                 "This location is overlapped with existed real estate."
-            );
-
-            assert!(matches!(data, RealEstateData::LandandBuilding(_, _, _, _)),
-                "You need to input Land data"
             );
 
             match data {
@@ -351,7 +331,135 @@ blueprint! {
                     land_right
 
                 }
+
+                _ => {panic!("You need to input Land data")}
+
             }
+        }
+
+        /// This is method for citizens to make new land modify request.
+        /// Input: 
+        /// - the citizen's real estate proof: 
+        /// + If the real estate doesn't contain a building: Enum("Land", Proof("land_proof"));
+        /// + If the real estate contain a building: Enum("LandandBuilding", Proof("land_proof"), Proof("building_proof"));
+        /// - the requested land modify information: 
+        /// + If citizen want to construct a building: Enum("ConstructBuilding", Struct("${building_size}", "${building_floor}")
+        /// + If citizen want to demolish a building: Enum("DemolishBuilding")
+        /// Output: the request badge
+        pub fn new_land_modify_request(&mut self, real_estate_proof: RealEstateProof, land_modify: LandModifyType) -> Bucket {
+
+            let real_estate_data = get_real_estate_data(real_estate_proof, self.land, self.building);
+
+            let (construct_type, location) = match land_modify {
+
+                LandModifyType::Divide(_,_,_) => {
+                    let location = match real_estate_data.clone() {
+                        RealEstateData::Land(_, location) => location,
+                        RealEstateData::LandandBuilding(_,_,_,_) => panic!("You cannot construct a building on an already existed building.")
+                    };
+
+                    ("construct building", location)
+                },
+
+                LandModifyType::Merge(_) => {
+                    let location = match real_estate_data.clone() {
+                        RealEstateData::Land(_, _) => panic!("You cannot demolish a barren land."),
+                        RealEstateData::LandandBuilding(_, location,_,_) => location
+                    };
+
+                    ("demolish building", location)
+            }
+            };
+
+            let new_land_modify_request = Request {};
+
+            let request_id: NonFungibleId = NonFungibleId::from_u64(self.request_counter);
+
+            let request_badge = self.controller_badge.authorize(|| {
+                borrow_resource_manager!(self.land)
+                    .mint_non_fungible(&request_id, new_land_modify_request)
+            });
+
+            self.request_book.insert(request_id, (real_estate_data, land_modify));
+
+            info!("You have created a new {} request no.{} on the {} land.", construct_type, self.request_counter, location);
+
+            self.request_counter += 1;
+
+            request_badge
+
+        }
+
+        /// This method is for institutes to authorize a land modify request
+        /// Input: 
+        /// - the request id: ${request_id}u64
+        /// - the oracle data show whether this land modify is harmful or not: Enum("IsOk", ${ok_or_not})
+        /// Output: None
+        /// This method put the authorized land modify NFT on the component vault if passed.
+        pub fn authorize_land_modify(&mut self, id: u64, is_ok: Feasible) {
+
+            assert!(matches!(is_ok, Feasible::IsOk(_)),
+                "Wrong Oracle data."
+            );
+
+            let request_id = NonFungibleId::from_u64(id);
+
+            let result = self.request_book.remove(&request_id);
+
+            assert!(result.is_some(),
+                "The request book doesn't contain this request id."
+            );
+
+            assert!(matches!(is_ok, Feasible::IsOk(true)),
+                "This land modify is harmful, you cannot authorize this land modify."
+            );
+
+            let (real_estate_data, land_modify) = result.unwrap();
+
+            let land_modify_data = LandModify {
+                real_estate_data: real_estate_data,
+                land_modify: land_modify
+            };
+
+            let land_modify_right = self.controller_badge.authorize(|| {
+                borrow_resource_manager!(self.land_modify_badge)
+                    .mint_non_fungible(&request_id, land_modify_data)
+            });
+
+            info!("You have authorized the land modify request no.{}", id);
+
+            self.land_modify_badge_vault.put(land_modify_right);
+
+        }
+
+        /// This method is for citizens to get their construct badge after authorized.
+        /// Input: the request badge: Bucket("${request_badge}")
+        /// Output: the request result returned: if passed > return land modify right badge.
+        pub fn get_land_modify_badge(&mut self, request_badge: Bucket) -> RequestReturn {
+
+            assert!(request_badge.resource_address() == self.request_badge,
+                "Wrong resource!"
+            );
+
+            let request_id = request_badge.non_fungible::<Request>().id();
+
+            assert!(!self.request_book.contains_key(&request_id),
+                "The authority haven't reviewed your request yet"
+            );
+
+            self.controller_badge.authorize(|| {
+                borrow_resource_manager!(self.request_badge)
+                    .burn(request_badge)
+            });
+
+            if self.land_modify_badge_vault.non_fungible_ids().contains(&request_id) {
+                info!("Your land modify request no.{} has passed.", request_id);
+                RequestReturn::Passed(self.land_modify_badge_vault.take_non_fungible(&request_id))
+            } else {
+                info!("Your land modify request no.{} has been rejected.", request_id);
+                RequestReturn::Rejected
+            }
+
         }
 
         /// This method is for authority to divide an existed real estate to 2 other real estates with attached NFTs.
