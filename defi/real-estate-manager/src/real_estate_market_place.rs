@@ -1,5 +1,5 @@
-//! [RealEstate] is the blueprint for autorities to manage real estate rights by NFT, also a real estate market place for citizen.
-//! In other words, people can buy, sell real estate rights through this blueprint.
+//! [RealEstateMarketPlace] is the blueprint for market's host to run a decentralized real estate market place.
+//! Citizens (only) can buy, sell real estate rights through this blueprint.
 //! This blueprint also contain a taxing mechanism for any traded real estate.
 
 use scrypto::prelude::*;
@@ -7,27 +7,26 @@ use crate::real_estate_service::*;
 
 /// The NFT keep track of real estate seller's order
 #[derive(NonFungibleData)]
-pub struct Order {
-    order_id: NonFungibleId
-}
+pub struct Order {}
 
 blueprint! {
     struct RealEstateMarketPlace {
+
         /// Component controller badge
         controller_badge: Vault,
         /// Building address
         building: ResourceAddress,
         /// Land address
         land: ResourceAddress,
-        /// Tax percent paid on real estate trade (%)
+        /// Tax percent paid on real estate trade for govt authority (%)
         tax: Decimal,
-        /// Tax rate paid on real estate service (tokens)
+        /// fee paid on real estate trade for market host (%)
         fee: Decimal,
         /// The medium token using for payment 
         token: ResourceAddress,
         /// Badge to track orders on the real estate market
         order_badge: ResourceAddress,
-        /// The order book of real estate market
+        /// The order book of real estate market, struct: Order Id, (payment, Option(a Building NFT Id or None), Order status)
         book: HashMap<NonFungibleId, (Decimal, Option<NonFungibleId>, bool)>,
         /// The Vault contain real estate on sale
         order_vault: Vault,
@@ -47,22 +46,25 @@ blueprint! {
     impl RealEstateMarketPlace {
         
         /// This function will create new Real Estate Market Place component
-        /// Input: tax percent (paid for authorities on real estate trade), the medium token used for payment on market and fee percent (paid for market host on real estate trade)
+        /// Input: 
+        /// - name: market name.
+        /// - controller badge: the market component controller badge.
+        /// - fee: market fee.
+        /// - tax: real estate trading tax.
+        /// - land: land resource address.
+        /// - building: building resource address.
+        /// - medium token: the token used for trade.
+        /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(name: String, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress) -> (ComponentAddress, Bucket) {
-           
-            let controller_badge = ResourceBuilder::new_fungible()
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", "Mint Badge")
-                .initial_supply(dec!(1));
-
+        pub fn new(name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress) -> (ComponentAddress, Bucket) {
+    
             let market_host_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", name + "Real Estate Market Place Host Badge")
+                .metadata("name", name.clone() + "Real Estate Market Place Host Badge")
                 .initial_supply(dec!(1));
 
             let order_badge = ResourceBuilder::new_non_fungible()
-                .metadata("name", "Position Badge")
+                .metadata("name", name + "Market Order Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .updateable_non_fungible_data(rule!(require(controller_badge.resource_address())), LOCKED)
@@ -125,13 +127,11 @@ blueprint! {
                         "This land contain a building, you should also input the building right's NFT."
                     );
         
-                    let new_position = Order {
-                        order_id: order_id.clone()
-                    };
+                    let new_position = Order {};
         
                     let order_badge = self.controller_badge.authorize(|| {
                         borrow_resource_manager!(self.order_badge)
-                            .mint_non_fungible(&NonFungibleId::random(), new_position)
+                            .mint_non_fungible(&order_id, new_position)
                     });
         
                     self.book.insert(order_id.clone(), (price, None, false));
@@ -143,6 +143,7 @@ blueprint! {
                     self.order_counter += 1;
         
                     return order_badge
+
                 }
 
                 RealEstate::LandandBuilding(land_right, building_right) => {
@@ -161,13 +162,11 @@ blueprint! {
         
                     let order_id = NonFungibleId::from_u64(self.order_counter);
         
-                    let new_position = Order {
-                        order_id: order_id.clone()
-                    };
+                    let new_position = Order {};
         
                     let order_badge = self.controller_badge.authorize(|| {
                         borrow_resource_manager!(self.order_badge)
-                            .mint_non_fungible(&NonFungibleId::random(), new_position)
+                            .mint_non_fungible(&order_id, new_position)
                     });
         
                     self.book.insert(order_id.clone(), (price, Some(building_id), false));
@@ -226,7 +225,7 @@ blueprint! {
                     self.payment_vault.put(payment.take(price));
                     self.tax_vault.put(payment.take(tax));
                     self.fee_vault.put(payment.take(fee));
-                    self.book.insert(order_id.clone(), (price, building, true));
+                    self.book.insert(order_id.clone(), (price, None, true));
                     let land_right = self.order_vault.take_non_fungible(&order_id);
                     let land_location = land_right.non_fungible::<Land>().data().location;
                     info!("You have filled the no.{} order and bought the {} real estate", order_id, land_location);
@@ -259,7 +258,7 @@ blueprint! {
                 "Wrong resource."
             );
 
-            let order_id = order_badge.non_fungible::<Order>().data().order_id;
+            let order_id = order_badge.non_fungible::<Order>().id();
 
             let (_price, building, status) = self.book.get(&order_id).unwrap().clone();
 
@@ -303,7 +302,7 @@ blueprint! {
                 "Wrong resource."
             );
 
-            let order_id = order_badge.non_fungible::<Order>().data().order_id;
+            let order_id = order_badge.non_fungible::<Order>().id();
 
             let (price, _building, status) = self.book.get(&order_id).unwrap().clone();
 
