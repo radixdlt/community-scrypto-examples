@@ -54,6 +54,7 @@ pub enum BuildingOnLand {
 #[derive(TypeId, Encode, Decode, Describe)]
 pub enum LandModifyType {
     Divide(RealEstateData, RealEstateData, BuildingOnLand),
+    DivideRequest(RealEstateData, RealEstateData),
     Merge(RealEstateData)
 }
 
@@ -69,6 +70,7 @@ pub enum RequestReturn {
 /// Authorities, organizations in charge of providing land modify badge also need to make sure the change is feasible.
 #[derive(NonFungibleData)]
 pub struct LandModify {
+    real_estate_data: RealEstateData,
     land_modify: LandModifyType
 }
 
@@ -105,6 +107,7 @@ pub struct Land {
     pub contain: Option<(NonFungibleId, Building)>
 }
 
+/// A utility function to get real estate data from a real estate proof, also assert if the real estate proof is right resources or not.
 pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress, building: ResourceAddress) -> RealEstateData {
 
     match real_estate {
@@ -352,7 +355,7 @@ blueprint! {
 
             let (construct_type, location) = match land_modify {
 
-                LandModifyType::Divide(_,_,_) => {
+                LandModifyType::DivideRequest(_,_) => {
                     let location = match real_estate_data.clone() {
                         RealEstateData::Land(_, location) => location,
                         RealEstateData::LandandBuilding(_,_,_,_) => panic!("You cannot construct a building on an already existed building.")
@@ -368,7 +371,9 @@ blueprint! {
                     };
 
                     ("demolish building", location)
-            }
+                }
+
+                _ => {panic!("Wrong land modify information provided!")}
             };
 
             let new_land_modify_request = Request {};
