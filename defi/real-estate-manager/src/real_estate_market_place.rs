@@ -14,6 +14,8 @@ blueprint! {
 
         /// Component controller badge
         controller_badge: Vault,
+        /// Resource move badge
+        move_badge: ResourceAddress,
         /// Building address
         building: ResourceAddress,
         /// Land address
@@ -56,7 +58,7 @@ blueprint! {
         /// - medium token: the token used for trade.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress) -> (ComponentAddress, Bucket) {
+        pub fn new(name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> (ComponentAddress, Bucket) {
     
             let market_host_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
@@ -67,6 +69,7 @@ blueprint! {
                 .metadata("name", name + "Market Order Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
+                .restrict_deposit(rule!(require(move_badge)), LOCKED)
                 .updateable_non_fungible_data(rule!(require(controller_badge.resource_address())), LOCKED)
                 .no_initial_supply();
 
@@ -80,6 +83,7 @@ blueprint! {
             let comp = Self {
 
                 controller_badge: Vault::with_bucket(controller_badge),
+                move_badge: move_badge,
                 building: building,
                 land: land,
                 tax: tax/dec!(100),
@@ -107,7 +111,7 @@ blueprint! {
         /// - If the land have no housing > input Enum("Land", Bucket("${land_right}"));
         /// - If the land contain a building > input Enum("LandandBuilding", Bucket("${land_right}"), Bucket("${building_right}"));
         /// Output: The NFT keep track of real estate seller's order
-        pub fn new_sell_order(&mut self, real_estate: RealEstate, price: Decimal) -> Bucket {
+        pub fn new_sell_order(&mut self, real_estate: RealEstate, price: Decimal) -> (Bucket, Proof) {
 
             assert!(price>=dec!(0), "Price of the real estate must be >= 0");
 
@@ -129,20 +133,31 @@ blueprint! {
         
                     let new_position = Order {};
         
-                    let order_badge = self.controller_badge.authorize(|| {
-                        borrow_resource_manager!(self.order_badge)
-                            .mint_non_fungible(&order_id, new_position)
+                    let (order_badge, move_badge) = self.controller_badge.authorize(|| {
+                        
+                        (borrow_resource_manager!(self.order_badge)
+                            .mint_non_fungible(&order_id, new_position), 
+                        borrow_resource_manager!(self.move_badge)
+                            .mint(dec!(1)))
+
                     });
         
                     self.book.insert(order_id.clone(), (price, None, false));
-        
-                    self.order_vault.put(land_right);
+                    
+                    move_badge.authorize(|| {self.order_vault.put(land_right)});
+
+                    let move_proof = self.controller_badge.authorize(|| {
+                        let move_proof = move_badge.create_proof();
+                        borrow_resource_manager!(self.move_badge)
+                        .burn(move_badge);
+                        return move_proof
+                    });
 
                     info!("You have created a sell order no.{} on the {} real estate", order_id, land_data.location);
 
                     self.order_counter += 1;
         
-                    return order_badge
+                    return (order_badge, move_proof)
 
                 }
 
@@ -164,32 +179,40 @@ blueprint! {
         
                     let new_position = Order {};
         
-                    let order_badge = self.controller_badge.authorize(|| {
-                        borrow_resource_manager!(self.order_badge)
-                            .mint_non_fungible(&order_id, new_position)
+                    let (order_badge, move_badge) = self.controller_badge.authorize(|| {
+                        
+                        (borrow_resource_manager!(self.order_badge)
+                            .mint_non_fungible(&order_id, new_position), 
+                        borrow_resource_manager!(self.move_badge)
+                            .mint(dec!(1)))
+
                     });
         
-                    self.book.insert(order_id.clone(), (price, Some(building_id), false));
-        
-                    self.order_vault.put(land_right);
-        
-                    self.order_contain_building.put(building_right);
+                    self.book.insert(order_id.clone(), (price, None, false));
+                    
+                    move_badge.authorize(|| {self.order_vault.put(land_right); self.order_contain_building.put(building_right)});
+
+                    let move_proof = self.controller_badge.authorize(|| {
+                        let move_proof = move_badge.create_proof();
+                        borrow_resource_manager!(self.move_badge)
+                        .burn(move_badge);
+                        return move_proof
+                    });
 
                     info!("You have created a sell order no.{} on the {} real estate with an attached building", order_id, land_data.location);
 
                     self.order_counter += 1;
         
-                    return order_badge
+                    return (order_badge, move_proof)
 
                 }
             }    
         }
 
-
         /// This method is for buyer to buy a real estate right's NFTs.
         /// Input: The order id and payment (by medium token).
         /// Output: The real estate's NFTs and payment changes.
-        pub fn buy(&mut self, order_id: u64, mut payment: Bucket) -> (RealEstate, Bucket) {
+        pub fn buy(&mut self, order_id: u64, mut payment: Bucket) -> (RealEstate, Bucket, Proof) {
 
             let order_id = NonFungibleId::from_u64(order_id);
 
@@ -217,6 +240,15 @@ blueprint! {
                 payment.amount()>=(price + tax + fee),
                     "Not enough payment"
                 );
+
+            let move_proof = self.controller_badge.authorize(|| {
+                let move_badge = borrow_resource_manager!(self.move_badge)
+                    .mint(dec!(1));
+                let move_proof = move_badge.create_proof();
+                borrow_resource_manager!(self.move_badge)
+                    .burn(move_badge);
+                return move_proof
+                });
         
             match building.clone() {
         
@@ -229,7 +261,7 @@ blueprint! {
                     let land_right = self.order_vault.take_non_fungible(&order_id);
                     let land_location = land_right.non_fungible::<Land>().data().location;
                     info!("You have filled the no.{} order and bought the {} real estate", order_id, land_location);
-                    return (RealEstate::Land(land_right), payment)
+                    return (RealEstate::Land(land_right), payment, move_proof)
         
                 }
         
@@ -243,7 +275,7 @@ blueprint! {
                     let building_right = self.order_contain_building.take_non_fungible(&building_id);
                     let land_location = land_right.non_fungible::<Land>().data().location;
                     info!("You have filled the no.{} order and bought the {} real estate with the attached building", order_id, land_location);
-                    return (RealEstate::LandandBuilding(land_right, building_right), payment)
+                    return (RealEstate::LandandBuilding(land_right, building_right), payment, move_proof)
         
                 }
             }
@@ -252,7 +284,7 @@ blueprint! {
         /// This is method for seller to cancel an order that haven't been bought.
         /// Input: The order NFT badge.
         /// Output: The real estate right's NFTs.
-        pub fn cancel_sell_order(&mut self, order_badge: Bucket) -> RealEstate {
+        pub fn cancel_sell_order(&mut self, order_badge: Bucket) -> (RealEstate, Proof) {
 
             assert!(order_badge.resource_address()==self.order_badge,
                 "Wrong resource."
@@ -276,14 +308,23 @@ blueprint! {
 
             info!("You have cancel the sell order no.{} on {} real estate", order_id, land_location);
 
+            let move_proof = self.controller_badge.authorize(|| {
+                let move_badge = borrow_resource_manager!(self.move_badge)
+                    .mint(dec!(1));
+                let move_proof = move_badge.create_proof();
+                borrow_resource_manager!(self.move_badge)
+                    .burn(move_badge);
+                return move_proof
+                });
+
             match building.clone() {
 
                 None => {
-                    return RealEstate::Land(land_right)
+                    return (RealEstate::Land(land_right), move_proof)
                 }
 
                 Some(building_id) => {
-                    return RealEstate::LandandBuilding(land_right, self.order_contain_building.take_non_fungible(&building_id))
+                    return (RealEstate::LandandBuilding(land_right, self.order_contain_building.take_non_fungible(&building_id)), move_proof)
                 }
 
             }

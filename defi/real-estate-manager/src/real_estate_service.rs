@@ -1,5 +1,5 @@
-//! [RealEstateService] is the core blueprint for autorities to manage real estate rights by NFT.
-//! Authorities can use this blueprint to manage land NFTs, land modify right's NFT authorize new Market Place or Construction Institute.
+//! [RealEstateService] is the core blueprint for govt autorities to manage real estate rights by NFT.
+//! Authorities can use this blueprint to manage land NFTs, land modify right's NFT, authorize new Market Place or Construction Institute.
 //! Authorities can also collect, edit tax through this blueprint.
 //! Citizens can request divide or merge lands through this blueprint.
 //! This blueprint also contain a taxing mechanism for any land modify authorization service.
@@ -9,7 +9,7 @@ use crate::real_estate_market_place::RealEstateMarketPlace;
 use crate::real_estate_construction_institute::RealEstateConstructionInstitute;
 
 /// The NFTs of real estates, can contain both land right's NFT and building right's NFT (if that land contain a building)
-/// Real estate's NFTs cannot deposit into any other component except into the Market Place component. 
+/// Real estate's NFTs cannot deposit into any other component except into the Market Place component,
 /// This is to prevent citizens trade real estate's right on black market.
 #[derive(TypeId, Encode, Decode, Describe)]
 pub enum RealEstate {
@@ -51,11 +51,14 @@ pub enum BuildingOnLand {
 }
 
 /// The type of modifying a land
+/// Merge: The land data which the original real estate will merge with.
+/// DivideRequest: The 2 land data which de original real estate will divide into.
+/// Divide: same data as divide request but contain the data where the building on the original real estate (if exist) will be.
 #[derive(TypeId, Encode, Decode, Describe)]
 pub enum LandModifyType {
     Divide(RealEstateData, RealEstateData, BuildingOnLand),
     DivideRequest(RealEstateData, RealEstateData),
-    Merge(RealEstateData)
+    Merge(NonFungibleId)
 }
 
 /// The return to citizens after solved the request, return a bucket if their request passed.
@@ -70,7 +73,7 @@ pub enum RequestReturn {
 /// Authorities, organizations in charge of providing land modify badge also need to make sure the change is feasible.
 #[derive(NonFungibleData)]
 pub struct LandModify {
-    real_estate_data: RealEstateData,
+    land_id: NonFungibleId,
     land_modify: LandModifyType
 }
 
@@ -155,6 +158,8 @@ blueprint! {
 
         /// Authority component controller badge
         controller_badge: Vault,
+        /// Resource move badge
+        move_badge: ResourceAddress,
         /// Market place component controller badge address
         market_controller_badge: ResourceAddress,
         /// Construction institute component controller address
@@ -181,8 +186,8 @@ blueprint! {
         land_modify_badge: ResourceAddress,
         /// Land modify request badge NFT resource address.
         request_badge: ResourceAddress,
-        /// Request book, contain in-queue land modify request of citizens. Struct: Request Id, (the requested real estate data, status)
-        request_book: HashMap<NonFungibleId, (RealEstateData, LandModifyType)>,
+        /// Request book, contain in-queue land modify request of citizens. Struct: Request Id, (the requested land id, status)
+        request_book: HashMap<NonFungibleId, (NonFungibleId, LandModifyType)>,
         /// Land modify badge vault, contain solved land modify request of citizens.
         land_modify_badge_vault: Vault,
         /// Request id counter
@@ -192,7 +197,7 @@ blueprint! {
 
     impl RealEstateService {
         
-        /// This function will create new Real Estate Service component
+        /// This function will create new govt Real Estate Service component
         /// Input: 
         /// - the govt authority's name
         /// - tax percent (paid on real estate trade), 
@@ -220,11 +225,18 @@ blueprint! {
                 .metadata("name", name.clone() + "Institute Controller Badge")
                 .no_initial_supply();
 
+            let move_badge = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
+                .metadata("name", name.clone() + "Resource Move Badge")
+                .mintable(rule!(require(authority_controller_badge.resource_address()) || require(market_controller_badge) || require(institute_controller_badge)), LOCKED)
+                .burnable(rule!(require(authority_controller_badge.resource_address()) || require(market_controller_badge) || require(institute_controller_badge)), LOCKED)
+                .no_initial_supply();
+
             let land = ResourceBuilder::new_non_fungible()
                 .metadata("name", name.clone() + "Land")
                 .mintable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
-                .restrict_deposit(rule!(require(market_controller_badge)), LOCKED)
+                .restrict_deposit(rule!(require(move_badge)), LOCKED)
                 .updateable_non_fungible_data(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .no_initial_supply();
 
@@ -232,7 +244,7 @@ blueprint! {
                 .metadata("name", name.clone() + "Building")
                 .mintable(rule!(require(institute_controller_badge)), LOCKED)
                 .burnable(rule!(require(institute_controller_badge)), LOCKED)
-                .restrict_deposit(rule!(require(market_controller_badge)), LOCKED)
+                .restrict_deposit(rule!(require(move_badge)), LOCKED)
                 .updateable_non_fungible_data(rule!(require(institute_controller_badge)), LOCKED)
                 .no_initial_supply();
 
@@ -257,6 +269,7 @@ blueprint! {
 
             let rules = AccessRules::new()
                 .method("new_land", rule!(require(real_estate_authority.resource_address())))
+                .method("authorize", rule!(require(real_estate_authority.resource_address())))
                 .method("collect_tax", rule!(require(real_estate_authority.resource_address())))
                 .method("edit_tax", rule!(require(real_estate_authority.resource_address())))
                 .method("edit_rate", rule!(require(real_estate_authority.resource_address())))
@@ -267,6 +280,7 @@ blueprint! {
             let comp = Self {
 
                 controller_badge: Vault::with_bucket(authority_controller_badge),
+                move_badge: move_badge,
                 market_controller_badge: market_controller_badge,
                 institute_controller_badge: institute_controller_badge,
                 building: building,
@@ -293,7 +307,7 @@ blueprint! {
 
         }
 
-        /// This method is for authority to create and distribute new real estate right's NFTs with the input data
+        /// This method is for govt authority to create and distribute new real estate right's NFTs with the input data
         /// Input: 
         /// - real estate data: Enum("Land", Decimal("${land_size}"), "${location}");
         /// - is_overlap: data from Oracle > see if the land is overlap with an existed real estate or not: Enum("IsNotOverLap", Decimal("${land_size}"), "${location}")
@@ -340,41 +354,38 @@ blueprint! {
             }
         }
 
-        /// This is method for citizens to make new land modify request.
+        /// This is method for citizens to make new land divide request.
         /// Input: 
-        /// - the citizen's real estate proof: 
+        /// - the citizen's original real estate proof: 
         /// + If the real estate doesn't contain a building: Enum("Land", Proof("land_proof"));
         /// + If the real estate contain a building: Enum("LandandBuilding", Proof("land_proof"), Proof("building_proof"));
-        /// - the requested land modify information: 
-        /// + If citizen want to construct a building: Enum("ConstructBuilding", Struct("${building_size}", "${building_floor}")
-        /// + If citizen want to demolish a building: Enum("DemolishBuilding")
+        /// - the divided land 1 and land 2 information: Enum("Land", Decimal("${land1_size}"), "${location1}"), Enum("Land", Decimal("${land2_size}"), "${location2}"))
         /// Output: the request badge
-        pub fn new_land_modify_request(&mut self, real_estate_proof: RealEstateProof, land_modify: LandModifyType) -> Bucket {
+        pub fn new_land_divide_request(&mut self, real_estate_proof: RealEstateProof, divided_land1: RealEstateData, divided_land2: RealEstateData) -> Bucket {
+
+            let land_id = match real_estate_proof {
+                RealEstateProof::Land(proof) => {proof.non_fungible::<Land>().id()}
+                RealEstateProof::LandandBuilding(proof, _) => {proof.non_fungible::<Land>().id()}
+            };
 
             let real_estate_data = get_real_estate_data(real_estate_proof, self.land, self.building);
 
-            let (construct_type, location) = match land_modify {
-
-                LandModifyType::DivideRequest(_,_) => {
-                    let location = match real_estate_data.clone() {
-                        RealEstateData::Land(_, location) => location,
-                        RealEstateData::LandandBuilding(_,_,_,_) => panic!("You cannot construct a building on an already existed building.")
-                    };
-
-                    ("construct building", location)
-                },
-
-                LandModifyType::Merge(_) => {
-                    let location = match real_estate_data.clone() {
-                        RealEstateData::Land(_, _) => panic!("You cannot demolish a barren land."),
-                        RealEstateData::LandandBuilding(_, location,_,_) => location
-                    };
-
-                    ("demolish building", location)
-                }
-
-                _ => {panic!("Wrong land modify information provided!")}
+            match divided_land1 {
+                RealEstateData::LandandBuilding(_,_,_,_) => {panic!("Wrong real estate data provided!")}
+                _ => {}
             };
+
+            match divided_land2 {
+                RealEstateData::LandandBuilding(_,_,_,_) => {panic!("Wrong real estate data provided!")}
+                _ => {}
+            };
+
+            let location = match real_estate_data.clone() {
+                RealEstateData::Land(_, location) => location,
+                RealEstateData::LandandBuilding(_,location,_,_) => location
+            };
+
+            info!("You have created a new divide land request no.{} on the {} land.", self.request_counter, location);
 
             let new_land_modify_request = Request {};
 
@@ -385,9 +396,7 @@ blueprint! {
                     .mint_non_fungible(&request_id, new_land_modify_request)
             });
 
-            self.request_book.insert(request_id, (real_estate_data, land_modify));
-
-            info!("You have created a new {} request no.{} on the {} land.", construct_type, self.request_counter, location);
+            self.request_book.insert(request_id, (land_id, LandModifyType::DivideRequest(divided_land1, divided_land2)));
 
             self.request_counter += 1;
 
@@ -395,45 +404,149 @@ blueprint! {
 
         }
 
-        /// This method is for institutes to authorize a land modify request
+        /// This is method for citizens to make new land merge request.
+        /// Input: 
+        /// - the citizen's original real estate proofs: 
+        /// + If the real estate doesn't contain a building: Enum("Land", Proof("land_proof"));
+        /// + If the real estate contain a building: Enum("LandandBuilding", Proof("land_proof"), Proof("building_proof"))
+        /// Output: the request badge
+        pub fn new_land_merge_request(&mut self, real_estate_proof1: RealEstateProof, real_estate_proof2: RealEstateProof) -> Bucket {
+
+            let land_id1 = match real_estate_proof1 {
+                RealEstateProof::Land(proof) => {proof.non_fungible::<Land>().id()}
+                RealEstateProof::LandandBuilding(proof, _) => {proof.non_fungible::<Land>().id()}
+            };
+
+            let real_estate_data1 = get_real_estate_data(real_estate_proof1, self.land, self.building);
+
+            let real_estate_data2 = get_real_estate_data(real_estate_proof2, self.land, self.building);
+
+            match real_estate_data1.clone() {
+
+                RealEstateData::Land(_, location1) => {
+
+                    match real_estate_data2.clone() {
+
+                        RealEstateData::Land(_, location2) => {
+
+                            info!("You have created a new merge land request no.{} on the {} land and the {} land", self.request_counter, location1, location2);
+
+                        }
+
+                        RealEstateData::LandandBuilding(_, location2, _, _) => {
+                            
+                            info!("You have created a new merge land request no.{} on the {} land and the {} land with an attached building", self.request_counter, location1, location2);
+
+                        }
+                    }
+                }
+
+                RealEstateData::LandandBuilding(_, location1,_,_) =>{ 
+
+                    match real_estate_data2.clone() {
+
+                        RealEstateData::Land(_, location2) => {
+
+                            info!("You have created a new merge land request no.{} on the {} land with an attached building and the {} land", self.request_counter, location1, location2);
+
+                        }
+
+                        RealEstateData::LandandBuilding(_, _, _, _) => {
+                            
+                            panic!("You shouldn't merge 2 land with 2 buildings!");
+
+                        }
+                    }
+                }
+
+            };
+               
+            let new_land_modify_request = Request {};
+
+            let request_id: NonFungibleId = NonFungibleId::from_u64(self.request_counter);
+
+            let request_badge = self.controller_badge.authorize(|| {
+                borrow_resource_manager!(self.land)
+                    .mint_non_fungible(&request_id, new_land_modify_request)
+            });
+
+            self.request_book.insert(request_id, (real_estate_data1, LandModifyType::Merge(real_estate_data2)));
+
+            self.request_counter += 1;
+
+            request_badge
+
+        }
+
+        /// This method is for govt authority to authorize a land modify request
         /// Input: 
         /// - the request id: ${request_id}u64
-        /// - the oracle data show whether this land modify is harmful or not: Enum("IsOk", ${ok_or_not})
+        /// - the oracle data show whether this land modify is ok or not: 
+        /// + If the user want divide a land: Enum("IsNotOverLap", ${ok_or_not})
+        /// + If the user want merge a land: Enum("IsNextTo", ${ok_or_not})
+        /// - building on land: the oracle data show that where the building would belong to after divided a real estate contain a building:
+        /// + None if the request is to merge a land or that land before divided contain no building
+        /// + Land1 if the building would be on the first land after divided
+        /// + Land2 if the building would be on the second land after divided
         /// Output: None
         /// This method put the authorized land modify NFT on the component vault if passed.
-        pub fn authorize_land_modify(&mut self, id: u64, is_ok: Feasible) {
-
-            assert!(matches!(is_ok, Feasible::IsOk(_)),
-                "Wrong Oracle data."
-            );
+        pub fn authorize_land_modify(&mut self, id: u64, is_ok: Feasible, building_on_land: BuildingOnLand) {
 
             let request_id = NonFungibleId::from_u64(id);
 
-            let result = self.request_book.remove(&request_id);
+            let result = self.request_book.get(&request_id);
 
             assert!(result.is_some(),
                 "The request book doesn't contain this request id."
             );
 
-            assert!(matches!(is_ok, Feasible::IsOk(true)),
-                "This land modify is harmful, you cannot authorize this land modify."
-            );
+            let (_, land_modify) = result.unwrap();
 
-            let (real_estate_data, land_modify) = result.unwrap();
+            let (real_estate_data, land_modify) = match land_modify {
+
+                LandModifyType::DivideRequest(_, _) => {
+
+                    assert!(matches!(is_ok, Feasible::IsNotOverLap(_)),
+                    "Wrong Oracle data."
+                    );
+
+                    assert!(matches!(is_ok, Feasible::IsNotOverLap(true)),
+                    "The divide line is overlap with other construction, you cannot authorize this land divide."
+                    );
+
+                    self.request_book.remove(&request_id).unwrap()
+
+                }
+
+                LandModifyType::Merge(_) => {
+
+                    assert!(matches!(is_ok, Feasible::IsNextTo(_)),
+                    "Wrong Oracle data."
+                    );
+
+                    assert!(matches!(is_ok, Feasible::IsNextTo(true)),
+                    "The two land provided is not next to each other."
+                    );
+
+                    self.request_book.remove(&request_id).unwrap()
+
+                }
+
+                _ => {panic!("Wrong land modify data")}
+            };
 
             let land_modify_data = LandModify {
                 real_estate_data: real_estate_data,
                 land_modify: land_modify
             };
 
-            let land_modify_right = self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.land_modify_badge)
-                    .mint_non_fungible(&request_id, land_modify_data)
+            self.controller_badge.authorize(|| {
+                let land_modify_right = borrow_resource_manager!(self.land_modify_badge)
+                    .mint_non_fungible(&request_id, land_modify_data);
+                self.land_modify_badge_vault.put(land_modify_right);
             });
 
             info!("You have authorized the land modify request no.{}", id);
-
-            self.land_modify_badge_vault.put(land_modify_right);
 
         }
 

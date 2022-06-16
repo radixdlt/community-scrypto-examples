@@ -23,9 +23,12 @@ pub enum ConstructionType {
 /// The construction right's NFT. This NFT is an authorized badge to divide a land, merge lands, constructe a building, re-constructe a building,...
 /// Making change to any real estate NFTs need a construction NFT badge, show that the change can happend or has happened.
 /// Authorities, organizations in charge of providing construction badge also need to make sure the change won't cause bad effect to society.
+/// Struct: 
+/// land_id: the id of the land which will make the construction
+/// construction: the construction type
 #[derive(NonFungibleData)]
 pub struct Construction {
-    real_estate_data: RealEstateData,
+    land_id: NonFungibleId,
     construction: ConstructionType
 }
 
@@ -35,6 +38,8 @@ blueprint! {
 
         /// Component controller badge
         controller_badge: Vault,
+        /// Resource move badge
+        move_badge: ResourceAddress,
         /// Building address
         building: ResourceAddress,
         /// Land address
@@ -53,8 +58,8 @@ blueprint! {
         construction_badge: ResourceAddress,
         /// Construction request badge NFT resource address.
         request_badge: ResourceAddress,
-        /// Request book, contain in-queue construction request of citizens. Struct: Request Id, (the requested real estate data, the requested construction data, request status)
-        request_book: HashMap<NonFungibleId, (RealEstateData, ConstructionType)>,
+        /// Request book, contain in-queue construction request of citizens. Struct: Request Id, (the requested construction land id, the requested construction data)
+        request_book: HashMap<NonFungibleId, (NonFungibleId, ConstructionType)>,
         /// Construction badge vault, contain solved construction request of citizens.
         construction_badge_vault: Vault,
         /// Request id counter
@@ -75,7 +80,7 @@ blueprint! {
         /// - building: building resource address.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, land: ResourceAddress, building: ResourceAddress, real_estate_authority: ResourceAddress) -> (ComponentAddress, Bucket) {
+        pub fn new(name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, land: ResourceAddress, building: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> (ComponentAddress, Bucket) {
 
             let construction_authority_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
@@ -107,6 +112,7 @@ blueprint! {
             let comp = Self {
 
                 controller_badge: Vault::with_bucket(controller_badge),
+                move_badge: move_badge,
                 building: building,
                 land: land,
                 rate: rate,
@@ -140,6 +146,11 @@ blueprint! {
         /// Output: the request badge
         pub fn new_construction_request(&mut self, real_estate_proof: RealEstateProof, construction: ConstructionType) -> Bucket {
 
+            let land_id = match real_estate_proof {
+                RealEstateProof::Land(proof) => {proof.non_fungible::<Land>().id()}
+                RealEstateProof::LandandBuilding(proof, _) => {proof.non_fungible::<Land>().id()}
+            };
+
             let real_estate_data = get_real_estate_data(real_estate_proof, self.land, self.building);
 
             let (construct_type, location) = match construction {
@@ -172,7 +183,7 @@ blueprint! {
                     .mint_non_fungible(&request_id, new_construction_request)
             });
 
-            self.request_book.insert(request_id, (real_estate_data, construction));
+            self.request_book.insert(request_id, (land_id, construction));
 
             info!("You have created a new {} request no.{} on the {} land.", construct_type, self.request_counter, location);
 
@@ -206,21 +217,20 @@ blueprint! {
                 "This construction is harmful, you cannot authorize this construction."
             );
 
-            let (real_estate_data, construction) = result.unwrap();
+            let (land_id, construction) = result.unwrap();
 
             let construction_data = Construction {
-                real_estate_data: real_estate_data,
+                land_id: land_id,
                 construction: construction
             };
 
-            let construction_right = self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.construction_badge)
-                    .mint_non_fungible(&request_id, construction_data)
+            self.controller_badge.authorize(|| {
+                let construction_right = borrow_resource_manager!(self.construction_badge)
+                    .mint_non_fungible(&request_id, construction_data);
+                self.construction_badge_vault.put(construction_right);
             });
 
             info!("You have authorized the construction request no.{}", id);
-
-            self.construction_badge_vault.put(construction_right);
 
         }
 
@@ -239,11 +249,6 @@ blueprint! {
                 "Construction institute haven't reviewed your request yet"
             );
 
-            self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.request_badge)
-                    .burn(request_badge)
-            });
-
             if self.construction_badge_vault.non_fungible_ids().contains(&request_id) {
                 info!("Your construction request no.{} has passed.", request_id);
                 RequestReturn::Passed(self.construction_badge_vault.take_non_fungible(&request_id))
@@ -251,7 +256,6 @@ blueprint! {
                 info!("Your construction request no.{} has been rejected.", request_id);
                 RequestReturn::Rejected
             }
-
         }
 
         /// This method is for citizens to construct new building to an existed land.
@@ -260,7 +264,7 @@ blueprint! {
         /// - the construction badge: Bucket("${construction_badge}")
         /// - the payment bucket: Bucket("${payment}")
         /// Output: The building right's NFT of that land and payment changes.
-        pub fn construct_new_building(&mut self, mut land_right: Proof, construction_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket) {
+        pub fn construct_new_building(&mut self, mut land_right: Proof, construction_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket, Proof) {
 
             assert!((land_right.resource_address()==self.land) & (construction_badge.resource_address()==self.construction_badge) & (payment.resource_address()==self.token),
                 "Wrong resource."
@@ -268,14 +272,13 @@ blueprint! {
 
             assert!(payment.amount()>=self.rate+self.fee, "Payment is not enough");
 
+            let id = land_right.non_fungible::<Land>().id();
+
             let mut data: Land = land_right.non_fungible().data();
 
             let construct_data = construction_badge.non_fungible::<Construction>().data();
 
-            match construct_data.real_estate_data {
-                RealEstateData::Land(_, location) => assert!((location == data.location), "Wrong land NFT proof provided."),
-                _ => {panic!("Wrong land NFT proof provided.")}
-            };
+            assert!(construct_data.land_id==id, "Wrong land proof provided");
 
             let (new_building, size, floor) = match construct_data.construction {
 
@@ -296,16 +299,24 @@ blueprint! {
 
             let location = data.location.clone();
 
-            let building_right = self.controller_badge
+            let (building_right, move_proof) = self.controller_badge
                 .authorize(|| {
+
+                    let move_badge = borrow_resource_manager!(self.move_badge)
+                        .mint(dec!(1));
+
+                    let move_proof = move_badge.create_proof();
+
+                    borrow_resource_manager!(self.move_badge)
+                        .burn(move_badge);
 
                     borrow_resource_manager!(self.construction_badge)
                     .burn(construction_badge);
 
                     land_right.non_fungible().update_data(data);
 
-                    borrow_resource_manager!(self.building)
-                    .mint_non_fungible(&building_id, new_building.clone())
+                    (borrow_resource_manager!(self.building)
+                    .mint_non_fungible(&building_id, new_building.clone()),move_proof)
 
                 });
 
@@ -314,7 +325,7 @@ blueprint! {
             self.fee_vault.put(payment.take(self.fee));
             self.tax_vault.put(payment.take(self.rate));
 
-            return (building_right, payment)
+            return (building_right, payment, move_proof)
 
         }
 
@@ -333,6 +344,8 @@ blueprint! {
 
             assert!(payment.amount()>=self.rate+self.fee, "Payment is not enough");
 
+            let id = land_right.non_fungible::<Land>().id();
+
             let mut land_data: Land = land_right.non_fungible().data();
 
             let building_id = building.non_fungible::<Building>().id();
@@ -343,10 +356,7 @@ blueprint! {
 
             let construct_data = construction_badge.non_fungible::<Construction>().data();
 
-            match construct_data.real_estate_data {
-                RealEstateData::LandandBuilding(_, location, _, _) => assert!((location == land_data.location), "Wrong land NFT proof provided."),
-                _ => {panic!("Wrong land NFT proof provided.")}
-            };
+            assert!(construct_data.land_id==id, "Wrong land proof provided");
 
             match construct_data.construction {
 
