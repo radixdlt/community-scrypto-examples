@@ -591,13 +591,13 @@ blueprint! {
                     "Wrong Oracle data."
                     );
 
-                    let result = self.request_book.remove(&request_id).unwrap();
+                    let (land_id, land_modify) = self.request_book.remove(&request_id).unwrap();
 
                     assert!(matches!(is_ok, Feasible::IsNextTo(true)),
                     "The two land provided is not next to each other."
                     );
 
-                    result
+                    (land_id, land_modify)
 
                 }
 
@@ -657,217 +657,240 @@ blueprint! {
         /// - the land modify badge: Bucket("${land_modify_badge}")
         /// - the payment bucket: Bucket("${payment}")
         /// Output: The building right's NFT of that land and payment changes.
-        pub fn divide_land(&self, mut real_estate: RealEstate, land_modify_badge: Bucket, mut payment: Bucket) -> (RealEstate, RealEstate) {
+        pub fn divide_land(&self, mut real_estate: RealEstate, land_modify_badge: Bucket, mut payment: Bucket) -> (RealEstate, RealEstate, Bucket) {
 
             assert!((land_modify_badge.resource_address()==self.land_modify_badge) & (payment.resource_address()==self.token),
                 "Wrong resource."
             );
 
-            let land_modify_data = land_modify_badge.non_fungible::<LandModify>().data();
+            let data = land_modify_badge.non_fungible::<LandModify>().data();
 
-            match real_estate {
+            let land_modify_data = data.land_modify;
 
-                RealEstate::Land(land_right) => {
+            let id = data.land_id;
 
-                    assert!(land_right.resource_address()==self.land,
-                        "Wrong resource."
-                    );
+            self.tax_vault.put(payment.take(self.rate));
+
+            match land_modify_data {
+
+                LandModifyType::Divide(real_estate1_data, real_estate2_data, building_on_land) => {
+
+                    match real_estate {
+
+                        RealEstate::Land(land_right) => {
         
-                    let land_data: Land = land_right.non_fungible().data();
+                            assert!(land_right.resource_address()==self.land,
+                                "Wrong resource."
+                            );
+                
+                            let land_data: Land = land_right.non_fungible().data();
+                
+                            assert!(land_data.contain.is_none(),
+                                "This land contain a building, you should also input the building right's NFT."
+                            );
         
-                    assert!(land_data.contain.is_none(),
-                        "This land contain a building, you should also input the building right's NFT."
-                    );
-
-                    let land_id = land_right.non_fungible::<Land>().id();
-
-                    assert!(land_id == land_modify_data.land_id,
-                        "Wrong land right's NFT provided"
-                    );
+                            let land_id = land_right.non_fungible::<Land>().id();
         
-                    let result = match real_estate1_data {
-
-                        RealEstateData::Land(land_size1, location1) => {
-                            
-                            match real_estate2_data {
-                                
-                                RealEstateData::Land(land_size2, location2) => {
-
-                                    assert!((land_size1+land_size2==land_data.size) & (land_size1>dec!(0)) & (land_size2>dec!(0)),
-                                        "Wrong land size data provided!"
-                                    );
-
-                                    let new_land1 = Land {
-                                        contain: None,
-                                        size: land_size1,
-                                        location: location1.clone()
-                                    };
+                            assert!(land_id == id,
+                                "Wrong land right's NFT provided"
+                            );
                 
-                                    let land_id1: NonFungibleId = NonFungibleId::random();
-                
-                                    let land_right1 = self.controller_badge.authorize(|| {
-                                        borrow_resource_manager!(self.land)
-                                            .mint_non_fungible(&land_id1, new_land1)
-                                    });
-                
-                                    info!("You have created a new land right's NFT of the {}m2 land on {}", land_size1, location1.clone());
-
-                                    let new_land2 = Land {
-                                        contain: None,
-                                        size: land_size2,
-                                        location: location2.clone()
-                                    };
-                
-                                    let land_id2: NonFungibleId = NonFungibleId::random();
-                
-                                    let land_right2 = self.controller_badge.authorize(|| {
-                                        borrow_resource_manager!(self.land)
-                                            .mint_non_fungible(&land_id2, new_land2)
-                                    });
-                
-                                    info!("You have created a new land right's NFT of the {}m2 land on {}", land_size2, location2.clone());
-
-                                    info!("You have divided the {} land into a {}m2 land on {} and a {}m2 land on {}", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
-
-                                    (RealEstate::Land(land_right1), RealEstate::Land(land_right2))
+                            let result = match real_estate1_data {
+        
+                                RealEstateData::Land(land_size1, location1) => {
+                                    
+                                    match real_estate2_data {
+                                        
+                                        RealEstateData::Land(land_size2, location2) => {
+        
+                                            assert!((land_size1+land_size2==land_data.size) & (land_size1>dec!(0)) & (land_size2>dec!(0)),
+                                                "Wrong land size data provided!"
+                                            );
+        
+                                            let new_land1 = Land {
+                                                contain: None,
+                                                size: land_size1,
+                                                location: location1.clone()
+                                            };
+                        
+                                            let land_id1: NonFungibleId = NonFungibleId::random();
+                        
+                                            let land_right1 = self.controller_badge.authorize(|| {
+                                                borrow_resource_manager!(self.land)
+                                                    .mint_non_fungible(&land_id1, new_land1)
+                                            });
+                        
+                                            info!("You have created a new land right's NFT of the {}m2 land on {}", land_size1, location1.clone());
+        
+                                            let new_land2 = Land {
+                                                contain: None,
+                                                size: land_size2,
+                                                location: location2.clone()
+                                            };
+                        
+                                            let land_id2: NonFungibleId = NonFungibleId::random();
+                        
+                                            let land_right2 = self.controller_badge.authorize(|| {
+                                                borrow_resource_manager!(self.land)
+                                                    .mint_non_fungible(&land_id2, new_land2)
+                                            });
+                        
+                                            info!("You have created a new land right's NFT of the {}m2 land on {}", land_size2, location2.clone());
+        
+                                            info!("You have divided the {} land into a {}m2 land on {} and a {}m2 land on {}", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
+        
+                                            (RealEstate::Land(land_right1), RealEstate::Land(land_right2), payment)
+                                        }
+                                        RealEstateData::LandandBuilding(_,_,_,_) => { panic!("This land data shoudn't contain a building!")}
+                                    }
                                 }
                                 RealEstateData::LandandBuilding(_,_,_,_) => { panic!("This land data shoudn't contain a building!")}
-                            }
+                            };
+        
+                            self.controller_badge.authorize(|| {
+                                borrow_resource_manager!(self.land)
+                                    .burn(land_right);
+                                borrow_resource_manager!(self.land_modify_badge)
+                                    .burn(land_modify_badge)    
+                            });
+        
+                            return result
+        
                         }
-                        RealEstateData::LandandBuilding(_,_,_,_) => { panic!("This land data shoudn't contain a building!")}
-                    };
-
-                    self.controller_badge.authorize(|| {
-                        borrow_resource_manager!(self.land)
-                            .burn(land_right)
-                    });
-
-                    return result
-
-                }
-
-                RealEstate::LandandBuilding(land_right, building_right) => {
-
-                    assert!((land_right.resource_address()==self.land) & (building_right.resource_address() == self.building),
-                        "Wrong resource."
-                    );
         
-                    let building_id = building_right.non_fungible::<Building>().id();
-
-                    let building_data: Building = building_right.non_fungible().data();
+                        RealEstate::LandandBuilding(land_right, building_right) => {
         
-                    let land_data: Land = land_right.non_fungible().data();
+                            assert!((land_right.resource_address()==self.land) & (building_right.resource_address() == self.building),
+                                "Wrong resource."
+                            );
+                
+                            let building_id = building_right.non_fungible::<Building>().id();
         
-                    assert!(land_data.contain.unwrap().0 == building_id,
-                        "This land doesn't contain the building from provided building right."
-                    );
+                            let building_data: Building = building_right.non_fungible().data();
+                
+                            let land_data: Land = land_right.non_fungible().data();
+                
+                            assert!(land_data.contain.unwrap().0 == building_id,
+                                "This land doesn't contain the building from provided building right."
+                            );
 
-                    let result = match real_estate1_data {
-
-                        RealEstateData::Land(land_size1, location1) => {
+                            let land_id = land_right.non_fungible::<Land>().id();
+        
+                            assert!(land_id == id,
+                                "Wrong land right's NFT provided"
+                            );
+        
+                            let result = match real_estate1_data {
+        
+                                RealEstateData::Land(land_size1, location1) => {
+                                    
+                                    match real_estate2_data {
+                                        
+                                        RealEstateData::Land(land_size2, location2) => {
+        
+                                            assert!((land_size1+land_size2==land_data.size) & (land_size1>dec!(0)) & (land_size2>dec!(0)),
+                                                "Wrong land size data provided!"
+                                            );
+        
+                                            let result2 = if matches!(building_on_land, BuildingOnLand::Land1) {
+        
+                                                let new_land1 = Land {
+                                                    contain: Some((building_id, building_data)),
+                                                    size: land_size1,
+                                                    location: location1.clone()
+                                                };
                             
-                            match real_estate2_data {
-                                
-                                RealEstateData::Land(land_size2, location2) => {
-
-                                    assert!((land_size1+land_size2==land_data.size) & (land_size1>dec!(0)) & (land_size2>dec!(0)),
-                                        "Wrong land size data provided!"
-                                    );
-
-                                    let result2 = if building_on_land == "1" {
-
-                                        let new_land1 = Land {
-                                            contain: Some((building_id, building_data)),
-                                            size: land_size1,
-                                            location: location1.clone()
-                                        };
-                    
-                                        let land_id1: NonFungibleId = NonFungibleId::random();
-                    
-                                        let land_right1 = self.controller_badge.authorize(|| {
-                                            borrow_resource_manager!(self.land)
-                                                .mint_non_fungible(&land_id1, new_land1)
-                                        });
-
-                                        info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_size1, location1.clone());
-
-                                        let new_land2 = Land {
-                                            contain: None,
-                                            size: land_size2,
-                                            location: location2.clone()
-                                        };
-                    
-                                        let land_id2: NonFungibleId = NonFungibleId::random();
-                    
-                                        let land_right2 = self.controller_badge.authorize(|| {
-                                            borrow_resource_manager!(self.land)
-                                                .mint_non_fungible(&land_id2, new_land2)
-                                        });
-                    
-                                        info!("You have created a new land right's NFT of the {}m2 land on {}", land_size2, location2.clone());
-
-                                        info!("You have divided the {} land into a {}m2 land on {} with an attached building and a {}m2 land on {}", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
-
-                                        (RealEstate::LandandBuilding(land_right1, building_right), RealEstate::Land(land_right2))
-
-                                    } else if building_on_land == "2" {
-
-                                        let new_land1 = Land {
-                                            contain: None,
-                                            size: land_size1,
-                                            location: location1.clone()
-                                        };
-                    
-                                        let land_id1: NonFungibleId = NonFungibleId::random();
-                    
-                                        let land_right1 = self.controller_badge.authorize(|| {
-                                            borrow_resource_manager!(self.land)
-                                                .mint_non_fungible(&land_id1, new_land1)
-                                        });
-
-                                        info!("You have created a new land right's NFT of the {}m2 land on {}", land_size1, location1.clone());
-
-                                        let new_land2 = Land {
-                                            contain: Some((building_id, building_data)),
-                                            size: land_size2,
-                                            location: location2.clone()
-                                        };
-                    
-                                        let land_id2: NonFungibleId = NonFungibleId::random();
-                    
-                                        let land_right2 = self.controller_badge.authorize(|| {
-                                            borrow_resource_manager!(self.land)
-                                                .mint_non_fungible(&land_id2, new_land2)
-                                        });
-                    
-                                        info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_size2, location2.clone());
-
-                                        info!("You have divided the {} land into a {}m2 land on {} and a {}m2 land on {} with an attached building", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
-
-                                        (RealEstate::Land(land_right1), RealEstate::LandandBuilding(land_right2, building_right))
-
-                                    } else {
-                                        panic!("Wrong Oracle data!")
-                                    };
-
-                                    result2
-
+                                                let land_id1: NonFungibleId = NonFungibleId::random();
+                            
+                                                let land_right1 = self.controller_badge.authorize(|| {
+                                                    borrow_resource_manager!(self.land)
+                                                        .mint_non_fungible(&land_id1, new_land1)
+                                                });
+        
+                                                info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_size1, location1.clone());
+        
+                                                let new_land2 = Land {
+                                                    contain: None,
+                                                    size: land_size2,
+                                                    location: location2.clone()
+                                                };
+                            
+                                                let land_id2: NonFungibleId = NonFungibleId::random();
+                            
+                                                let land_right2 = self.controller_badge.authorize(|| {
+                                                    borrow_resource_manager!(self.land)
+                                                        .mint_non_fungible(&land_id2, new_land2)
+                                                });
+                            
+                                                info!("You have created a new land right's NFT of the {}m2 land on {}", land_size2, location2.clone());
+        
+                                                info!("You have divided the {} land into a {}m2 land on {} with an attached building and a {}m2 land on {}", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
+        
+                                                (RealEstate::LandandBuilding(land_right1, building_right), RealEstate::Land(land_right2), payment)
+        
+                                            } else if matches!(building_on_land, BuildingOnLand::Land2) {
+        
+                                                let new_land1 = Land {
+                                                    contain: None,
+                                                    size: land_size1,
+                                                    location: location1.clone()
+                                                };
+                            
+                                                let land_id1: NonFungibleId = NonFungibleId::random();
+                            
+                                                let land_right1 = self.controller_badge.authorize(|| {
+                                                    borrow_resource_manager!(self.land)
+                                                        .mint_non_fungible(&land_id1, new_land1)
+                                                });
+        
+                                                info!("You have created a new land right's NFT of the {}m2 land on {}", land_size1, location1.clone());
+        
+                                                let new_land2 = Land {
+                                                    contain: Some((building_id, building_data)),
+                                                    size: land_size2,
+                                                    location: location2.clone()
+                                                };
+                            
+                                                let land_id2: NonFungibleId = NonFungibleId::random();
+                            
+                                                let land_right2 = self.controller_badge.authorize(|| {
+                                                    borrow_resource_manager!(self.land)
+                                                        .mint_non_fungible(&land_id2, new_land2)
+                                                });
+                            
+                                                info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_size2, location2.clone());
+        
+                                                info!("You have divided the {} land into a {}m2 land on {} and a {}m2 land on {} with an attached building", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
+        
+                                                (RealEstate::Land(land_right1), RealEstate::LandandBuilding(land_right2, building_right), payment)
+        
+                                            } else {
+                                                panic!("Wrong Oracle data!")
+                                            };
+        
+                                            result2
+        
+                                        }
+                                        RealEstateData::LandandBuilding(_,_,_,_) => { panic!("This land data shoudn't contain a building!")}
+                                    }
                                 }
                                 RealEstateData::LandandBuilding(_,_,_,_) => { panic!("This land data shoudn't contain a building!")}
-                            }
-                        }
-                        RealEstateData::LandandBuilding(_,_,_,_) => { panic!("This land data shoudn't contain a building!")}
-                    };
+                            };
+                
+                            self.controller_badge.authorize(|| {
+                                borrow_resource_manager!(self.land)
+                                    .burn(land_right);
+                                borrow_resource_manager!(self.land_modify_badge)
+                                    .burn(land_modify_badge)   
+                            });
         
-                    self.controller_badge.authorize(|| {
-                        borrow_resource_manager!(self.land)
-                            .burn(land_right)
-                    });
-
-                    return result
-
+                            return result
+        
+                        }
+                    }   
                 }
-            }    
+                _ => {panic!("Wrong land modify badge!")}
+            }
         }
 
         /// This method is for authority to merge an existed real estate with an existed (non-building) land.
