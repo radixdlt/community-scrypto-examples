@@ -111,7 +111,7 @@ pub struct Land {
 }
 
 /// A utility function to get real estate data from a real estate proof, also assert if the real estate proof is right resources or not.
-pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress, building: ResourceAddress) -> RealEstateData {
+pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress, building: ResourceAddress) -> (NonFungibleId, RealEstateData) {
 
     match real_estate {
 
@@ -127,7 +127,9 @@ pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress,
                 "This land contain a building, you should also input the building right's NFT."
             );
 
-            return  RealEstateData::Land(land_data.size, land_data.location)
+            let land_id = land_right.non_fungible::<Land>().id();
+
+            return  (land_id, RealEstateData::Land(land_data.size, land_data.location))
 
         }
 
@@ -146,8 +148,10 @@ pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress,
             assert!(land_data.contain.unwrap().0 == building_id,
                 "This land doesn't contain the building from provided building right."
             );
+            
+            let land_id = land_right.non_fungible::<Land>().id();
 
-            return RealEstateData::LandandBuilding(land_data.size, land_data.location, building_data.size, building_data.floor)
+            return (land_id, RealEstateData::LandandBuilding(land_data.size, land_data.location, building_data.size, building_data.floor))
 
         }
     }
@@ -363,12 +367,7 @@ blueprint! {
         /// Output: the request badge
         pub fn new_land_divide_request(&mut self, real_estate_proof: RealEstateProof, divided_land1: RealEstateData, divided_land2: RealEstateData) -> Bucket {
 
-            let land_id = match real_estate_proof {
-                RealEstateProof::Land(proof) => {proof.non_fungible::<Land>().id()}
-                RealEstateProof::LandandBuilding(proof, _) => {proof.non_fungible::<Land>().id()}
-            };
-
-            let real_estate_data = get_real_estate_data(real_estate_proof, self.land, self.building);
+            let (land_id, real_estate_data) = get_real_estate_data(real_estate_proof, self.land, self.building);
 
             match divided_land1 {
                 RealEstateData::LandandBuilding(_,_,_,_) => {panic!("Wrong real estate data provided!")}
@@ -412,53 +411,114 @@ blueprint! {
         /// Output: the request badge
         pub fn new_land_merge_request(&mut self, real_estate_proof1: RealEstateProof, real_estate_proof2: RealEstateProof) -> Bucket {
 
-            let land_id1 = match real_estate_proof1 {
-                RealEstateProof::Land(proof) => {proof.non_fungible::<Land>().id()}
-                RealEstateProof::LandandBuilding(proof, _) => {proof.non_fungible::<Land>().id()}
-            };
+            let (land_id1, land_id2): (NonFungibleId, NonFungibleId) = match real_estate_proof1 {
 
-            let real_estate_data1 = get_real_estate_data(real_estate_proof1, self.land, self.building);
+                RealEstateProof::Land(proof) => {
 
-            let real_estate_data2 = get_real_estate_data(real_estate_proof2, self.land, self.building);
+                    assert!(proof.resource_address()==self.land,
+                        "Wrong resource."
+                    );
+        
+                    let land_data1: Land = proof.non_fungible().data();
+        
+                    assert!(land_data1.contain.is_none(),
+                        "This land contain a building, you should also input the building right's NFT."
+                    );
 
-            match real_estate_data1.clone() {
+                    let land_id1 = proof.non_fungible::<Land>().id();
 
-                RealEstateData::Land(_, location1) => {
+                    let land_id2 = match real_estate_proof2 {
 
-                    match real_estate_data2.clone() {
+                        RealEstateProof::Land(proof2) => {
+                            assert!(proof2.resource_address()==self.land,
+                                "Wrong resource."
+                            );
+                
+                            let land_data2: Land = proof.non_fungible().data();
+                
+                            assert!(land_data2.contain.is_none(),
+                                "This land contain a building, you should also input the building right's NFT."
+                            );
 
-                        RealEstateData::Land(_, location2) => {
+                            let land_id2 = proof.non_fungible::<Land>().id();
 
-                            info!("You have created a new merge land request no.{} on the {} land and the {} land", self.request_counter, location1, location2);
+                            info!("You have created a new merge land request no.{} on the {} land and the {} land", self.request_counter, land_data1.location, land_data2.location);
+
+                            land_id2
 
                         }
 
-                        RealEstateData::LandandBuilding(_, location2, _, _) => {
-                            
-                            info!("You have created a new merge land request no.{} on the {} land and the {} land with an attached building", self.request_counter, location1, location2);
+                        RealEstateProof::LandandBuilding(proof2, building_proof2) => {
+
+                            assert!((proof2.resource_address()==self.land) & (building_proof2.resource_address() == self.building),
+                                "Wrong resource."
+                            );
+
+                            let building_id = building_proof2.non_fungible::<Building>().id();
+
+                            let building_data: Building = building_proof2.non_fungible().data();
+
+                            let land_data2: Land = proof2.non_fungible().data();
+
+                            assert!(land_data2.contain.unwrap().0 == building_id,
+                                "This land doesn't contain the building from provided building right."
+                            );
+
+                            let land_id2 = proof.non_fungible::<Land>().id();
+
+                            info!("You have created a new merge land request no.{} on the {} land and the {} land with an attached building", self.request_counter, land_data1.location, land_data2.location);
+
+                            land_id2
 
                         }
-                    }
+                    };
+
+                    (land_id1, land_id2)
                 }
+                RealEstateProof::LandandBuilding(proof, building_proof) => {
 
-                RealEstateData::LandandBuilding(_, location1,_,_) =>{ 
+                    assert!((proof.resource_address()==self.land) & (building_proof.resource_address() == self.building),
 
-                    match real_estate_data2.clone() {
+                        "Wrong resource."
+                    );
 
-                        RealEstateData::Land(_, location2) => {
+                    let building_id = building_proof.non_fungible::<Building>().id();
 
-                            info!("You have created a new merge land request no.{} on the {} land with an attached building and the {} land", self.request_counter, location1, location2);
+                    let building_data: Building = building_proof.non_fungible().data();
 
+                    let land_data1: Land = proof.non_fungible().data();
+
+                    assert!(land_data1.contain.unwrap().0 == building_id,
+                        "This land doesn't contain the building from provided building right."
+                    );
+
+                    let land_id1 = proof.non_fungible::<Land>().id();
+
+                    let land_id2 = match real_estate_proof2 {
+                        RealEstateProof::Land(proof2) => {
+                            assert!(proof2.resource_address()==self.land,
+                                "Wrong resource."
+                            );
+                
+                            let land_data2: Land = proof.non_fungible().data();
+                
+                            assert!(land_data2.contain.is_none(),
+                                "This land contain a building, you should also input the building right's NFT."
+                            );
+
+                            let land_id2 = proof.non_fungible::<Land>().id();
+
+                            info!("You have created a new merge land request no.{} on the {} land with an attached building and the {} land", self.request_counter, land_data1.location, land_data2.location);
+                            land_id2
                         }
-
-                        RealEstateData::LandandBuilding(_, _, _, _) => {
-                            
+                        RealEstateProof::LandandBuilding(proof2, _) => {
                             panic!("You shouldn't merge 2 land with 2 buildings!");
-
                         }
-                    }
-                }
+                    };
 
+                   (land_id1, land_id2)
+
+                }
             };
                
             let new_land_modify_request = Request {};
@@ -470,7 +530,7 @@ blueprint! {
                     .mint_non_fungible(&request_id, new_land_modify_request)
             });
 
-            self.request_book.insert(request_id, (real_estate_data1, LandModifyType::Merge(real_estate_data2)));
+            self.request_book.insert(request_id, (land_id1, LandModifyType::Merge(land_id2)));
 
             self.request_counter += 1;
 
@@ -502,7 +562,7 @@ blueprint! {
 
             let (_, land_modify) = result.unwrap();
 
-            let (real_estate_data, land_modify) = match land_modify {
+            let (land_id, land_modify) = match land_modify {
 
                 LandModifyType::DivideRequest(_, _) => {
 
@@ -510,11 +570,18 @@ blueprint! {
                     "Wrong Oracle data."
                     );
 
+                    let (land_id, land_modify) = self.request_book.remove(&request_id).unwrap();
+
+                    let land_modify_result = match land_modify {
+                        LandModifyType::DivideRequest(land_data1, land_data2) => LandModifyType::Divide(land_data1, land_data2, building_on_land),
+                        _ => {panic!("Wrong land modify data")}
+                    };
+
                     assert!(matches!(is_ok, Feasible::IsNotOverLap(true)),
                     "The divide line is overlap with other construction, you cannot authorize this land divide."
                     );
 
-                    self.request_book.remove(&request_id).unwrap()
+                    (land_id, land_modify_result)
 
                 }
 
@@ -524,11 +591,13 @@ blueprint! {
                     "Wrong Oracle data."
                     );
 
+                    let result = self.request_book.remove(&request_id).unwrap();
+
                     assert!(matches!(is_ok, Feasible::IsNextTo(true)),
                     "The two land provided is not next to each other."
                     );
 
-                    self.request_book.remove(&request_id).unwrap()
+                    result
 
                 }
 
@@ -536,7 +605,7 @@ blueprint! {
             };
 
             let land_modify_data = LandModify {
-                real_estate_data: real_estate_data,
+                land_id: land_id,
                 land_modify: land_modify
             };
 
@@ -582,15 +651,19 @@ blueprint! {
 
         /// This method is for authority to divide an existed real estate to 2 other real estates with attached NFTs.
         /// Input: 
-        /// real_estate:
-        /// - If the real estate have no building > input the land right's NFT
-        /// - If the real estate contain a building > input both the land right's NFT and the building right's NFT
-        /// real_estate1_data, real_estate2_data: input Enum("Land", Decimal("${land_size}"), "${location}"), these data can also be acquired through Oracle.
-        /// building_on_land: data from an Oracle > see the location of building (if the original real estate contain a building) belong to the real estate 1 or real estate 2.
-        /// this data is either Default if the original real estate have no building, "1" if the building is on real estate 1, "2" if the building is on real estate 2.
-        /// To follow the asset oriented logic, the divided real estate should not have a building which the original real estate didn't have.
-        /// Output: 2 divided real estate with the attached NFTs.
-        pub fn divide_land(&self, real_estate: RealEstate, real_estate1_data: RealEstateData, real_estate2_data: RealEstateData, building_on_land: String) -> (RealEstate, RealEstate) {
+        /// - The real estate's NFTs: 
+        /// + If the land contain a building: Enum("LandandBuilding", Bucket("land_proof"), Bucket("building_proof"))
+        /// + If the land doesn't contain a building: Enum("Land", Bucket("land_proof"))
+        /// - the land modify badge: Bucket("${land_modify_badge}")
+        /// - the payment bucket: Bucket("${payment}")
+        /// Output: The building right's NFT of that land and payment changes.
+        pub fn divide_land(&self, mut real_estate: RealEstate, land_modify_badge: Bucket, mut payment: Bucket) -> (RealEstate, RealEstate) {
+
+            assert!((land_modify_badge.resource_address()==self.land_modify_badge) & (payment.resource_address()==self.token),
+                "Wrong resource."
+            );
+
+            let land_modify_data = land_modify_badge.non_fungible::<LandModify>().data();
 
             match real_estate {
 
@@ -604,6 +677,12 @@ blueprint! {
         
                     assert!(land_data.contain.is_none(),
                         "This land contain a building, you should also input the building right's NFT."
+                    );
+
+                    let land_id = land_right.non_fungible::<Land>().id();
+
+                    assert!(land_id == land_modify_data.land_id,
+                        "Wrong land right's NFT provided"
                     );
         
                     let result = match real_estate1_data {

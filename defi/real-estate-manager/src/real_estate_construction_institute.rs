@@ -145,13 +145,8 @@ blueprint! {
         /// + If citizen want to demolish a building: Enum("DemolishBuilding")
         /// Output: the request badge
         pub fn new_construction_request(&mut self, real_estate_proof: RealEstateProof, construction: ConstructionType) -> Bucket {
-
-            let land_id = match real_estate_proof {
-                RealEstateProof::Land(proof) => {proof.non_fungible::<Land>().id()}
-                RealEstateProof::LandandBuilding(proof, _) => {proof.non_fungible::<Land>().id()}
-            };
-
-            let real_estate_data = get_real_estate_data(real_estate_proof, self.land, self.building);
+            
+            let (land_id, real_estate_data) = get_real_estate_data(real_estate_proof, self.land, self.building);
 
             let (construct_type, location) = match construction {
 
