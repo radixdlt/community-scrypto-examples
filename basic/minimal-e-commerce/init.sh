@@ -1,5 +1,7 @@
 #!/bin/bash
 
+mkdir -p manifests
+
 scrypto build && \
 resim reset
 
