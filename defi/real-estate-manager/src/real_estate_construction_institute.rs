@@ -5,6 +5,7 @@
 
 use scrypto::prelude::*;
 use crate::real_estate_service::*;
+use crate::utility::*;
 
 /// The building construction structure with needed input
 #[derive(TypeId, Encode, Decode, Describe)]
@@ -84,20 +85,20 @@ blueprint! {
 
             let construction_authority_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", name.clone() + "Construction Institute Badge")
+                .metadata("name", name.clone() + " Construction Institute Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .initial_supply(dec!(1));
 
             let construction_badge = ResourceBuilder::new_non_fungible()
-                .metadata("name", name.clone()+"Construction Right's Badge")
+                .metadata("name", name.clone()+" Construction Right's Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .updateable_non_fungible_data(rule!(require(controller_badge.resource_address())), LOCKED)
                 .no_initial_supply();
 
             let request_badge = ResourceBuilder::new_non_fungible()
-                .metadata("name", name+"Construction Request Badge")
+                .metadata("name", name+" Construction Request Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .updateable_non_fungible_data(rule!(require(controller_badge.resource_address())), LOCKED)
@@ -265,7 +266,7 @@ blueprint! {
                 "Wrong resource."
             );
 
-            assert!(payment.amount()>=self.rate+self.fee, "Payment is not enough");
+            assert!(payment.amount() >= self.rate+self.fee, "Payment is not enough");
 
             let id = land_right.non_fungible::<Land>().id();
 
@@ -290,7 +291,7 @@ blueprint! {
 
             let building_id: NonFungibleId = NonFungibleId::random();
 
-            data.contain = Some((building_id.clone(), new_building.clone()));
+            data.contain = Some(building_id.clone());
 
             let location = data.location.clone();
 
@@ -311,7 +312,7 @@ blueprint! {
                     land_right.non_fungible().update_data(data);
 
                     (borrow_resource_manager!(self.building)
-                    .mint_non_fungible(&building_id, new_building.clone()),move_proof)
+                    .mint_non_fungible(&building_id, new_building),move_proof)
 
                 });
 
@@ -345,7 +346,7 @@ blueprint! {
 
             let building_id = building.non_fungible::<Building>().id();
 
-            assert!(land_data.contain.unwrap().0 == building_id,
+            assert!(land_data.contain.unwrap() == building_id,
                     "This land doesn't contain the building from provided building right."
                 );
 

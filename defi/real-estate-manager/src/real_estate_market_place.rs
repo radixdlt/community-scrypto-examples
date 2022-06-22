@@ -4,6 +4,7 @@
 
 use scrypto::prelude::*;
 use crate::real_estate_service::*;
+use crate::utility::*;
 
 /// The NFT keep track of real estate seller's order
 #[derive(NonFungibleData)]
@@ -62,11 +63,11 @@ blueprint! {
     
             let market_host_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", name.clone() + "Real Estate Market Place Host Badge")
+                .metadata("name", name.clone() + " Real Estate Market Place Host Badge")
                 .initial_supply(dec!(1));
 
             let order_badge = ResourceBuilder::new_non_fungible()
-                .metadata("name", name + "Market Order Badge")
+                .metadata("name", name + " Market Order Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .restrict_deposit(rule!(require(move_badge)), LOCKED)
@@ -119,38 +120,29 @@ blueprint! {
 
                 RealEstate::Land(land_right) => {
 
-                    assert!(land_right.resource_address()==self.land,
-                        "Wrong resource."
-                    );
-        
+                    let (_, land_data) = assert_land_proof(land_right.create_proof(), self.land);
+
                     let order_id = NonFungibleId::from_u64(self.order_counter);
-        
-                    let land_data: Land = land_right.non_fungible().data();
-        
-                    assert!(land_data.contain.is_none(),
-                        "This land contain a building, you should also input the building right's NFT."
-                    );
         
                     let new_position = Order {};
         
-                    let (order_badge, move_badge) = self.controller_badge.authorize(|| {
-                        
-                        (borrow_resource_manager!(self.order_badge)
-                            .mint_non_fungible(&order_id, new_position), 
-                        borrow_resource_manager!(self.move_badge)
-                            .mint(dec!(1)))
-
-                    });
-        
                     self.book.insert(order_id.clone(), (price, None, false));
-                    
-                    move_badge.authorize(|| {self.order_vault.put(land_right)});
+                
+                    let (order_badge, move_proof) = self.controller_badge.authorize(|| {
 
-                    let move_proof = self.controller_badge.authorize(|| {
+                        let move_badge = borrow_resource_manager!(self.move_badge)
+                            .mint(dec!(1));
+
+                        move_badge.authorize(|| {self.order_vault.put(land_right)});
+
                         let move_proof = move_badge.create_proof();
+
                         borrow_resource_manager!(self.move_badge)
-                        .burn(move_badge);
-                        return move_proof
+                            .burn(move_badge);
+
+                        (borrow_resource_manager!(self.order_badge)
+                        .mint_non_fungible(&order_id, new_position), move_proof)
+
                     });
 
                     info!("You have created a sell order no.{} on the {} real estate", order_id, land_data.location);
@@ -163,40 +155,31 @@ blueprint! {
 
                 RealEstate::LandandBuilding(land_right, building_right) => {
 
-                    assert!((land_right.resource_address()==self.land) & (building_right.resource_address() == self.building),
-                        "Wrong resource."
-                    );
-        
-                    let building_id = building_right.non_fungible::<Building>().id();
-        
-                    let land_data: Land = land_right.non_fungible().data();
-        
-                    assert!(land_data.contain.unwrap().0 == building_id,
-                        "This land doesn't contain the building from provided building right."
-                    );
-        
+                    let (_, land_data, _, _) = assert_landandbuilding_proof(land_right.create_proof(), building_right.create_proof(), self.land, self.building);
+
                     let order_id = NonFungibleId::from_u64(self.order_counter);
         
                     let new_position = Order {};
         
-                    let (order_badge, move_badge) = self.controller_badge.authorize(|| {
-                        
-                        (borrow_resource_manager!(self.order_badge)
-                            .mint_non_fungible(&order_id, new_position), 
-                        borrow_resource_manager!(self.move_badge)
-                            .mint(dec!(1)))
-
-                    });
-        
                     self.book.insert(order_id.clone(), (price, None, false));
                     
-                    move_badge.authorize(|| {self.order_vault.put(land_right); self.order_contain_building.put(building_right)});
+                    
 
-                    let move_proof = self.controller_badge.authorize(|| {
+                    let (order_badge, move_proof) = self.controller_badge.authorize(|| {
+
+                        let move_badge = borrow_resource_manager!(self.move_badge)
+                            .mint(dec!(1));
+
+                        move_badge.authorize(|| {self.order_vault.put(land_right); self.order_contain_building.put(building_right)});
+
                         let move_proof = move_badge.create_proof();
+                        
                         borrow_resource_manager!(self.move_badge)
-                        .burn(move_badge);
-                        return move_proof
+                            .burn(move_badge);
+
+                        (borrow_resource_manager!(self.order_badge)
+                        .mint_non_fungible(&order_id, new_position), move_proof)
+
                     });
 
                     info!("You have created a sell order no.{} on the {} real estate with an attached building", order_id, land_data.location);
@@ -298,11 +281,6 @@ blueprint! {
                 "This real estate is already bought."
             );
 
-            self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.order_badge)
-                    .burn(order_badge)
-            });
-
             let land_right = self.order_vault.take_non_fungible(&order_id);
             let land_location = land_right.non_fungible::<Land>().data().location;
 
@@ -314,6 +292,8 @@ blueprint! {
                 let move_proof = move_badge.create_proof();
                 borrow_resource_manager!(self.move_badge)
                     .burn(move_badge);
+                borrow_resource_manager!(self.order_badge)
+                    .burn(order_badge);
                 return move_proof
                 });
 

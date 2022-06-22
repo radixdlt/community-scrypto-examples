@@ -1,0 +1,19 @@
+CALL_METHOD ComponentAddress("${ADMIN_ACC}") "create_proof" ResourceAddress("${AUTHORITY_BADGE}");
+
+CALL_METHOD ComponentAddress("${COMP}") "authorize_citizen" ${ID1}u64;
+CALL_METHOD ComponentAddress("${USER1_ACC}") "deposit_batch";
+
+CALL_METHOD ComponentAddress("${COMP}") "authorize_citizen" ${ID2}u64;
+CALL_METHOD ComponentAddress("${USER2_ACC}") "deposit_batch";
+
+CALL_METHOD ComponentAddress("${COMP}") "authorize_citizen" ${ID3}u64;
+CALL_METHOD ComponentAddress("${USER3_ACC}") "deposit_batch";
+
+CALL_METHOD ComponentAddress("${COMP}") "authorize_citizen" ${ID4}u64;
+CALL_METHOD ComponentAddress("${USER4_ACC}") "deposit_batch";
+
+CALL_METHOD ComponentAddress("${COMP}") "authorize_construction_institute" "${Cname}" Decimal("${Cfee}");
+CALL_METHOD ComponentAddress("${USER1_ACC}") "deposit_batch";
+
+CALL_METHOD ComponentAddress("${COMP}") "authorize_marketplace" "${Mname}" Decimal("${Mfee}");
+CALL_METHOD ComponentAddress("${USER3_ACC}") "deposit_batch";
