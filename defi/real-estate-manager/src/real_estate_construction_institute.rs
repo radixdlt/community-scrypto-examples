@@ -81,14 +81,7 @@ blueprint! {
         /// - building: building resource address.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, land: ResourceAddress, building: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> (ComponentAddress, Bucket) {
-
-            let construction_authority_badge = ResourceBuilder::new_fungible()
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", name.clone() + " Construction Institute Badge")
-                .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
-                .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
-                .initial_supply(dec!(1));
+        pub fn new(construction_authority_badge: NonFungibleAddress, name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, land: ResourceAddress, building: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
 
             let construction_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name.clone()+" Construction Right's Badge")
@@ -107,7 +100,7 @@ blueprint! {
             let rules = AccessRules::new()
                 .method("edit_rate", rule!(require(real_estate_authority)))
                 .method("take_tax", rule!(require(real_estate_authority)))
-                .method("authorize_construction", rule!(require(construction_authority_badge.resource_address())))
+                .method("authorize_construction", rule!(require(construction_authority_badge)))
                 .default(rule!(allow_all));
 
             let comp = Self {
@@ -132,7 +125,7 @@ blueprint! {
             .add_access_check(rules)
             .globalize();
 
-            return (comp, construction_authority_badge)
+            return comp
 
         }
 
@@ -260,7 +253,7 @@ blueprint! {
         /// - the construction badge: Bucket("${construction_badge}")
         /// - the payment bucket: Bucket("${payment}")
         /// Output: The building right's NFT of that land and payment changes.
-        pub fn construct_new_building(&mut self, mut land_right: Proof, construction_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket, Proof) {
+        pub fn construct_new_building(&mut self, land_right: Proof, construction_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket, Proof) {
 
             assert!((land_right.resource_address()==self.land) & (construction_badge.resource_address()==self.construction_badge) & (payment.resource_address()==self.token),
                 "Wrong resource."
@@ -332,7 +325,7 @@ blueprint! {
         /// - the construction badge: Bucket("${construction_badge}")
         /// - the payment bucket: Bucket("${payment}")
         /// Output: The payment changes.
-        pub fn demolish_building(&mut self, mut land_right: Proof, building: Bucket, construction_badge: Bucket, mut payment: Bucket) -> Bucket {
+        pub fn demolish_building(&mut self, land_right: Proof, building: Bucket, construction_badge: Bucket, mut payment: Bucket) -> Bucket {
 
             assert!((land_right.resource_address()==self.land) & (building.resource_address()==self.building) & (construction_badge.resource_address()==self.construction_badge) & (payment.resource_address()==self.token),
                 "Wrong resource."

@@ -89,6 +89,16 @@ pub struct Request {
 pub struct ID {
 }
 
+/// The NFT keep track of market place information.
+#[derive(NonFungibleData)]
+pub struct MarketHostBadge {
+}
+
+/// The NFT keep track of construction institute information.
+#[derive(NonFungibleData)]
+pub struct InstituteBadge {
+}
+
 /// The building right's NFT
 /// All the building data (size, floor) is mutable through construction.
 /// size (m2)
@@ -158,7 +168,11 @@ blueprint! {
         /// Land modify badge vault, contain solved land modify request of citizens.
         land_modify_badge_vault: Vault,
         /// Request id counter
-        request_counter: u64
+        request_counter: u64,
+        /// Construction institute badge
+        institute_badge: ResourceAddress,
+        /// Market host badge
+        market_host_badge: ResourceAddress
 
     }
 
@@ -180,9 +194,7 @@ blueprint! {
 
             let id_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name.clone() + " Citizen ID badge")
-                .mintable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
-                .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
-                .updateable_non_fungible_data(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .restrict_withdraw(rule!(deny_all), LOCKED)
                 .no_initial_supply();
 
             let market_controller_badge = ResourceBuilder::new_fungible()
@@ -237,10 +249,22 @@ blueprint! {
                 .no_initial_supply();
 
             let request_badge = ResourceBuilder::new_non_fungible()
-                .metadata("name", name + " Land Modify Request Badge")
+                .metadata("name", name.clone() + " Land Modify Request Badge")
                 .mintable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .updateable_non_fungible_data(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .no_initial_supply();
+
+            let market_host_badge = ResourceBuilder::new_non_fungible()
+                .mintable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .metadata("name", name.clone() + " Real Estate Market Place Host Badge")
+                .no_initial_supply();
+
+            let institute_badge = ResourceBuilder::new_non_fungible()
+                .metadata("name", name + " Construction Institute Badge")
+                .mintable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .no_initial_supply();
                 
             let rules = AccessRules::new()
@@ -274,7 +298,9 @@ blueprint! {
                 request_badge: request_badge,
                 request_book: HashMap::new(),
                 land_modify_badge_vault: Vault::new(land_modify_badge),
-                request_counter: 0
+                request_counter: 0,
+                market_host_badge: market_host_badge,
+                institute_badge: institute_badge
                 
             }
             .instantiate()
@@ -286,6 +312,7 @@ blueprint! {
         }
 
         /// This method is for govt authority to authorize a citizen to use real estate services.
+        /// Input: the citizen id, Output: the ID badge.
         /// Without ID badge, user cannot use any on-chain real estate services.
         pub fn authorize_citizen(&self, citizen_id: u64) -> Bucket {
 
@@ -303,7 +330,7 @@ blueprint! {
         /// This method is for govt authority to create and distribute new real estate right's NFTs with the input data
         /// Input: 
         /// - real estate data: Enum("Land", Decimal("${land_size}"), "${location}");
-        /// - is_overlap: data from Oracle > see if the land is overlap with an existed real estate or not: Enum("IsNotOverLap", Decimal("${land_size}"), "${location}")
+        /// - is_overlap: data from Oracle > see if the land is overlap with an existed real estate or not: Enum("IsNotOverLap", ${ok_or_not})
         /// Output: The land right's NFT
         pub fn new_land(&self, data: RealEstateData, is_not_overlap: Feasible) -> (Bucket, Proof) {
 
@@ -971,11 +998,19 @@ blueprint! {
         /// Output: the institute's badge
         pub fn authorize_construction_institute(&mut self, name: String, fee: Decimal) -> Bucket {
 
-            let institute_controller_badge = self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.institute_controller_badge)
-                    .mint(dec!(1))
+            let institute_id = NonFungibleId::random();
+
+            let institute = InstituteBadge {};
+
+            let (institute_badge, institute_controller_badge) = self.controller_badge.authorize(|| {
+                (borrow_resource_manager!(self.institute_badge)
+                .mint_non_fungible(&institute_id, institute)
+                ,borrow_resource_manager!(self.institute_controller_badge)
+                    .mint(dec!(1)))
             });
-            let (institute_comp, institute_badge) = RealEstateConstructionInstitute::new(name, fee, institute_controller_badge, self.rate, self.token, self.land, self.building, self.real_estate_authority, self.move_badge);
+
+            let institute_address = NonFungibleAddress::new(self.institute_badge, institute_id);
+            let institute_comp = RealEstateConstructionInstitute::new(institute_address, name, fee, institute_controller_badge, self.rate, self.token, self.land, self.building, self.real_estate_authority, self.move_badge);
             self.real_estate_construction_institute.insert(institute_comp);
             return institute_badge
 
@@ -986,11 +1021,20 @@ blueprint! {
         /// Output: the market's badge.
         pub fn authorize_marketplace(&mut self, name: String, fee: Decimal) -> Bucket {
 
-            let market_controller_badge = self.controller_badge.authorize(|| {
+            let host_id = NonFungibleId::random();
+
+            let host = MarketHostBadge {};
+
+            let (market_host_badge, market_controller_badge) = self.controller_badge.authorize(|| {
+                (borrow_resource_manager!(self.market_host_badge)
+                .mint_non_fungible(&host_id, host),
                 borrow_resource_manager!(self.market_controller_badge)
-                    .mint(dec!(1))
+                    .mint(dec!(1)))
             });
-            let (market_comp, market_host_badge) = RealEstateMarketPlace::new(name, market_controller_badge, fee, self.tax, self.land, self.building, self.token, self.real_estate_authority, self.move_badge);
+
+            let address = NonFungibleAddress::new(self.market_host_badge, host_id);
+
+            let market_comp = RealEstateMarketPlace::new(address, name, market_controller_badge, fee, self.tax, self.land, self.building, self.token, self.real_estate_authority, self.move_badge);
             self.real_estate_market_place.insert(market_comp);
             return market_host_badge
 

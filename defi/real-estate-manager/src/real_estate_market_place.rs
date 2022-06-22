@@ -59,12 +59,7 @@ blueprint! {
         /// - medium token: the token used for trade.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> (ComponentAddress, Bucket) {
-    
-            let market_host_badge = ResourceBuilder::new_fungible()
-                .divisibility(DIVISIBILITY_NONE)
-                .metadata("name", name.clone() + " Real Estate Market Place Host Badge")
-                .initial_supply(dec!(1));
+        pub fn new(market_host_badge: NonFungibleAddress, name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
 
             let order_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name + " Market Order Badge")
@@ -75,9 +70,9 @@ blueprint! {
                 .no_initial_supply();
 
             let rules = AccessRules::new()
-                .method("take_fee", rule!(require(market_host_badge.resource_address())))
+                .method("take_fee", rule!(require(market_host_badge.clone())))
                 .method("take_tax", rule!(require(real_estate_authority)))
-                .method("edit_fee", rule!(require(market_host_badge.resource_address())))
+                .method("edit_fee", rule!(require(market_host_badge)))
                 .method("edit_tax", rule!(require(real_estate_authority)))
                 .default(rule!(allow_all));
 
@@ -104,7 +99,7 @@ blueprint! {
             .add_access_check(rules)
             .globalize();
 
-            return (comp, market_host_badge)
+            return comp
         }
 
         /// This method is for seller to sell a real estate right's NFTs.

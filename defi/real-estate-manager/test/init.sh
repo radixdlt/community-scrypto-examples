@@ -80,7 +80,7 @@ export BUILDING=`echo $output | cut -d " " -f8`
 export AUTHORITY_BADGE=`echo $output | cut -d " " -f9`
 export MODIFY_BADGE=`echo $output | cut -d " " -f10`
 export MREQUEST_BADGE=`echo $output | cut -d " " -f11`
-export CBADGE=`echo $output | cut -d " " -f12`
-export MBADGE=`echo $output | cut -d " " -f13`
+export CBADGE=`echo $output | cut -d " " -f13`
+export MBADGE=`echo $output | cut -d " " -f12`
 
 completed
