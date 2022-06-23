@@ -381,7 +381,9 @@ blueprint! {
         /// - the citizen's original real estate proof: 
         /// + If the real estate doesn't contain a building: Enum("Land", Proof("land_proof"));
         /// + If the real estate contain a building: Enum("LandandBuilding", Proof("land_proof"), Proof("building_proof"));
-        /// - the divided land 1 and land 2 information: Enum("Land", Decimal("${land1_size}"), "${location1}"), Enum("Land", Decimal("${land2_size}"), "${location2}"))
+        /// - the divided land 1 and land 2 information: 
+        /// + Enum("Land", Decimal("${land1_size}"), "${location1}") Enum("Land", Decimal("${land2_size}"), "${location2}"))
+        /// + These data can be from Oracle.
         /// Output: the request badge
         pub fn new_land_divide_request(&mut self, real_estate_proof: RealEstateProof, divided_land1: RealEstateData, divided_land2: RealEstateData) -> Bucket {
 

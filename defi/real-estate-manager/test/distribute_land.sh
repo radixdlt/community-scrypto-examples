@@ -9,7 +9,7 @@ source ./authorize.sh
 logc "Mint 4 land with different data and distribute those to the citizens."
 logy "The location can be address ID instead for more privacy."
 
-export land_size1="3000"
+export land_size1=3000
 export location1="Hanoi, VietNam"
 export ok=true
 logy "Citizen no.1 has ${land_size1}m2 land on ${location1}"
