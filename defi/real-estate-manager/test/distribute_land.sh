@@ -11,7 +11,7 @@ logy "The location can be address ID instead for more privacy."
 
 export land_size1="3000"
 export location1="Hanoi, VietNam"
-export ok_or_not=true
+export ok=true
 logy "Citizen no.1 has ${land_size1}m2 land on ${location1}"
 
 logy "Make an overlapped address."
@@ -33,6 +33,10 @@ export land_size4=5000
 export location4="HCM City, VietNam"
 logy "Citizen no.4 has ${land_size4}m2 land on ${location4}"
 
+export land_size5=10000
+export location5="Cerberus, Xi'an, Radix"
+logy "Citizen no.5 has ${land_size5}m2 land on ${location5}"
+
 resim run ./transaction_manifest/distribute_land
 
 export LAND1_ID=`resim show $USER1_ACC | grep -oP '(?<=id: ).*?(?=,)'`
@@ -42,5 +46,7 @@ export LAND2_ID=`resim show $USER2_ACC | grep -oP '(?<=id: ).*?(?=,)'`
 export LAND3_ID=`resim show $USER3_ACC | grep -oP '(?<=id: ).*?(?=,)'`
 
 export LAND4_ID=`resim show $USER4_ACC | grep -oP '(?<=id: ).*?(?=,)'`
+
+export LAND5_ID=`resim show $USER5_ACC | grep -oP '(?<=id: ).*?(?=,)'`
 
 completed

@@ -63,13 +63,6 @@ pub enum LandModifyType {
     Merge(NonFungibleId)
 }
 
-/// The return to citizens after solved the request, return a bucket if their request passed.
-#[derive(TypeId, Encode, Decode, Describe)]
-pub enum RequestReturn {
-    Rejected,
-    Passed(Bucket),
-}
-
 /// The land modify right's NFT. This NFT is an authorized badge to divide a land, merge lands, constructe a building, re-constructe a building,...
 /// Making change to any real estate NFTs need a land modify NFT badge, show that the change can happend or has happened.
 /// Authorities, organizations in charge of providing land modify badge also need to make sure the change is feasible.
@@ -105,9 +98,7 @@ pub struct InstituteBadge {
 /// Building NFT data can only be updated on the Construction Institute component.
 #[derive(NonFungibleData)]
 pub struct Building {
-    #[scrypto(mutable)]
     pub size: Decimal,
-    #[scrypto(mutable)]
     pub floor: u32
 }
 
@@ -194,6 +185,8 @@ blueprint! {
 
             let id_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name.clone() + " Citizen ID badge")
+                .mintable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .restrict_withdraw(rule!(deny_all), LOCKED)
                 .no_initial_supply();
 
@@ -224,7 +217,7 @@ blueprint! {
                 .burnable(rule!(require(authority_controller_badge.resource_address())), LOCKED)
                 .restrict_withdraw(rule!(require(id_badge)), LOCKED)
                 .restrict_deposit(rule!(require(move_badge)), LOCKED)
-                .updateable_non_fungible_data(rule!(require(authority_controller_badge.resource_address())), LOCKED)
+                .updateable_non_fungible_data(rule!(require(authority_controller_badge.resource_address()) || require(institute_controller_badge)), LOCKED)
                 .no_initial_supply();
 
             let building = ResourceBuilder::new_non_fungible()
@@ -233,7 +226,6 @@ blueprint! {
                 .burnable(rule!(require(institute_controller_badge)), LOCKED)
                 .restrict_withdraw(rule!(require(id_badge)), LOCKED)
                 .restrict_deposit(rule!(require(move_badge)), LOCKED)
-                .updateable_non_fungible_data(rule!(require(institute_controller_badge)), LOCKED)
                 .no_initial_supply();
 
             let real_estate_authority = ResourceBuilder::new_fungible()
@@ -410,20 +402,20 @@ blueprint! {
                 RealEstateData::LandandBuilding(_,location,_,_) => location
             };
 
-            info!("You have created a new divide land request no.{} on the {} land.", self.request_counter, location);
-
             let new_land_modify_request = Request {};
 
             let request_id: NonFungibleId = NonFungibleId::from_u64(self.request_counter);
 
             let request_badge = self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.land)
+                borrow_resource_manager!(self.request_badge)
                     .mint_non_fungible(&request_id, new_land_modify_request)
             });
 
-            self.request_book.insert(request_id, (land_id, LandModifyType::DivideRequest(divided_land1, divided_land2)));
+            self.request_book.insert(request_id.clone(), (land_id, LandModifyType::DivideRequest(divided_land1, divided_land2)));
 
             self.request_counter += 1;
+
+            info!("You have created a new divide land request no.{} on the {} land.", request_id, location);
 
             request_badge
 
@@ -437,6 +429,8 @@ blueprint! {
         /// Output: the request badge
         pub fn new_land_merge_request(&mut self, real_estate_proof1: RealEstateProof, real_estate_proof2: RealEstateProof) -> Bucket {
 
+            let request_id: NonFungibleId = NonFungibleId::from_u64(self.request_counter);
+
             let (land_id1, land_id2): (NonFungibleId, NonFungibleId) = match real_estate_proof1 {
 
                 RealEstateProof::Land(proof) => {
@@ -449,7 +443,7 @@ blueprint! {
 
                             let (land_id2, land_data2) = assert_land_proof(proof2, self.land);
 
-                            info!("You have created a new merge land request no.{} on the {} land and the {} land", self.request_counter, land_data1.location, land_data2.location);
+                            info!("You have created a new merge land request no.{} on the {} land and the {} land", request_id.clone(), land_data1.location, land_data2.location);
 
                             land_id2
 
@@ -459,7 +453,7 @@ blueprint! {
 
                             let (land_id2, land_data2, _, _) = assert_landandbuilding_proof(proof2, building_proof2, self.land, self.building);
 
-                            info!("You have created a new merge land request no.{} on the {} land and the {} land with an attached building", self.request_counter, land_data1.location, land_data2.location);
+                            info!("You have created a new merge land request no.{} on the {} land and the {} land with an attached building", request_id.clone(), land_data1.location, land_data2.location);
 
                             land_id2
 
@@ -477,7 +471,7 @@ blueprint! {
 
                             let (land_id2, land_data2) = assert_land_proof(proof2, self.land);
 
-                            info!("You have created a new merge land request no.{} on the {} land with an attached building and the {} land", self.request_counter, land_data1.location, land_data2.location);
+                            info!("You have created a new merge land request no.{} on the {} land with an attached building and the {} land", request_id.clone(), land_data1.location, land_data2.location);
                             land_id2
                         }
                         RealEstateProof::LandandBuilding(_, _) => {
@@ -492,10 +486,8 @@ blueprint! {
                
             let new_land_modify_request = Request {};
 
-            let request_id: NonFungibleId = NonFungibleId::from_u64(self.request_counter);
-
             let request_badge = self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.land)
+                borrow_resource_manager!(self.request_badge)
                     .mint_non_fungible(&request_id, new_land_modify_request)
             });
 
@@ -584,14 +576,14 @@ blueprint! {
                 self.land_modify_badge_vault.put(land_modify_right);
             });
 
-            info!("You have authorized the land modify request no.{}", id);
+            info!("You have authorized the land modify request no.{}", request_id);
 
         }
 
         /// This method is for citizens to get their construct badge after authorized.
         /// Input: the request badge: Bucket("${request_badge}")
         /// Output: the request result returned: if passed > return land modify right badge.
-        pub fn get_land_modify_badge(&mut self, request_badge: Bucket) -> RequestReturn {
+        pub fn get_land_modify_badge(&mut self, request_badge: Bucket) -> Option<Bucket> {
 
             assert!(request_badge.resource_address() == self.request_badge,
                 "Wrong resource!"
@@ -610,10 +602,10 @@ blueprint! {
 
             if self.land_modify_badge_vault.non_fungible_ids().contains(&request_id) {
                 info!("Your land modify request no.{} has passed.", request_id);
-                RequestReturn::Passed(self.land_modify_badge_vault.take_non_fungible(&request_id))
+                Some(self.land_modify_badge_vault.take_non_fungible(&request_id))
             } else {
                 info!("Your land modify request no.{} has been rejected.", request_id);
-                RequestReturn::Rejected
+                None
             }
 
         }

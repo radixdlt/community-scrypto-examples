@@ -1,6 +1,6 @@
 [package]
 name = "real-estate-manager"
-version = "0.3.0"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
@@ -9,7 +9,7 @@ scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.1"
 
 [dev-dependencies]
 radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.1" }
-scrypto-unit = { git = "https://github.com/a137x/scrypto-unit.git" }
+scrypto-unit = { git = "https://github.com/a137x/scrypto-unit" }
 
 [profile.release]
 opt-level = 's'     # Optimize for size.

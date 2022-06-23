@@ -135,7 +135,7 @@ blueprint! {
         /// + If the real estate doesn't contain a building: Enum("Land", Proof("land_proof"));
         /// + If the real estate contain a building: Enum("LandandBuilding", Proof("land_proof"), Proof("building_proof"));
         /// - the requested construction information: 
-        /// + If citizen want to construct a building: Enum("ConstructBuilding", Struct("${building_size}", "${building_floor}")
+        /// + If citizen want to construct a building: Enum("ConstructBuilding", Struct(Decimal("${building_size}"), ${building_floor}u32)
         /// + If citizen want to demolish a building: Enum("DemolishBuilding")
         /// Output: the request badge
         pub fn new_construction_request(&mut self, real_estate_proof: RealEstateProof, construction: ConstructionType) -> Bucket {
@@ -168,13 +168,13 @@ blueprint! {
             let request_id: NonFungibleId = NonFungibleId::from_u64(self.request_counter);
 
             let request_badge = self.controller_badge.authorize(|| {
-                borrow_resource_manager!(self.land)
+                borrow_resource_manager!(self.request_badge)
                     .mint_non_fungible(&request_id, new_construction_request)
             });
 
-            self.request_book.insert(request_id, (land_id, construction));
+            self.request_book.insert(request_id.clone(), (land_id, construction));
 
-            info!("You have created a new {} request no.{} on the {} land.", construct_type, self.request_counter, location);
+            info!("You have created a new {} request no.{} on the {} land.", construct_type, request_id, location);
 
             self.request_counter += 1;
 
@@ -202,31 +202,33 @@ blueprint! {
                 "The request book doesn't contain this request id."
             );
 
-            assert!(matches!(is_ok, Feasible::IsOk(true)),
-                "This construction is harmful, you cannot authorize this construction."
-            );
+            if matches!(is_ok, Feasible::IsOk(true)) {
 
-            let (land_id, construction) = result.unwrap();
+                let (land_id, construction) = result.unwrap();
 
-            let construction_data = Construction {
-                land_id: land_id,
-                construction: construction
-            };
+                let construction_data = Construction {
+                    land_id: land_id,
+                    construction: construction
+                };
 
-            self.controller_badge.authorize(|| {
-                let construction_right = borrow_resource_manager!(self.construction_badge)
-                    .mint_non_fungible(&request_id, construction_data);
-                self.construction_badge_vault.put(construction_right);
-            });
+                self.controller_badge.authorize(|| {
+                    let construction_right = borrow_resource_manager!(self.construction_badge)
+                        .mint_non_fungible(&request_id, construction_data);
+                    self.construction_badge_vault.put(construction_right);
+                });
 
-            info!("You have authorized the construction request no.{}", id);
+                info!("You have authorized the construction request no.{}", request_id);
 
+            } else {
+                error!("The construction no.{} is harmful, rejected the construction request.", request_id);
+            }
+                
         }
 
         /// This method is for citizens to get their construct badge after authorized.
-        /// Input: the request badge: Bucket("${request_badge}")
+        /// Input: the request badge: Bucket("request_badge")
         /// Output: the request result returned: if passed > return construction right badge.
-        pub fn get_construction_badge(&mut self, request_badge: Bucket) -> RequestReturn {
+        pub fn get_construction_badge(&mut self, request_badge: Bucket) -> Option<Bucket> {
 
             assert!(request_badge.resource_address() == self.request_badge,
                 "Wrong resource!"
@@ -238,20 +240,26 @@ blueprint! {
                 "Construction institute haven't reviewed your request yet"
             );
 
+            self.controller_badge
+                .authorize(|| { 
+                    borrow_resource_manager!(self.request_badge)
+                        .burn(request_badge);
+                });
+
             if self.construction_badge_vault.non_fungible_ids().contains(&request_id) {
                 info!("Your construction request no.{} has passed.", request_id);
-                RequestReturn::Passed(self.construction_badge_vault.take_non_fungible(&request_id))
+                Some(self.construction_badge_vault.take_non_fungible(&request_id))
             } else {
                 info!("Your construction request no.{} has been rejected.", request_id);
-                RequestReturn::Rejected
+                None
             }
         }
 
         /// This method is for citizens to construct new building to an existed land.
         /// Input: 
-        /// - the land right's NFT proof: Proof("${land_right}")
-        /// - the construction badge: Bucket("${construction_badge}")
-        /// - the payment bucket: Bucket("${payment}")
+        /// - the land right's NFT proof: Proof("land_right")
+        /// - the construction badge: Bucket("construction_badge")
+        /// - the payment bucket: Bucket("payment")
         /// Output: The building right's NFT of that land and payment changes.
         pub fn construct_new_building(&mut self, land_right: Proof, construction_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket, Proof) {
 
@@ -320,10 +328,10 @@ blueprint! {
 
         /// This method is for citizens to demolish an existed building.
         /// Input: 
-        /// - the land right's NFT proof: Proof("${land_right}")
-        /// - the building right's NFT: Bucket("${building_right}")
-        /// - the construction badge: Bucket("${construction_badge}")
-        /// - the payment bucket: Bucket("${payment}")
+        /// - the land right's NFT proof: Proof("land_right")
+        /// - the building right's NFT: Bucket("building_right")
+        /// - the construction badge: Bucket("construction_badge")
+        /// - the payment bucket: Bucket("payment")
         /// Output: The payment changes.
         pub fn demolish_building(&mut self, land_right: Proof, building: Bucket, construction_badge: Bucket, mut payment: Bucket) -> Bucket {
 

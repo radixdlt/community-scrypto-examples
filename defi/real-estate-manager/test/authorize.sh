@@ -6,8 +6,7 @@ set -e
 # Use init
 source ./init.sh
 
-logc "Authorize 4 users to become citizens and distribute ID badges."
-logy "User 5 is not authorized as citizen."
+logc "Authorize 5 users to become citizens and distribute ID badges."
 
 export ID1=3536
 logy "User 1 is citizen no.${ID1}"
@@ -20,6 +19,9 @@ logy "User 3 is citizen no.${ID3}"
 
 export ID4=5578
 logy "User 4 is citizen no.${ID4}"
+
+export ID5=9954
+logy "User 5 is citizen no.${ID5}"
 
 logc "Authorize a construction institute and a market place."
 
