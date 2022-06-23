@@ -39,14 +39,4 @@ logy "Citizen no.5 has ${land_size5}m2 land on ${location5}"
 
 resim run ./transaction_manifest/distribute_land
 
-export LAND1_ID=`resim show $USER1_ACC | grep -oP '(?<=id: ).*?(?=,)'`
-
-export LAND2_ID=`resim show $USER2_ACC | grep -oP '(?<=id: ).*?(?=,)'`
-
-export LAND3_ID=`resim show $USER3_ACC | grep -oP '(?<=id: ).*?(?=,)'`
-
-export LAND4_ID=`resim show $USER4_ACC | grep -oP '(?<=id: ).*?(?=,)'`
-
-export LAND5_ID=`resim show $USER5_ACC | grep -oP '(?<=id: ).*?(?=,)'`
-
 completed

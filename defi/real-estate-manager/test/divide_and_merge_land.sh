@@ -23,6 +23,17 @@ export land2_size=$(expr $land_size5 - $land1_size)
 export location2="Atomic Composability, Radix"
 resim run ./transaction_manifest/request_land_divide_building
 
+resim set-default-account $ADMIN_ACC $ADMIN_PIV
+resim run ./transaction_manifest/review_land
+
+resim set-default-account $USER1_ACC $USER1_PIV
+export R_ACC=$USER1_ACC
+resim run ./transaction_manifest/divide_land 
+
+resim set-default-account $USER5_ACC $USER5_PIV
+export R_ACC=$USER5_ACC
+resim run ./transaction_manifest/divide_land_building
+
 logc "Let citizen no.${ID5} merge his lands"
 
 completed

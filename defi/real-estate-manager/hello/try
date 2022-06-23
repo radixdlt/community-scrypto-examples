@@ -1,0 +1,11 @@
+CALL_METHOD 
+    ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "create_proof" ResourceAddress("0314eda4d39d388fbb1cb7b79615946818607b71851cb04c707259");
+
+POP_FROM_AUTH_ZONE
+    Proof("yes");
+
+CALL_METHOD 
+    ComponentAddress("02a24917178a7d03ad814c57b5013b91b785818a3adb6446dc9cb4") "free_token" Some(Proof("yes"));
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("020d3869346218a5e8deaaf2001216dc00fcacb79fb43e30ded79a") "deposit_batch";

@@ -29,7 +29,7 @@ TAKE_FROM_WORKTOP_BY_AMOUNT
 CALL_METHOD 
     ComponentAddress("${USER4_ACC}") "deposit" Bucket("id4");
 
-    CALL_METHOD 
+CALL_METHOD 
     ComponentAddress("${COMP}") "authorize_citizen" ${ID5}u64;
 TAKE_FROM_WORKTOP_BY_AMOUNT 
     Decimal("1") ResourceAddress("${ID_BADGE}") Bucket("id5");

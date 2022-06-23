@@ -140,7 +140,7 @@ blueprint! {
         /// Output: the request badge
         pub fn new_construction_request(&mut self, real_estate_proof: RealEstateProof, construction: ConstructionType) -> Bucket {
             
-            let (land_id, real_estate_data) = get_real_estate_data(real_estate_proof, self.land, self.building);
+            let (land_id, _, real_estate_data) = get_real_estate_data(real_estate_proof, self.land, self.building);
 
             let (construct_type, location) = match construction {
 
