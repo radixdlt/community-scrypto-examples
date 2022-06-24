@@ -1,4 +1,7 @@
 CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
     ComponentAddress("${R_ACC}") "withdraw" ResourceAddress("${CREQUEST_BADGE}");
 
 TAKE_FROM_WORKTOP

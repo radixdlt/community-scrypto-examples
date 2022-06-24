@@ -1,11 +1,14 @@
 CALL_METHOD 
-    ComponentAddress("${R_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("b41cd9d4ca3a82e7874aef9401ccaf16")) ResourceAddress("${LAND}");
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("19ba617e65a623c8bfdf352111985ce8")) ResourceAddress("${LAND}");
 
 POP_FROM_AUTH_ZONE
     Proof("land1_proof");
 
 CALL_METHOD 
-    ComponentAddress("${R_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("d0ccd6720f64323c044978952b720502")) ResourceAddress("${LAND}");
+    ComponentAddress("${R_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("9e720fb8e0b7ecba61cf0883e8795d3e")) ResourceAddress("${LAND}");
     
 POP_FROM_AUTH_ZONE
     Proof("land2_proof");

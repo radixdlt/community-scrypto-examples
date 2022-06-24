@@ -4,7 +4,6 @@
 set -e
 
 # Use init
-source ./divide_and_merge_land.sh
 
 logc "Let citizen no.${ID1} put a sell order on his land, price: 50000 XRD"
 resim set-default-account $USER1_ACC $USER1_PIV
@@ -61,7 +60,6 @@ resim set-default-account $ADMIN_ACC $ADMIN_PIV
 export edit=3
 resim run ./transaction_manifest/edit_tax
 
-resim set-default-account $ADMIN_ACC $ADMIN_PIV
 export edit=350
 resim run ./transaction_manifest/edit_rate
 

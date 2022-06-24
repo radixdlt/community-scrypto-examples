@@ -67,10 +67,3 @@ pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress,
         }
     }
 }
-
-pub fn deposit_tax(address: ComponentAddress, tax: Bucket) {
-
-    let authority: RealEstateService = address.into();
-    authority.deposit_tax(tax)
-
-}

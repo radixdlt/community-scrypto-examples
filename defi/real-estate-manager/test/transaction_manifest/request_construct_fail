@@ -1,4 +1,7 @@
 CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
     ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${LAND}");
 
 POP_FROM_AUTH_ZONE

@@ -273,7 +273,10 @@ blueprint! {
                 .method("edit_rate", rule!(require(real_estate_authority.resource_address())))
                 .method("authorize_construction_institute", rule!(require(real_estate_authority.resource_address())))
                 .method("authorize_marketplace", rule!(require(real_estate_authority.resource_address())))
-                .default(rule!(allow_all));
+                .method("rate", rule!(allow_all))
+                .method("tax", rule!(allow_all))
+                .method("deposit_tax", rule!(allow_all))
+                .default(rule!(require(id_badge)));
 
             let comp = Self {
 
@@ -284,7 +287,7 @@ blueprint! {
                 institute_controller_badge: institute_controller_badge,
                 building: building,
                 land: land,
-                tax: tax,
+                tax: tax/dec!(100),
                 rate: rate,
                 token: medium_token,
                 real_estate_construction_institute: HashSet::new(),
@@ -1062,7 +1065,7 @@ blueprint! {
 
             let authority_address: ComponentAddress = Runtime::actor().component_address().unwrap();
 
-            let institute_comp = RealEstateConstructionInstitute::new(institute_address, authority_address, name.clone(), fee, institute_controller_badge, self.rate, self.token, self.controller_badge.resource_address(), self.land, self.building, self.move_badge);
+            let institute_comp = RealEstateConstructionInstitute::new(institute_address, self.id_badge, authority_address, name.clone(), fee, institute_controller_badge, self.token, self.land, self.building, self.move_badge);
             self.real_estate_construction_institute.insert(institute_comp);
 
             info!("You have authorized {} construction institute with {} tokens fee per service", name, fee);
@@ -1091,7 +1094,7 @@ blueprint! {
 
             let authority_address: ComponentAddress = Runtime::actor().component_address().unwrap();
 
-            let market_comp = RealEstateMarketPlace::new(address, authority_address, name.clone(), market_controller_badge, fee, self.tax, self.controller_badge.resource_address(), self.land, self.building, self.token, self.move_badge);
+            let market_comp = RealEstateMarketPlace::new(address, self.id_badge, authority_address, name.clone(), market_controller_badge, fee,self.land, self.building, self.token, self.move_badge);
             self.real_estate_market_place.insert(market_comp);
 
             info!("You have authorized {} market place with {} % fee per service", name, fee);
@@ -1102,14 +1105,9 @@ blueprint! {
 
         pub fn edit_tax(&mut self, tax: Decimal) {
 
-            self.tax = tax;
+            self.tax = tax/dec!(100);
 
             info!("You have edited the tax of all market places into {} % per trade", tax);
-
-            self.real_estate_market_place.iter().for_each(|address| {
-                    let market: RealEstateMarketPlace = address.clone().into();
-                    market.edit_tax(tax/dec!(100))
-                })
 
         }
 
@@ -1118,11 +1116,6 @@ blueprint! {
             self.rate = rate;
 
             info!("You have edited the tax rate of all institutes into {} tokens per service", rate);
-
-            self.real_estate_construction_institute.iter().for_each(|address| {
-                let institute: RealEstateConstructionInstitute = address.clone().into();
-                institute.edit_rate(rate)
-            })
 
         }
 
@@ -1138,6 +1131,16 @@ blueprint! {
 
             self.tax_vault.put(tax);
 
+        }
+
+        /// Read only method for utility
+        pub fn tax(&self) -> Decimal {
+            self.tax
+        }
+
+        /// Read only method for utility
+        pub fn rate(&self) -> Decimal {
+            self.rate
         }
     }
 }

@@ -47,14 +47,10 @@ blueprint! {
         building: ResourceAddress,
         /// Land address
         land: ResourceAddress,
-        /// Tax rate for govt authority (tokens)
-        rate: Decimal,
         /// Fee rate paid on real estate service for construction institute (tokens)
         fee: Decimal,
         /// The medium token using for payment 
         token: ResourceAddress,
-        /// Authority's tax vault
-        tax_vault: Vault,
         /// Construction Institute's fee vault
         fee_vault: Vault,
         /// Construction badge NFT resource address.
@@ -77,13 +73,12 @@ blueprint! {
         /// - name: institute name.
         /// - controller badge: the institute component controller badge.
         /// - fee: institute service fee.
-        /// - rate: real estate construction tax rate.
         /// - medium token: the token used for trade.
         /// - land: land resource address.
         /// - building: building resource address.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(construction_authority_badge: NonFungibleAddress, authority_address: ComponentAddress, name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, authority_controller: ResourceAddress, land: ResourceAddress, building: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
+        pub fn new(construction_authority_badge: NonFungibleAddress, id_badge: ResourceAddress, authority_address: ComponentAddress, name: String, fee: Decimal, controller_badge: Bucket, medium_token: ResourceAddress, land: ResourceAddress, building: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
 
             let construction_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name.clone()+" Construction Right's Badge")
@@ -100,11 +95,10 @@ blueprint! {
                 .no_initial_supply();
 
             let rules = AccessRules::new()
-                .method("edit_rate", rule!(require(authority_controller)))
                 .method("take_fee", rule!(require(construction_authority_badge.clone())))
                 .method("edit_fee", rule!(require(construction_authority_badge.clone())))
                 .method("authorize_construction", rule!(require(construction_authority_badge)))
-                .default(rule!(allow_all));
+                .default(rule!(require(id_badge)));
 
             let comp = Self {
 
@@ -113,10 +107,8 @@ blueprint! {
                 move_badge: move_badge,
                 building: building,
                 land: land,
-                rate: rate,
                 fee: fee,
                 token: medium_token,
-                tax_vault: Vault::new(medium_token),
                 fee_vault: Vault::new(medium_token),
                 construction_badge: construction_badge,
                 request_badge: request_badge,
@@ -271,7 +263,11 @@ blueprint! {
                 "Wrong resource."
             );
 
-            assert!(payment.amount() >= self.rate+self.fee, "Payment is not enough");
+            let authority: RealEstateService = self.authority_address.into();
+
+            let rate = authority.rate();
+
+            assert!(payment.amount() >= rate+self.fee, "Payment is not enough");
 
             let id = land_right.non_fungible::<Land>().id();
 
@@ -321,10 +317,10 @@ blueprint! {
 
                 });
 
-            info!("You have paid {} tokens to mint a new building right's NFT of the {}m2, {} floor building attached to the land on {} according to construction data",self.rate+self.fee, size, floor, location);
+            info!("You have paid {} tokens to mint a new building right's NFT of the {}m2, {} floor building attached to the land on {} according to construction data",rate+self.fee, size, floor, location);
 
             self.fee_vault.put(payment.take(self.fee));
-            self.tax_vault.put(payment.take(self.rate));
+            authority.deposit_tax(payment.take(rate));
 
             return (building_right, payment, move_proof)
 
@@ -343,7 +339,11 @@ blueprint! {
                 "Wrong resource."
             );
 
-            assert!(payment.amount()>=self.rate+self.fee, "Payment is not enough");
+            let authority: RealEstateService = self.authority_address.into();
+
+            let rate = authority.rate();
+
+            assert!(payment.amount()>=rate+self.fee, "Payment is not enough");
 
             let id = land_right.non_fungible::<Land>().id();
 
@@ -384,17 +384,13 @@ blueprint! {
 
                 });
 
-            info!("You have paid {} tokens to burn the building right's NFT of the building attached to the land on {} according to construction data", self.rate+self.fee, location);
+            info!("You have paid {} tokens to burn the building right's NFT of the building attached to the land on {} according to construction data", rate+self.fee, location);
 
             self.fee_vault.put(payment.take(self.fee));
-            self.tax_vault.put(payment.take(self.rate));
+            authority.deposit_tax(payment.take(rate));
 
             return payment
 
-        }
-
-        pub fn take_tax(&mut self) -> Bucket {
-            self.tax_vault.take_all()
         }
 
         pub fn take_fee(&mut self) -> Bucket {
@@ -404,13 +400,9 @@ blueprint! {
 
         }
 
-        pub fn edit_rate(&mut self, rate: Decimal) {
-            self.rate = rate
-        }
-
         pub fn edit_fee(&mut self, fee: Decimal) {
 
-            info!("You have edited fee of the market place into {} tokens per service", fee);
+            info!("You have edited fee of the institute into {} tokens per service", fee);
             self.fee = fee
         }
     }

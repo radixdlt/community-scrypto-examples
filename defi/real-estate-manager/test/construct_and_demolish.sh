@@ -4,7 +4,6 @@
 set -e
 
 # Use init
-source ./distribute_land.sh
 
 logy "Citizen no.${ID1} request demolish a building in barren land."
 

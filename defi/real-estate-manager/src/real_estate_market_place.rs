@@ -23,8 +23,6 @@ blueprint! {
         building: ResourceAddress,
         /// Land address
         land: ResourceAddress,
-        /// Tax percent paid on real estate trade for govt authority (%)
-        tax: Decimal,
         /// fee paid on real estate trade for market host (%)
         fee: Decimal,
         /// The medium token using for payment 
@@ -39,8 +37,6 @@ blueprint! {
         order_contain_building: Vault,
         /// Buyer payment vault
         payment_vault: Vault,
-        /// Authority's tax vault
-        tax_vault: Vault,
         /// Market host's fee vault
         fee_vault: Vault,
         /// Order counter
@@ -55,18 +51,18 @@ blueprint! {
         /// - name: market name.
         /// - controller badge: the market component controller badge.
         /// - fee: market fee.
-        /// - tax: real estate trading tax.
         /// - land: land resource address.
         /// - building: building resource address.
         /// - medium token: the token used for trade.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(market_host_badge: NonFungibleAddress, authority_address: ComponentAddress, name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, authority_controller: ResourceAddress, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
+        pub fn new(market_host_badge: NonFungibleAddress, id_badge: ResourceAddress, authority_address: ComponentAddress, name: String, controller_badge: Bucket, fee: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
 
             let order_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name + " Market Order Badge")
                 .mintable(rule!(require(controller_badge.resource_address())), LOCKED)
                 .burnable(rule!(require(controller_badge.resource_address())), LOCKED)
+                .restrict_withdraw(rule!(require(id_badge)), LOCKED)
                 .restrict_deposit(rule!(require(move_badge)), LOCKED)
                 .updateable_non_fungible_data(rule!(require(controller_badge.resource_address())), LOCKED)
                 .no_initial_supply();
@@ -74,8 +70,7 @@ blueprint! {
             let rules = AccessRules::new()
                 .method("take_fee", rule!(require(market_host_badge.clone())))
                 .method("edit_fee", rule!(require(market_host_badge)))
-                .method("edit_tax", rule!(require(authority_controller)))
-                .default(rule!(allow_all));
+                .default(rule!(require(id_badge)));
 
             let comp = Self {
 
@@ -84,7 +79,6 @@ blueprint! {
                 move_badge: move_badge,
                 building: building,
                 land: land,
-                tax: tax/dec!(100),
                 fee: fee/dec!(100),
                 token: medium_token,
                 order_badge: order_badge,
@@ -92,7 +86,6 @@ blueprint! {
                 order_vault: Vault::new(land),
                 order_contain_building: Vault::new(building),
                 payment_vault: Vault::new(medium_token),
-                tax_vault: Vault::new(medium_token),
                 fee_vault: Vault::new(medium_token),
                 order_counter: 0
                 
@@ -209,8 +202,10 @@ blueprint! {
             assert!(status==false,
                 "This real estate is already bought."
             );
+
+            let authority: RealEstateService = self.authority_address.into();
         
-            let tax = price*self.tax;
+            let tax = price*authority.tax();
 
             let fee = price*self.fee;
 
@@ -235,7 +230,7 @@ blueprint! {
                 None => {
         
                     self.payment_vault.put(payment.take(price));
-                    deposit_tax(self.authority_address, payment.take(tax));
+                    authority.deposit_tax(payment.take(tax));
                     self.fee_vault.put(payment.take(fee));
                     self.book.insert(order_id.clone(), (price, land_id.clone(), None, true));
                     let land_right = self.order_vault.take_non_fungible(&land_id);
@@ -248,7 +243,7 @@ blueprint! {
                 Some(building_id) => {
         
                     self.payment_vault.put(payment.take(price));
-                    self.tax_vault.put(payment.take(tax));
+                    authority.deposit_tax(payment.take(tax));
                     self.fee_vault.put(payment.take(fee));
                     self.book.insert(order_id.clone(), (price, land_id.clone(), Some(building_id.clone()), true));
                     let land_right = self.order_vault.take_non_fungible(&land_id);
@@ -335,20 +330,11 @@ blueprint! {
 
         }
 
-        pub fn take_tax(&mut self) -> Bucket {
-            self.tax_vault.take_all()
-        }
-
         pub fn take_fee(&mut self) -> Bucket {
 
             info!("You have collected {} tokens market place fee.", self.fee_vault.amount());
             self.fee_vault.take_all()
 
-        }
-
-        pub fn edit_tax(&mut self, tax: Decimal) {
-            
-            self.tax = tax
         }
 
         pub fn edit_fee(&mut self, fee: Decimal) {
