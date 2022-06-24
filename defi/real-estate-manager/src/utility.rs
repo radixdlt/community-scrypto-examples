@@ -15,6 +15,8 @@ pub fn assert_land_proof(land_right: Proof, land: ResourceAddress) -> (NonFungib
 
     let land_id = land_right.non_fungible::<Land>().id();
 
+    land_right.drop();
+
     return (land_id, land_data)
 
 }
@@ -36,6 +38,8 @@ pub fn assert_landandbuilding_proof(land_right: Proof, building_right: Proof, la
             );
             
             let land_id = land_right.non_fungible::<Land>().id();
+
+    land_right.drop(); building_right.drop();
 
     return (land_id, land_data, building_id, building_data)
 
@@ -64,3 +68,9 @@ pub fn get_real_estate_data(real_estate: RealEstateProof, land: ResourceAddress,
     }
 }
 
+pub fn deposit_tax(address: ComponentAddress, tax: Bucket) {
+
+    let authority: RealEstateService = address.into();
+    authority.deposit_tax(tax)
+
+}

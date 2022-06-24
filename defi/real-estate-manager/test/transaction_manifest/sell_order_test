@@ -1,0 +1,22 @@
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "withdraw_by_amount" Decimal("1") ResourceAddress("${LAND}");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${LAND}")
+    Bucket("land");
+
+CALL_METHOD 
+    ComponentAddress("${MCOMP}") "new_sell_order" Enum("Land", Bucket("land")) Decimal("${price}");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${ORDER_BADGE}")
+    Bucket("order");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "deposit" Bucket("order");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

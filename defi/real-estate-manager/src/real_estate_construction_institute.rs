@@ -39,6 +39,8 @@ blueprint! {
 
         /// Component controller badge
         controller_badge: Vault,
+        /// Authority component address
+        authority_address: ComponentAddress,
         /// Resource move badge
         move_badge: ResourceAddress,
         /// Building address
@@ -81,7 +83,7 @@ blueprint! {
         /// - building: building resource address.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(construction_authority_badge: NonFungibleAddress, name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, land: ResourceAddress, building: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
+        pub fn new(construction_authority_badge: NonFungibleAddress, authority_address: ComponentAddress, name: String, fee: Decimal, controller_badge: Bucket, rate: Decimal, medium_token: ResourceAddress, authority_controller: ResourceAddress, land: ResourceAddress, building: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
 
             let construction_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name.clone()+" Construction Right's Badge")
@@ -98,14 +100,16 @@ blueprint! {
                 .no_initial_supply();
 
             let rules = AccessRules::new()
-                .method("edit_rate", rule!(require(real_estate_authority)))
-                .method("take_tax", rule!(require(real_estate_authority)))
+                .method("edit_rate", rule!(require(authority_controller)))
+                .method("take_fee", rule!(require(construction_authority_badge.clone())))
+                .method("edit_fee", rule!(require(construction_authority_badge.clone())))
                 .method("authorize_construction", rule!(require(construction_authority_badge)))
                 .default(rule!(allow_all));
 
             let comp = Self {
 
                 controller_badge: Vault::with_bucket(controller_badge),
+                authority_address: authority_address,
                 move_badge: move_badge,
                 building: building,
                 land: land,
@@ -317,7 +321,7 @@ blueprint! {
 
                 });
 
-            info!("You have minted a new building right's NFT of the {}m2, {} floor building attached to the land on {} according to construction data", size, floor, location);
+            info!("You have paid {} tokens to mint a new building right's NFT of the {}m2, {} floor building attached to the land on {} according to construction data",self.rate+self.fee, size, floor, location);
 
             self.fee_vault.put(payment.take(self.fee));
             self.tax_vault.put(payment.take(self.rate));
@@ -380,7 +384,7 @@ blueprint! {
 
                 });
 
-            info!("You have burned the building right's NFT of the building attached to the land on {} according to construction data", location);
+            info!("You have paid {} tokens to burn the building right's NFT of the building attached to the land on {} according to construction data", self.rate+self.fee, location);
 
             self.fee_vault.put(payment.take(self.fee));
             self.tax_vault.put(payment.take(self.rate));
@@ -393,8 +397,21 @@ blueprint! {
             self.tax_vault.take_all()
         }
 
+        pub fn take_fee(&mut self) -> Bucket {
+
+            info!("You have collected {} tokens institute fee.", self.fee_vault.amount());
+            self.fee_vault.take_all()
+
+        }
+
         pub fn edit_rate(&mut self, rate: Decimal) {
             self.rate = rate
+        }
+
+        pub fn edit_fee(&mut self, fee: Decimal) {
+
+            info!("You have edited fee of the market place into {} tokens per service", fee);
+            self.fee = fee
         }
     }
 }

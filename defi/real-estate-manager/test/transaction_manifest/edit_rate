@@ -1,0 +1,8 @@
+CALL_METHOD 
+    ComponentAddress("${ADMIN_ACC}") "create_proof" ResourceAddress("${AUTHORITY_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "edit_rate" Decimal("${edit}");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${ADMIN_ACC}") "deposit_batch";

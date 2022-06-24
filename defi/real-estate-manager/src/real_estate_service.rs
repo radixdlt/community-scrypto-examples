@@ -149,8 +149,6 @@ blueprint! {
         rate: Decimal,
         /// The medium token using for payment, possibly the CBDC token on Radix chain.
         token: ResourceAddress,
-        /// Real estate authority badge address.
-        real_estate_authority: ResourceAddress,
         /// Keep track of current running Real Estate Construction Institute.
         real_estate_construction_institute: HashSet<ComponentAddress>,
         /// Keep track of current running Real Estate Market Place.
@@ -286,10 +284,9 @@ blueprint! {
                 institute_controller_badge: institute_controller_badge,
                 building: building,
                 land: land,
-                tax: tax/dec!(100),
+                tax: tax,
                 rate: rate,
                 token: medium_token,
-                real_estate_authority: real_estate_authority.resource_address(),
                 real_estate_construction_institute: HashSet::new(),
                 real_estate_market_place: HashSet::new(),
                 tax_vault: Vault::new(medium_token),
@@ -632,6 +629,8 @@ blueprint! {
 
             let id = data.land_id;
 
+            let amount = payment.amount();
+
             self.tax_vault.put(payment.take(self.rate));
 
             match land_modify_data {
@@ -694,7 +693,7 @@ blueprint! {
                         
                                             info!("You have created a new land right's NFT of the {}m2 land on {}", land_size2, location2.clone());
         
-                                            info!("You have divided the {} land into a {}m2 land on {} and a {}m2 land on {}", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
+                                            info!("You have paid {} tokens to divide the {} land into a {}m2 land on {} and a {}m2 land on {}", amount, land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
 
                                             let move_proof = self.controller_badge.authorize(|| {
 
@@ -790,7 +789,7 @@ blueprint! {
 
                                                             info!("You have created a new land right's NFT of the {}m2 land on {}", land_size2, location2.clone());
                     
-                                                            info!("You have divided the {} land into a {}m2 land on {} with an attached building and a {}m2 land on {}", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
+                                                            info!("You have paid {} tokens to divide the {} land into a {}m2 land on {} with an attached building and a {}m2 land on {}", amount, land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
             
                                                             let move_proof = self.controller_badge.authorize(|| {
                                                                 let move_badge = borrow_resource_manager!(self.move_badge)
@@ -842,7 +841,7 @@ blueprint! {
                                         
                                                             info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_size2, location2.clone());
                     
-                                                            info!("You have divided the {} land into a {}m2 land on {} and a {}m2 land on {} with an attached building", land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
+                                                            info!("You have paid {} tokens to divide the {} land into a {}m2 land on {} and a {}m2 land on {} with an attached building", amount, land_data.location, land_size1, location1.clone(), land_size2, location2.clone());
             
                                                             let move_proof = self.controller_badge.authorize(|| {
                                                                 let move_badge = borrow_resource_manager!(self.move_badge)
@@ -887,9 +886,12 @@ blueprint! {
         /// + If that's a barren land: Enum("None")
         /// - payment: the tax rate payment bucket.
         /// Output: 1 merged real estate with the attached NFTs. The location data of new real estate is equal to the first original real estate.
-        pub fn merge_land(&mut self, land_right1: Bucket, land_right2: Bucket, building_proof: Option<Proof>, land_modify_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket, Proof) {
+        pub fn merge_land(&mut self, land_right1: Bucket, land_right2: Bucket, building_proof: OptionProof, land_modify_badge: Bucket, mut payment: Bucket) -> (Bucket, Bucket, Proof) {
 
-            assert!((land_modify_badge.resource_address()==self.land_modify_badge) & (payment.resource_address()==self.token),
+            assert!((land_modify_badge.resource_address()==self.land_modify_badge) 
+            & (payment.resource_address()==self.token) 
+            & (land_right1.resource_address() == self.land) 
+            & (land_right2.resource_address() == self.land),
                 "Wrong resource."
             );
 
@@ -899,9 +901,27 @@ blueprint! {
 
             let id = data.land_id;
 
+            let amount = payment.amount();
+
             self.tax_vault.put(payment.take(self.rate));
 
-            let (land_id2, land_data2) = assert_land_proof(land_right2.create_proof(), self.land);
+            let land_id1 = land_right1.non_fungible::<Land>().id();
+
+            let land_data1 = land_right1.non_fungible::<Land>().data();
+
+            let land_id2 = land_right2.non_fungible::<Land>().id();
+
+            let land_data2 = land_right2.non_fungible::<Land>().data();
+
+            let (land_data1, land_id2, land_data2) = if land_id1 == id {
+
+                (land_data1, land_id2, land_data2)
+
+            } else if land_id2 == id {
+
+                (land_data2, land_id1, land_data1)
+
+            } else {panic!("Wrong land right's NFT provided")};
 
             match land_modify_data {
 
@@ -911,20 +931,18 @@ blueprint! {
 
                         None => {
 
-                            assert!(building_proof == None,
+                            assert!(matches!(building_proof, OptionProof::None),
                                 "Wrong building proof provided."
                             );
         
-                            let (land_id, land_data) = assert_land_proof(land_right1.create_proof(), self.land);
-        
-                            assert!((land_id == id) & (land_id2 == land2_id),
+                            assert!((land_id2 == land2_id),
                                 "Wrong land right's NFT provided"
                             );
                 
                             let new_land = Land {
                                 contain: None,
-                                size: land_data.size+land_data2.size,
-                                location: land_data.location.clone()
+                                size: land_data1.size+land_data2.size,
+                                location: land_data1.location.clone()
                             };
         
                             let land_id_merged: NonFungibleId = NonFungibleId::random();
@@ -934,9 +952,9 @@ blueprint! {
                                     .mint_non_fungible(&land_id_merged, new_land)
                             });
         
-                            info!("You have created a new land right's NFT of the {}m2 land on {}", land_data.size+land_data2.size, land_data.location.clone());
+                            info!("You have created a new land right's NFT of the {}m2 land on {}", land_data1.size+land_data2.size, land_data1.location.clone());
         
-                            info!("You have merged the {}m2 land on {} and {}m2 land on {} into a {}m2 land on {}", land_data.size, land_data.location.clone(), land_data2.size, land_data2.location.clone(), land_data.size+land_data2.size, land_data.location.clone());
+                            info!("You have paid {} tokens to merge the {}m2 land on {} and {}m2 land on {} into a {}m2 land on {}", amount, land_data1.size, land_data1.location.clone(), land_data2.size, land_data2.location.clone(), land_data1.size+land_data2.size, land_data1.location.clone());
         
                             let move_proof = self.controller_badge.authorize(|| {
                                 let move_badge = borrow_resource_manager!(self.move_badge)
@@ -952,7 +970,9 @@ blueprint! {
                                     .burn(land_right2);
                                 borrow_resource_manager!(self.land_modify_badge)
                                     .burn(land_modify_badge);
+        
                                     move_proof
+
                             });
         
                             return (land_right_merged, payment, move_proof)
@@ -963,26 +983,24 @@ blueprint! {
 
                             match building_proof {
 
-                                None => {panic!("Wrong building proof provided.")}
+                                OptionProof::None => {panic!("Wrong building proof provided.")}
 
-                                Some(building_proof) => {
+                                OptionProof::Some(building_proof) => {
 
                                     let building_proof_id = building_proof.non_fungible::<Building>().id();
 
                                     assert!(building_proof_id == building_id,
                                         "Wrong building proof provided."
                                     );
-                
-                                    let (land_id, land_data, building_id, _) = assert_landandbuilding_proof(land_right1.create_proof(), building_proof, self.land, self.building);
-        
-                                    assert!((land_id == id) & (land_id2 == land2_id),
+
+                                    assert!((land_id2 == land2_id),
                                         "Wrong land right's NFT provided"
                                     );
                         
                                     let new_land = Land {
                                         contain: Some(building_id),
-                                        size: land_data.size+land_data2.size,
-                                        location: land_data.location.clone()
+                                        size: land_data1.size+land_data2.size,
+                                        location: land_data1.location.clone()
                                     };
                 
                                     let land_id_merged: NonFungibleId = NonFungibleId::random();
@@ -992,9 +1010,9 @@ blueprint! {
                                             .mint_non_fungible(&land_id_merged, new_land)
                                     });
                 
-                                    info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_data.size+land_data2.size, land_data.location.clone());
+                                    info!("You have created a new land right's NFT of the {}m2 land on {} with an attached building", land_data1.size+land_data2.size, land_data1.location.clone());
                 
-                                    info!("You have merged the {}m2 land on {} with an attached building and {}m2 land on {} into a {}m2 land on {} with an attached building", land_data.size, land_data.location.clone(), land_data2.size, land_data2.location.clone(), land_data.size+land_data2.size, land_data.location.clone());
+                                    info!("You have paid {} tokens to merge the {}m2 land on {} with an attached building and {}m2 land on {} into a {}m2 land on {} with an attached building", amount, land_data1.size, land_data1.location.clone(), land_data2.size, land_data2.location.clone(), land_data1.size+land_data2.size, land_data1.location.clone());
                 
                                     let move_proof = self.controller_badge.authorize(|| {
                                         let move_badge = borrow_resource_manager!(self.move_badge)
@@ -1041,8 +1059,14 @@ blueprint! {
             });
 
             let institute_address = NonFungibleAddress::new(self.institute_badge, institute_id);
-            let institute_comp = RealEstateConstructionInstitute::new(institute_address, name, fee, institute_controller_badge, self.rate, self.token, self.land, self.building, self.real_estate_authority, self.move_badge);
+
+            let authority_address: ComponentAddress = Runtime::actor().component_address().unwrap();
+
+            let institute_comp = RealEstateConstructionInstitute::new(institute_address, authority_address, name.clone(), fee, institute_controller_badge, self.rate, self.token, self.controller_badge.resource_address(), self.land, self.building, self.move_badge);
             self.real_estate_construction_institute.insert(institute_comp);
+
+            info!("You have authorized {} construction institute with {} tokens fee per service", name, fee);
+
             return institute_badge
 
         }
@@ -1065,8 +1089,13 @@ blueprint! {
 
             let address = NonFungibleAddress::new(self.market_host_badge, host_id);
 
-            let market_comp = RealEstateMarketPlace::new(address, name, market_controller_badge, fee, self.tax, self.land, self.building, self.token, self.real_estate_authority, self.move_badge);
+            let authority_address: ComponentAddress = Runtime::actor().component_address().unwrap();
+
+            let market_comp = RealEstateMarketPlace::new(address, authority_address, name.clone(), market_controller_badge, fee, self.tax, self.controller_badge.resource_address(), self.land, self.building, self.token, self.move_badge);
             self.real_estate_market_place.insert(market_comp);
+
+            info!("You have authorized {} market place with {} % fee per service", name, fee);
+
             return market_host_badge
 
         }
@@ -1075,9 +1104,11 @@ blueprint! {
 
             self.tax = tax;
 
+            info!("You have edited the tax of all market places into {} % per trade", tax);
+
             self.real_estate_market_place.iter().for_each(|address| {
                     let market: RealEstateMarketPlace = address.clone().into();
-                    market.edit_tax(tax)
+                    market.edit_tax(tax/dec!(100))
                 })
 
         }
@@ -1085,6 +1116,8 @@ blueprint! {
         pub fn edit_rate(&mut self, rate: Decimal) {
 
             self.rate = rate;
+
+            info!("You have edited the tax rate of all institutes into {} tokens per service", rate);
 
             self.real_estate_construction_institute.iter().for_each(|address| {
                 let institute: RealEstateConstructionInstitute = address.clone().into();
@@ -1095,17 +1128,16 @@ blueprint! {
 
         pub fn collect_tax(&mut self) -> Bucket {
 
-            self.real_estate_market_place.iter().for_each(|address| {
-                let market: RealEstateMarketPlace = address.clone().into();
-                self.tax_vault.put(market.take_tax());
-            });
-
-            self.real_estate_construction_institute.iter().for_each(|address| {
-                let institute: RealEstateConstructionInstitute = address.clone().into();
-                self.tax_vault.put(institute.take_tax());
-            });
+            info!("You have collected {} tokens tax.", self.tax_vault.amount());
 
             self.tax_vault.take_all()
+
+        }
+
+        pub fn deposit_tax(&mut self, tax: Bucket) {
+
+            self.tax_vault.put(tax);
+
         }
     }
 }

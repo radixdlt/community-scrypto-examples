@@ -7,6 +7,7 @@ set -e
 source ./construct_and_demolish.sh
 
 logc "Let citizen no.${ID1} and citizen no ${ID5} divide their lands"
+
 resim set-default-account $USER1_ACC $USER1_PIV
 export R_ACC=$USER1_ACC
 export land1_size=100
@@ -35,5 +36,13 @@ export R_ACC=$USER5_ACC
 resim run ./transaction_manifest/divide_land_building
 
 logc "Let citizen no.${ID5} merge his lands"
+resim run ./transaction_manifest/request_merge
+
+resim set-default-account $ADMIN_ACC $ADMIN_PIV
+resim run ./transaction_manifest/review_merge
+
+resim set-default-account $USER5_ACC $USER5_PIV
+export R_ACC=$USER5_ACC
+resim run ./transaction_manifest/merge_land
 
 completed

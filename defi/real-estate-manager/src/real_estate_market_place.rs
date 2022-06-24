@@ -15,6 +15,8 @@ blueprint! {
 
         /// Component controller badge
         controller_badge: Vault,
+        /// Authority component address
+        authority_address: ComponentAddress,
         /// Resource move badge
         move_badge: ResourceAddress,
         /// Building address
@@ -29,8 +31,8 @@ blueprint! {
         token: ResourceAddress,
         /// Badge to track orders on the real estate market
         order_badge: ResourceAddress,
-        /// The order book of real estate market, struct: Order Id, (payment, Option(a Building NFT Id or None), Order status)
-        book: HashMap<NonFungibleId, (Decimal, Option<NonFungibleId>, bool)>,
+        /// The order book of real estate market, struct: Order Id, (payment, land id, Option(a Building NFT Id or None), Order status)
+        book: HashMap<NonFungibleId, (Decimal, NonFungibleId, Option<NonFungibleId>, bool)>,
         /// The Vault contain real estate on sale
         order_vault: Vault,
         /// The Vault contain building on sale with the attached real estate
@@ -59,7 +61,7 @@ blueprint! {
         /// - medium token: the token used for trade.
         /// - real estate authority: the authority that authorized the market.
         /// Output: Component address and the market host badge
-        pub fn new(market_host_badge: NonFungibleAddress, name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, real_estate_authority: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
+        pub fn new(market_host_badge: NonFungibleAddress, authority_address: ComponentAddress, name: String, controller_badge: Bucket, fee: Decimal, tax: Decimal, authority_controller: ResourceAddress, land: ResourceAddress, building: ResourceAddress, medium_token: ResourceAddress, move_badge: ResourceAddress) -> ComponentAddress {
 
             let order_badge = ResourceBuilder::new_non_fungible()
                 .metadata("name", name + " Market Order Badge")
@@ -71,14 +73,14 @@ blueprint! {
 
             let rules = AccessRules::new()
                 .method("take_fee", rule!(require(market_host_badge.clone())))
-                .method("take_tax", rule!(require(real_estate_authority)))
                 .method("edit_fee", rule!(require(market_host_badge)))
-                .method("edit_tax", rule!(require(real_estate_authority)))
+                .method("edit_tax", rule!(require(authority_controller)))
                 .default(rule!(allow_all));
 
             let comp = Self {
 
                 controller_badge: Vault::with_bucket(controller_badge),
+                authority_address: authority_address,
                 move_badge: move_badge,
                 building: building,
                 land: land,
@@ -115,13 +117,13 @@ blueprint! {
 
                 RealEstate::Land(land_right) => {
 
-                    let (_, land_data) = assert_land_proof(land_right.create_proof(), self.land);
+                    let (land_id, land_data) = assert_land_proof(land_right.create_proof(), self.land);
 
                     let order_id = NonFungibleId::from_u64(self.order_counter);
         
                     let new_position = Order {};
         
-                    self.book.insert(order_id.clone(), (price, None, false));
+                    self.book.insert(order_id.clone(), (price, land_id, None, false));
                 
                     let (order_badge, move_proof) = self.controller_badge.authorize(|| {
 
@@ -150,15 +152,13 @@ blueprint! {
 
                 RealEstate::LandandBuilding(land_right, building_right) => {
 
-                    let (_, land_data, _, _) = assert_landandbuilding_proof(land_right.create_proof(), building_right.create_proof(), self.land, self.building);
+                    let (land_id, land_data, building_id, _) = assert_landandbuilding_proof(land_right.create_proof(), building_right.create_proof(), self.land, self.building);
 
                     let order_id = NonFungibleId::from_u64(self.order_counter);
         
                     let new_position = Order {};
         
-                    self.book.insert(order_id.clone(), (price, None, false));
-                    
-                    
+                    self.book.insert(order_id.clone(), (price, land_id, Some(building_id), false));
 
                     let (order_badge, move_proof) = self.controller_badge.authorize(|| {
 
@@ -204,7 +204,7 @@ blueprint! {
                 "The order book doesn't contain this order id"
             );
 
-            let (price, building, status) = result.unwrap().clone();
+            let (price, land_id, building_id, status) = result.unwrap().clone();
 
             assert!(status==false,
                 "This real estate is already bought."
@@ -213,9 +213,11 @@ blueprint! {
             let tax = price*self.tax;
 
             let fee = price*self.fee;
+
+            let total = price + tax + fee;
         
             assert!(
-                payment.amount()>=(price + tax + fee),
+                payment.amount()>=total,
                     "Not enough payment"
                 );
 
@@ -228,17 +230,17 @@ blueprint! {
                 return move_proof
                 });
         
-            match building.clone() {
+            match building_id {
         
                 None => {
         
                     self.payment_vault.put(payment.take(price));
-                    self.tax_vault.put(payment.take(tax));
+                    deposit_tax(self.authority_address, payment.take(tax));
                     self.fee_vault.put(payment.take(fee));
-                    self.book.insert(order_id.clone(), (price, None, true));
-                    let land_right = self.order_vault.take_non_fungible(&order_id);
+                    self.book.insert(order_id.clone(), (price, land_id.clone(), None, true));
+                    let land_right = self.order_vault.take_non_fungible(&land_id);
                     let land_location = land_right.non_fungible::<Land>().data().location;
-                    info!("You have filled the no.{} order and bought the {} real estate", order_id, land_location);
+                    info!("You have paid {} tokens to fill the order no.{} and bought the {} real estate (included all tax, fee)", total, order_id, land_location);
                     return (RealEstate::Land(land_right), payment, move_proof)
         
                 }
@@ -248,11 +250,11 @@ blueprint! {
                     self.payment_vault.put(payment.take(price));
                     self.tax_vault.put(payment.take(tax));
                     self.fee_vault.put(payment.take(fee));
-                    self.book.insert(order_id.clone(), (price, building, true));
-                    let land_right = self.order_vault.take_non_fungible(&order_id);
+                    self.book.insert(order_id.clone(), (price, land_id.clone(), Some(building_id.clone()), true));
+                    let land_right = self.order_vault.take_non_fungible(&land_id);
                     let building_right = self.order_contain_building.take_non_fungible(&building_id);
                     let land_location = land_right.non_fungible::<Land>().data().location;
-                    info!("You have filled the no.{} order and bought the {} real estate with the attached building", order_id, land_location);
+                    info!("You have paid {} tokens to fill the order no.{} and bought the {} real estate with the attached building (included all tax, fee)", total, order_id, land_location);
                     return (RealEstate::LandandBuilding(land_right, building_right), payment, move_proof)
         
                 }
@@ -270,13 +272,13 @@ blueprint! {
 
             let order_id = order_badge.non_fungible::<Order>().id();
 
-            let (_price, building, status) = self.book.remove(&order_id).unwrap();
+            let (_, land_id, building_id, status) = self.book.remove(&order_id).unwrap();
 
             assert!(status==false,
                 "This real estate is already bought."
             );
 
-            let land_right = self.order_vault.take_non_fungible(&order_id);
+            let land_right = self.order_vault.take_non_fungible(&land_id);
             let land_location = land_right.non_fungible::<Land>().data().location;
 
             info!("You have cancel the sell order no.{} on {} real estate", order_id, land_location);
@@ -292,7 +294,7 @@ blueprint! {
                 return move_proof
                 });
 
-            match building.clone() {
+            match building_id {
 
                 None => {
                     return (RealEstate::Land(land_right), move_proof)
@@ -301,9 +303,7 @@ blueprint! {
                 Some(building_id) => {
                     return (RealEstate::LandandBuilding(land_right, self.order_contain_building.take_non_fungible(&building_id)), move_proof)
                 }
-
             }
-
         }
 
         /// This is method for seller to take the payment.
@@ -318,7 +318,7 @@ blueprint! {
 
             let order_id = order_badge.non_fungible::<Order>().id();
 
-            let (price, _building, status) = self.book.get(&order_id).unwrap().clone();
+            let (price, _, _, status) = self.book.get(&order_id).unwrap().clone();
 
             assert!(status==true,
                 "This real estate haven't bought."
@@ -329,7 +329,7 @@ blueprint! {
                     .burn(order_badge)
             });
 
-            info!("You have taken the payment on no.{} order", order_id);
+            info!("You have taken the payment of {} tokens on order no.{}", price, order_id);
 
             self.payment_vault.take(price)
 
@@ -340,15 +340,22 @@ blueprint! {
         }
 
         pub fn take_fee(&mut self) -> Bucket {
+
+            info!("You have collected {} tokens market place fee.", self.fee_vault.amount());
             self.fee_vault.take_all()
+
         }
 
         pub fn edit_tax(&mut self, tax: Decimal) {
+            
             self.tax = tax
         }
 
         pub fn edit_fee(&mut self, fee: Decimal) {
-            self.fee = fee
+
+            info!("You have edited fee rate of the market place into {} % per trade", fee);
+            self.fee = fee/dec!(100);
+
         }
     }
 }
