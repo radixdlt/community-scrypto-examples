@@ -10,10 +10,10 @@ This is a Permissioned, Secure Real Estate Manager Protocol blueprint package bu
 The blueprint package (included 3 blueprints) is for authorities of countries or local communities *(Hereby refer as **authorities**)* to manage, keep track of ***real estate deeds*** and provide ***real estate services*** for authorized citizens of that communities by making use of Non Fungible Tokens (NFTs). 
 
 - Protocol entities:
-1. **Authorities**: The main manager of the protocol, are allowed to authorize new citizen, market place or construction institute, also can authorize land modification, collect and edit tax.
-2. **Citizens**: The main user of the protocol, are allowed to request land modification, request construction or trade real estate NFTs.
-3. **Market hosts**: The main manager of the Market Place Components, are allowed to collect and edit market fee.
-4. **Construction institutes**: The main manager of the Construction Institute Components, are allowed to authorize construction, collect and edit construction service fee.
+1. **Authorities**: The main managers of the protocol, are allowed to authorize new citizen, market place or construction institute, also can authorize land modification, collect and edit tax.
+2. **Citizens**: The main users of the protocol, are allowed to request land modification, request construction or trade real estate NFTs.
+3. **Market hosts**: The main managers of the Market Place Components, are allowed to collect and edit market fee.
+4. **Construction institutes**: The main managers of the Construction Institute Components, are allowed to authorize construction, collect and edit construction service fee.
 
 - Core blueprint ***Real Estate Service***:
 1. Use Soul Bound Tokens (SBTs) to include a simple KYC solution for authorities to keep track of their citizens. Citizen's personal data is not recorded on ledger to ensure privacy.
