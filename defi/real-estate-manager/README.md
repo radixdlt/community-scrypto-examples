@@ -9,6 +9,12 @@ This is a Permissioned, Secure Real Estate Manager Protocol blueprint package bu
 
 The blueprint package (included 3 blueprints) is for authorities of countries or local communities *(Hereby refer as **authorities**)* to manage, keep track of ***real estate deeds*** and provide ***real estate services*** for authorized citizens of that communities by making use of Non Fungible Tokens (NFTs). 
 
+- Protocol entities:
+1. Authorities: The main manager of the protocol, are allowed to authorize new citizen, market place or construction institute, also can authorize land modification, collect and edit tax.
+2. Citizens: The main user of the protocol, are allowed to request land modification, request construction or trade real estate NFTs.
+3. Market hosts: The main manager of the Market Place Components, are allowed to collect and edit market fee.
+4. Construction institutes: The main manager of the Construction Institute Components, are allowed to authorize construction, collect and edit construction service fee.
+
 - Core blueprint ***Real Estate Service***:
 1. Use Soul Bound Tokens (SBTs) to include a simple KYC solution for authorities to keep track of their citizens. Citizen's personal data is not recorded on ledger to ensure privacy.
 2. Included a method to authorize new land and create associated NFT when the protocol is first implemented on the communities.
@@ -23,10 +29,10 @@ The blueprint package (included 3 blueprints) is for authorities of countries or
 3. Included methods for market hosts to collect, edit market fee.
 
 - Blueprint ***Real Estate Construction Institute***:
-1. After authorized, organizations can run a construction institutes and earn construction service fee.
+1. After authorized, construction institutes can earn construction service fee.
 2. Included methods for citizens to request construction (*construct a building* or *demolish a building*) and get the *construction right* NFT on their land to conduct the construction.
-3. Included a method for organizations to review the citizen's construction requests and give them *construction right* NFT so they are allowed to conduct the construction.
-4. Included methods for organizations to collect, edit service fee.
+3. Included a method for institutes to review the citizen's construction requests and give them *construction right* NFT so they are allowed to conduct the construction.
+4. Included methods for institutes to collect, edit service fee.
 
 ## Quick Start
 
