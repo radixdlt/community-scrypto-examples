@@ -1,13 +1,13 @@
-# Real Estate Manager: Secure Real Estate Manage solution
+# Real Estate Manager: Permissioned, Secure Real Estate Manager Protocol
 
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-Real Estate Manager is a Secure Real Estate Manager blueprint pack built on Radix Ledger to provide real estate manage solution for authorities.
+This is a Permissioned, Secure Real Estate Manager Protocol blueprint package built on Radix Ledger to provide real estate manage solution for authorities.
 
 ## Main Features
 
-The blueprint pack (included 3 blueprints) is for authorities of countries or local communities *(Hereby refer as **authorities**)* to manage, keep track of ***real estate deeds*** and provide ***real estate services*** for authorized citizens of that communities by making use of Non Fungible Tokens (NFTs). 
+The blueprint package (included 3 blueprints) is for authorities of countries or local communities *(Hereby refer as **authorities**)* to manage, keep track of ***real estate deeds*** and provide ***real estate services*** for authorized citizens of that communities by making use of Non Fungible Tokens (NFTs). 
 
 - Core blueprint ***Real Estate Service***:
 1. Use Soul Bound Tokens (SBTs) to include a simple KYC solution for authorities to keep track of their citizens. Citizen's personal data is not recorded on ledger to ensure privacy.
