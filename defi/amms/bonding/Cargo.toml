@@ -13,13 +13,13 @@ A Scrypto package for creating and using bonding curves as an automated market m
 num-bigint = { version = "0.4.3", default-features = false, features = [] }
 num-rational = { version ="0.4.0", optional = true, default-features = false, features = ["num-bigint"] }
 num-traits = "0.2.14"
-sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
+sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.1" }
+scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.1" }
 scrypto_statictypes = { git = "https://github.com/devmannic/scrypto_statictypes", tag = "v0.4.1" }
 bonding_macros = { path = "bonding_macros" }
 
 [dev-dependencies]
-radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.3.0" }
+radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.1" }
 scrypto-unit = { git = "https://github.com/plymth/scrypto-unit", rev = "e259715c5b7abb6356ce2589ab1a32cdc597581f" }
 
 [profile.release]
