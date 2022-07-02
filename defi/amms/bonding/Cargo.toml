@@ -20,7 +20,7 @@ bonding_macros = { path = "bonding_macros" }
 
 [dev-dependencies]
 radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.4.1" }
-scrypto-unit = { git = "https://github.com/plymth/scrypto-unit", rev = "e259715c5b7abb6356ce2589ab1a32cdc597581f" }
+scrypto-unit = { git = "https://github.com/devmannic/scrypto-unit", branch = "v0.3.0" }
 
 [profile.release]
 opt-level = 's'     # Optimize for size.
