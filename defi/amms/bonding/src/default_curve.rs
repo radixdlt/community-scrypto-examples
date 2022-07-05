@@ -151,7 +151,7 @@ blueprint! {
     }
 
     impl RatioBondingCurve {
-        pub fn new(reserve_ratio_n: u32, reserve_ratio_d: u32, precision_bits: u16) -> Component {
+        pub fn new(reserve_ratio_n: u32, reserve_ratio_d: u32, precision_bits: u16) -> ComponentAddress {
             debug!(
                 "RatioBondingCurve::new called with {} / {} @ {} bits",
                 reserve_ratio_n, reserve_ratio_d, precision_bits
@@ -172,6 +172,7 @@ blueprint! {
                 precision_bits,
             }
             .instantiate()
+            .globalize()
         }
 
         // can't do trait impl's within the blueprint.  Would be ncie to get those compile time checks...

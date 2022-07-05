@@ -1,5 +1,8 @@
 # scrypto-bonding
 
+An almost-production-ready Scrypto package for using Bancor-style bonding curves as an AMM on Radix. Created by @devmannic it showcases high-precision math and community packages scrypto-unit and scrypto_statictypes to increase quality and security.
+
+
 scrypto-bonding: A Scrypto package for creating and using bonding curves as an automated market maker on Radix
 
 The main blueprint to interact with is `BondingAMM`.  It has buy/sell functionality against a single

@@ -4,8 +4,8 @@ blueprint! {
     struct BasicBondingCurve {}
 
     impl BasicBondingCurve {
-        pub fn new() -> Component {
-            BasicBondingCurve {}.instantiate()
+        pub fn new() -> ComponentAddress {
+            BasicBondingCurve {}.instantiate().globalize()
         }
 
         // can't do trait impl's within the blueprint.  Would be ncie to get those compile time checks...
