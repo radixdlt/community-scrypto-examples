@@ -1,0 +1,26 @@
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("19ba617e65a623c8bfdf352111985ce8")) ResourceAddress("${LAND}");
+
+POP_FROM_AUTH_ZONE
+    Proof("land1_proof");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof_by_ids" TreeSet<NonFungibleId>(NonFungibleId("9e720fb8e0b7ecba61cf0883e8795d3e")) ResourceAddress("${LAND}");
+    
+POP_FROM_AUTH_ZONE
+    Proof("land2_proof");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${BUILDING}");
+
+POP_FROM_AUTH_ZONE
+    Proof("building_proof");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "new_land_merge_request" Enum("LandandBuilding", Proof("land1_proof"), Proof("building_proof")) Enum("Land", Proof("land2_proof"));
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

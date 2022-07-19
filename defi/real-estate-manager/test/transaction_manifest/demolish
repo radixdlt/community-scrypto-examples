@@ -1,0 +1,42 @@
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "withdraw" ResourceAddress("${CREQUEST_BADGE}");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${CREQUEST_BADGE}")
+    Bucket("request_badge");
+
+CALL_METHOD 
+    ComponentAddress("${CCOMP}") "get_construction_badge" Bucket("request_badge");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${CONSTRUCTION_BADGE}")
+    Bucket("construction_badge");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "withdraw_by_amount" Decimal("200") ResourceAddress("${XRD}");
+
+TAKE_FROM_WORKTOP   
+    ResourceAddress("${XRD}")
+    Bucket("payment");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${LAND}");
+
+POP_FROM_AUTH_ZONE
+    Proof("land_proof");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "withdraw" ResourceAddress("${BUILDING}");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${BUILDING}")
+    Bucket("building");
+
+CALL_METHOD 
+    ComponentAddress("${CCOMP}") "demolish_building" Proof("land_proof") Bucket("building") Bucket("construction_badge") Bucket("payment");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

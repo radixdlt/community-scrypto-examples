@@ -1,0 +1,8 @@
+CALL_METHOD 
+    ComponentAddress("${CAUTH_ACC}") "create_proof" ResourceAddress("${CBADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${CCOMP}") "authorize_construction" 5u64 Enum("IsOk", ${ok});
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

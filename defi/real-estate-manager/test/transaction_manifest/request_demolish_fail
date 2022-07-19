@@ -1,0 +1,14 @@
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${LAND}");
+
+POP_FROM_AUTH_ZONE
+    Proof("land_proof");
+
+CALL_METHOD 
+    ComponentAddress("${CCOMP}") "new_construction_request" Enum("Land", Proof("land_proof")) Enum("DemolishBuilding");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

@@ -1,0 +1,15 @@
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "withdraw" ResourceAddress("${ORDER_BADGE}");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${ORDER_BADGE}")
+    Bucket("order");
+
+CALL_METHOD 
+    ComponentAddress("${MCOMP}") "take_payment" Bucket("order");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

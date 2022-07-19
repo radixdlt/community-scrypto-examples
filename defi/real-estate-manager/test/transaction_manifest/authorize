@@ -1,0 +1,54 @@
+CALL_METHOD 
+    ComponentAddress("${ADMIN_ACC}") "create_proof" ResourceAddress("${AUTHORITY_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_citizen" ${ID1}u64;
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${ID_BADGE}") Bucket("id1");
+CALL_METHOD 
+    ComponentAddress("${USER1_ACC}") "deposit" Bucket("id1");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_citizen" ${ID2}u64;
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${ID_BADGE}") Bucket("id2");
+CALL_METHOD 
+    ComponentAddress("${USER2_ACC}") "deposit" Bucket("id2");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_citizen" ${ID3}u64;
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${ID_BADGE}") Bucket("id3");
+CALL_METHOD 
+    ComponentAddress("${USER3_ACC}") "deposit" Bucket("id3");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_citizen" ${ID4}u64;
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${ID_BADGE}") Bucket("id4");
+CALL_METHOD 
+    ComponentAddress("${USER4_ACC}") "deposit" Bucket("id4");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_citizen" ${ID5}u64;
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${ID_BADGE}") Bucket("id5");
+CALL_METHOD 
+    ComponentAddress("${USER5_ACC}") "deposit" Bucket("id5");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_construction_institute" "${Cname}" Decimal("${Cfee}");
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${CBADGE}") Bucket("con_badge");
+CALL_METHOD 
+    ComponentAddress("${CAUTH_ACC}") "deposit" Bucket("con_badge");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_marketplace" "${Mname}" Decimal("${Mfee}");
+TAKE_FROM_WORKTOP_BY_AMOUNT 
+    Decimal("1") ResourceAddress("${MBADGE}") Bucket("mar_badge");
+CALL_METHOD 
+    ComponentAddress("${MHOST_ACC}") "deposit" Bucket("mar_badge");
+
+CALL_METHOD_WITH_ALL_RESOURCES
+    ComponentAddress("${ADMIN_ACC}") "deposit_batch";

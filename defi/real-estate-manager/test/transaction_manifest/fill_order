@@ -1,0 +1,29 @@
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "create_proof" ResourceAddress("${ID_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "withdraw_by_amount" Decimal("${payment}") ResourceAddress("${XRD}");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${XRD}")
+    Bucket("payment");
+
+CALL_METHOD 
+    ComponentAddress("${MCOMP}") "buy" ${order_no}u64 Bucket("payment");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${LAND}")
+    Bucket("landreturn");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "deposit" Bucket("landreturn");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${BUILDING}")
+    Bucket("buildingreturn");
+
+CALL_METHOD 
+    ComponentAddress("${R_ACC}") "deposit" Bucket("buildingreturn");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${R_ACC}") "deposit_batch";

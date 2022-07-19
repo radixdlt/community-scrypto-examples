@@ -1,0 +1,11 @@
+CALL_METHOD 
+    ComponentAddress("${ADMIN_ACC}") "create_proof" ResourceAddress("${AUTHORITY_BADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_land_modify" 0u64 Enum("IsNotOverLap", ${ok}) Enum("None");
+
+CALL_METHOD 
+    ComponentAddress("${COMP}") "authorize_land_modify" 1u64 Enum("IsNotOverLap", ${ok}) Enum("Land1");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${ADMIN_ACC}") "deposit_batch";

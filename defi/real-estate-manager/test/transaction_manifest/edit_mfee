@@ -1,0 +1,8 @@
+CALL_METHOD 
+    ComponentAddress("${MHOST_ACC}") "create_proof" ResourceAddress("${MBADGE}");
+
+CALL_METHOD 
+    ComponentAddress("${MCOMP}") "edit_fee" Decimal("${edit}");
+
+CALL_METHOD_WITH_ALL_RESOURCES 
+    ComponentAddress("${MHOST_ACC}") "deposit_batch";

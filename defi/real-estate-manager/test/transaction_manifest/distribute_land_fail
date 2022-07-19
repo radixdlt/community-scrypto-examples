@@ -1,0 +1,7 @@
+CALL_METHOD ComponentAddress("${ADMIN_ACC}") "create_proof" ResourceAddress("${AUTHORITY_BADGE}");
+
+CALL_METHOD ComponentAddress("${COMP}") "new_land" Decimal("${land_size1}") "${location1}" Enum("IsNotOverLap", ${not_ok});
+TAKE_FROM_WORKTOP_BY_AMOUNT Decimal("1") ResourceAddress("${LAND}") Bucket("land1");
+CALL_METHOD ComponentAddress("${USER1_ACC}") "deposit" Bucket("land1");
+
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ADMIN_ACC}") "deposit_batch";
