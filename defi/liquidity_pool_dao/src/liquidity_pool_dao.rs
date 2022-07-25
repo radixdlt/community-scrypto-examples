@@ -1178,11 +1178,24 @@ blueprint!{
 
             let amount = vote_badge_data.lp_tokens_allocated;
             let vote = vote_badge_data.vote;
+            let proposal_id = vote_badge_data.proposal;
+            let vote_weight = vote_badge_data.vote_weight;
+
+            let resource_manager = borrow_resource_manager!(self.nft_proposal_address);
 
             // Matches the vote to its respective scenarios.
             match vote {
                 // Scenario when the vote casted was a `Yes`.
                 Vote::Yes => {
+
+                    if self.proposals_in_voting_period.contains(&proposal_id) {
+                        let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+                        proposal_data.yes_counter -= vote_weight;
+                        self.nft_proposal_admin.authorize(|| 
+                            resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
+                        );
+                    }
+
                     // Redeems the LP Token.
                     let return_lp: Bucket = self.voting_yes_vault.take(amount);
 
@@ -1193,6 +1206,15 @@ blueprint!{
                 }
                 // Scenario when the vote casted was a `No`.
                 Vote::No => {
+
+                    if self.proposals_in_voting_period.contains(&proposal_id) {
+                        let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+                        proposal_data.no_counter -= vote_weight;
+                        self.nft_proposal_admin.authorize(|| 
+                            resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
+                        );
+                    }
+
                     // Redeems the LP Token.
                     let return_lp: Bucket = self.voting_no_vault.take(amount);
 
@@ -1203,6 +1225,15 @@ blueprint!{
                 }
                 // Scenario when the vote casted was a `No with veto`.
                 Vote::NoWithVeto => {
+
+                    if self.proposals_in_voting_period.contains(&proposal_id) {
+                        let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+                        proposal_data.no_with_veto_counter -= vote_weight;
+                        self.nft_proposal_admin.authorize(|| 
+                            resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
+                        );
+                    }
+
                     // Redeems the LP Token.
                     let return_lp: Bucket = self.voting_no_with_veto_vault.take(amount);
 
