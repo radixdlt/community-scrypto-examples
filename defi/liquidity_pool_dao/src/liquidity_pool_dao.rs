@@ -1,11 +1,11 @@
 use scrypto::prelude::*;
 use crate::liquidity_pool::*;
 
-
-/// Design question: Not sure if should provide 1 token per LP or have the LP token itself be used to vote.
-/// If use LP token to vote, then they can vote different selection i.e allocate portions between Yes and No... but why would they wanna do this?
-/// Same problem will occur if provide voting tokens for LP. And if each LP only get 1, then it would be unfair for LP that has most ownership in the pool?
-
+/// This enum describes the selection of choices users can make to cast a vote.
+/// The `Yes` vote signifies support of the proposal.
+/// The `No` vote signifies disagreement of the proposal.
+/// The `No with veto` vote signifies a significantly stronger disagreement, where you may feel the proposal is actively harming the governance 
+/// system by abusing or spamming pointless proposals just to send a message. 
 #[derive(TypeId, Encode, Decode, Describe, Debug, PartialEq)]
 pub enum Vote {
     Yes,
@@ -13,6 +13,10 @@ pub enum Vote {
     NoWithVeto,
 }
 
+/// This enum descibes the states in which the governance proposal can be in.
+/// `Passed` allows the proposal to change the pool parameters.
+/// `Failed` does nothing and burns the Proposal NFT.
+/// `InProcess` signifies that the Proposal NFT is still being proposed or voted on.
 #[derive(TypeId, Encode, Decode, Describe, Debug, PartialEq)]
 pub enum Resolution {
     Passed,
@@ -20,12 +24,18 @@ pub enum Resolution {
     InProcess,
 }
 
+/// This enum describes the stage of the governance proposal.
+/// `DepositPhase` means that the proposal is freshly minted and if there is serious consideration,
+/// the LPs will push for it to be advanced to the next stage to be voted on.
+/// `VotingPeriod` means that the proposal is in the stage where it can be voted on where protocol
+/// changes may happen if it succeeds.
 #[derive(TypeId, Encode, Decode, Describe, Debug, PartialEq)]
 pub enum Stage {
     DepositPhase,
     VotingPeriod,
 }
 
+/// This struct describes the data that the Proposal NFT holds.
 #[derive(NonFungibleData, Debug)]
 pub struct Proposal {
     pub token_1_weight: Decimal,
@@ -48,6 +58,7 @@ pub struct Proposal {
     pub resolution: Resolution,
 }
 
+/// This struct describes the data that the Vote Badge NFT holds.
 #[derive(NonFungibleData, Debug)]
 pub struct VoteBadge {
     proposal: NonFungibleId,
@@ -191,24 +202,34 @@ blueprint!{
         /// 
         /// # Arguments:
         /// 
+        /// * `lp_proof` (Proof) - Proof of the LP Token to determine if the proposer is an LP.
         /// * `token_1_weight` (Decimal) - The weight desired to change for Token 1.
         /// * `token_2_weight` (Decimal) - The weight desired to change for Token 2.
         /// * `fee_to_pool` (Decimal) - The swap fee desired to change for the pool.
         /// 
         /// # Returns:
         /// 
-        /// `NonFungible` - The NonFungibleId of the Proposal NFT used for identification. 
+        /// `NonFungible` - The NonFungibleId of the minted Proposal NFT used for identification. 
         pub fn propose(
             &mut self,
+            lp_proof: Proof,
             token_1_weight: Decimal,
             token_2_weight: Decimal,
             fee_to_pool: Decimal,
         ) -> NonFungibleId
         {
+            // Retrieves the LiquidityPool component. 
+            let liquidity_pool: LiquidityPool = self.liquidity_pool.unwrap().into();
+
+            // Retrieves the resource address of the tracking_token
+            let tracking_token_address = liquidity_pool.tracking_token_address();
+
+            asserts_eq!(lp_proof.resource_address(), tracking_token_address, 
+                "LP Token does not belong to this liquidity pool"
+            );
             assert!((token_1_weight + token_2_weight) <= dec!("1.0"), 
                 "[Governance Proposal]: The weight of both tokens cannot exceed {:?}.", dec!("1.0")
             );
-
             assert!(
                 (fee_to_pool >= Decimal::zero()) & (fee_to_pool <= dec!("100")), 
                 "[Pool Creation]: Fee must be between 0 and 100"
@@ -283,7 +304,7 @@ blueprint!{
         /// * `fee` (Bucket) - The bucket that contains the XRD to be deposited towards the Proposal NFT.
         /// * `proposal_id` (NonFungibleId) - The NonFungibleId of the proposal selected.
         /// 
-        /// This method does not return any assets. 
+        /// This method does not return any assets.
         pub fn deposit_proposal(
             &mut self,
             fee: Bucket,
@@ -327,6 +348,7 @@ blueprint!{
             // Retrieves the Proposal NFT data again since the previous value has been consumed.
             let proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
 
+            // The scenario when the Proposal NFT has met its deposit quota. It can now be advanced.
             if proposal_data.amount_deposited >= self.minimum_xrd {
 
                 // Retrieves the Proposal NFT data again since the previous value has been consumed.
@@ -342,7 +364,7 @@ blueprint!{
                 // This helper function is used to ensure that no more than one Proposal NFT has advanced to the Voting Process.
                 self.check_voting_stage();
 
-                // Pushes the Proposal NFT that has advanced to the Voting Prorcess.
+                // Pushes the Proposal NFT that has advanced to the Voting Process.
                 self.proposal_in_voting_period.push(proposal_id);
 
                 assert_eq!(self.proposal_in_voting_period.len(), 1, "Cannot have more than one proposal in the voting period.");
@@ -356,7 +378,8 @@ blueprint!{
                 info!("[Depositing Proposal]: Condition 3 - Less than {:?} of participating voting power votes 'no-with-veto'.",
                     self.no_with_veto_threshold
                 );
-            
+
+            // The scneario when the Proposal NFT Deposit Phase has lapsed. It will be burnt.
             } else if Runtime::current_epoch() > self.proposal_end_epoch {
 
                 // Here we take the NFT out of the vault because there is no other option other than
@@ -367,7 +390,8 @@ blueprint!{
                 info!("[Depositing Proposal]: Create a new proposal to start another process."); 
 
                 self.nft_proposal_admin.authorize(|| proposal.burn());
-                
+            
+            // The scenario when the Proposal NFT has not met its deposit quote yet and there is still time remaining.
             } else {
 
                 let amount_deposited = proposal_data.amount_deposited;
@@ -386,12 +410,18 @@ blueprint!{
             };
         }
 
+        /// This is a helper function to ensure that there is no more than one Proposal NFT that can be advanced.
         fn check_voting_stage(
             &self,
         )
         {
+            // Reviews all the NFTs within the `proposal_vault`.
             let proposals = self.proposal_vault.non_fungible_ids();
+
+            // Creates an iterator to go through each NFTs.
             let all_proposals = proposals.iter();
+            
+            // Runs a for loop to review the stage of each NFT.
             for proposal in all_proposals {
                 let resource_manager = borrow_resource_manager!(self.nft_proposal_address);
                 let proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal);
@@ -403,11 +433,25 @@ blueprint!{
             }
         }
 
+        /// This method allows users to check the status of a proposal.
+        /// 
+        /// This method performs a single check:
+        /// 
+        /// * **Check 1:** Checks whether the proposal exists.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `proposal_id` (NonFungibleId) - The NonfungibleId of the Proposal NFT the user wish to retrieve information.
+        /// 
+        /// This method returns the information of the Proposal NFT.
         pub fn check_proposal(
             &self,
             proposal_id: NonFungibleId
         )
         {
+            assert_eq!(self.proposal_vault.non_fungible_ids().contains(&proposal_id), true, 
+                "The proposal you are attempint to retrieve information does not exist."
+            );
             let resource_manager = borrow_resource_manager!(self.nft_proposal_address);
             let proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
             info!("[Proposal Info]: Token 1 weight: {:?}", proposal_data.token_1_weight);
@@ -423,14 +467,52 @@ blueprint!{
             info!("[Proposal Info]: Current epoch: {:?}", proposal_data.current_epoch);
             info!("[Proposal Info]: Resolution: {:?}", proposal_data.resolution);
         }
-        // Test function
-        pub fn see_voting(
+        
+        /// This method simply is used to view the Proposal NFT that is in the Voting Process.
+        /// 
+        /// This method does not perform any checks.
+        /// 
+        /// This method does not accept any arguments.
+        /// 
+        /// # Returns:
+        /// 
+        /// * `Vec<NonFungibleId>` - The NonFungibleId of the Proposal NFT is a `Vec`.
+        pub fn see_proposal(
             &self,
         ) -> Vec<NonFungibleId>
         {
             return self.proposal_in_voting_period.clone()
         }
 
+        /// This method allows users to vote on a governance proposal.
+        /// 
+        /// It takes either a `Yes`, `No`, or `No with veto` vote and matches each scenario appropriately.
+        /// A Vote Badge NFT is then minted as a receipt of the vote.
+        /// 
+        /// This method performs a few checks:
+        /// 
+        /// * **Check 1:** Checks that the Proposal NFT exists.
+        /// * **Check 2:** Checks that the correct LP Tokens have been passed.
+        /// * **Check 3:** Checks whether the Proposal NFT has advanced to the Voting Process stage.
+        /// * **Check 4:** Checks that the Proposal NFT has advanced to the Voting Process stage... but in a different way.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `lp_tokens` (Bucket) - The bucket that contains the LP Tokens used to vote.
+        /// * `vote_submission` (Enum) - The finite selection of votes the user can select.
+        /// * `proposal_id` (NonFungibleId) - The NonFungibleId of the Proposal NFT.
+        /// 
+        /// # Returns:
+        /// 
+        /// * `Bucket` - The Vote Badge NFT as a receipt of the user's vote.
+        /// 
+        /// # Note:
+        /// 
+        /// * Design question: Not sure if should provide 1 token per LP or have the LP token itself be used to vote.
+        /// * If use LP token to vote, then they can vote different selection i.e allocate portions between Yes and No... but why would they wanna do this?
+        /// * Same problem will occur if provide voting tokens for LP. And if each LP only get 1, then it would be unfair for LP that has most ownership in the pool?
+        /// * Also note that there are two counters. One are the vaults where LP Tokens are allocated towards with each respective vote. The second are the data fields
+        /// from the Proposal NFT to count votes. The reason for this is that the NFT data fields can be accessed outside of  
         pub fn vote_proposal(
             &mut self,
             lp_tokens: Bucket,
@@ -438,7 +520,10 @@ blueprint!{
             proposal_id: NonFungibleId,
         ) -> Bucket
         {
+            // Retrieves the LiquidityPool component. 
             let liquidity_pool: LiquidityPool = self.liquidity_pool.unwrap().into();
+
+            // Retrieves the resource address of the tracking_token
             let tracking_token_address = liquidity_pool.tracking_token_address();
 
             assert_eq!(self.proposal_vault.non_fungible_ids().contains(&proposal_id), true, 
@@ -449,7 +534,10 @@ blueprint!{
                 "Wrong LP tokens passed."
             );
 
+            // Retrieves the resource manager.
             let resource_manager = borrow_resource_manager!(self.nft_proposal_address);
+
+            // Retrieves the Proposal NFT data.
             let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
 
             assert_eq!(proposal_data.stage, Stage::VotingPeriod, 
@@ -469,28 +557,37 @@ blueprint!{
             let tracking_tokens_manager: &ResourceManager = borrow_resource_manager!(tracking_token_address);
             let vote_weight: Decimal = amount / tracking_tokens_manager.total_supply();
 
+            // Matches the `vote_submission` to its respective selections and mints a Vote Badge NFT to represent the selection.
             match vote_submission {
+                // The scenario when the user votes `Yes` to the proposal.
                 Vote::Yes => {
+                    // Puts the LP Tokens the vault responsible for `Yes` votes.
                     self.voting_yes_vault.put(lp_tokens);
 
+                    // Increases the yes counter for the Proposal NFT.
+                    // There are two counters technically. 
                     proposal_data.yes_counter += vote_weight;
 
+                    // Authorizes the Proposal NFT data update.
                     self.nft_proposal_admin.authorize(|| 
                         resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                     );
 
+                    // Retrieves Proposal NFT data.
                     let proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
 
                     let yes_counter = proposal_data.yes_counter;
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
-
                     let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
-                    info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
-                    yes_counter, no_counter, no_with_veto_counter, abstain_counter);
 
+                    info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
+                        yes_counter, no_counter, no_with_veto_counter, abstain_counter
+                    );
                     info!("[Voting]: You have voted 'Yes' for the proposal.");
                     info!("[Voting]: The weight of your vote is {:?}.", vote_weight);
+
+                    // Mints the Vote Badge NFT.
                     let vote_badge = self.nft_proposal_admin.authorize(|| {
                         borrow_resource_manager!(self.vote_badge_address)
                         .mint_non_fungible(
@@ -506,9 +603,12 @@ blueprint!{
 
                     info!("[Voting]: You've received a badge for your vote!");
                     info!("[Voting]: Your badge proof is {:?}", vote_badge.resource_address());
+
                     return vote_badge
                 }
+                // The scenario when the user votes `No` to the proposal.
                 Vote::No => {
+                    
                     self.voting_no_vault.put(lp_tokens);
 
                     proposal_data.no_counter += vote_weight;
@@ -525,10 +625,11 @@ blueprint!{
 
                     let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
                     info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
-                    yes_counter, no_counter, no_with_veto_counter, abstain_counter);
-
+                        yes_counter, no_counter, no_with_veto_counter, abstain_counter
+                    );
                     info!("[Voting]: You have voted 'No' for the proposal.");
                     info!("[Voting]: The weight of your vote is {:?}.", vote_weight);
+
                     let vote_badge = self.nft_proposal_admin.authorize(|| {
                         borrow_resource_manager!(self.vote_badge_address)
                         .mint_non_fungible(
@@ -544,9 +645,11 @@ blueprint!{
 
                     info!("[Voting]: You've received a badge for your vote!");
                     info!("[Voting]: Your badge proof is {:?}", vote_badge.resource_address());
+
                     return vote_badge
                 }
                 Vote::NoWithVeto => {
+                    // The scenario when the user votes `No with veto` to the proposal.
                     self.voting_no_with_veto_vault.put(lp_tokens);
 
                     proposal_data.no_with_veto_counter += vote_weight;
@@ -563,10 +666,12 @@ blueprint!{
     
                     let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
                     info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
-                    yes_counter, no_counter, no_with_veto_counter, abstain_counter);
+                        yes_counter, no_counter, no_with_veto_counter, abstain_counter
+                    );
 
                     info!("[Voting]: You have voted 'No' for the proposal.");
                     info!("[Voting]: The weight of your vote is {:?}.", vote_weight);
+
                     let vote_badge = self.nft_proposal_admin.authorize(|| {
                         borrow_resource_manager!(self.vote_badge_address)
                         .mint_non_fungible(
@@ -582,11 +687,23 @@ blueprint!{
 
                     info!("[Voting]: You've received a badge for your vote!");
                     info!("[Voting]: Your badge proof is {:?}", vote_badge.resource_address());
+
                     return vote_badge
                 }
             };
         }
 
+        /// This method is used to retrieve information from the Vote Badge NFT.
+        /// 
+        /// This method performs a single check:
+        /// 
+        /// * **Check 1:** Checks that the Vote Badge NFT belongs to this protocol.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `vote_badge` (Proof) - The proof of the Vote Badge NFT.
+        /// 
+        /// Returns the Vote Badge NFT information.
         pub fn check_vote(
             &self,
             vote_badge: Proof,
@@ -607,6 +724,23 @@ blueprint!{
             info!("[Vote Info]: LP tokens allocated: {:?}", lp_tokens_allocated);
         }
 
+        /// This method allows user to recast their vote.
+        /// 
+        /// It requires a lot of coordination to ensure the data is manipulated correctly.
+        /// The method uses a helper function to organize and assist the faciliation of the movement of assets.
+        /// 
+        /// This method performs a single check:
+        /// 
+        /// * **Check 1:** Checks that the Vote Badge NFT belongs to this protocol.
+        /// * **Check 2:** Checks that the vote recasted is not the same as the current vote casted.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `vote_badge` (Proof) - The proof of the Vote Badge NFT.
+        /// * `vote_submission` (Enum) - The choice of vote the user wants to recast.
+        /// 
+        /// This method does not return any assets, but will change their Vote Badge NFT along with the 
+        /// Proposal NFT. 
         pub fn recast_vote(
             &mut self,
             vote_badge: Proof,
@@ -631,14 +765,17 @@ blueprint!{
             // Retrieves Proposal NFT Data again due to value being consumed.
             let resource_manager = borrow_resource_manager!(self.nft_proposal_address);
 
+            // The helper function that reallocates the LP Tokens from the respective vote vaults.
             let lp_tokens = self.reallocate_lp_token(&vote_badge);
 
             // Evaluates the new vote and adds allocation based on matched criteria.
             // Data manipulation occurs for both Proposal NFT data and Vote Badge data.
             match vote_submission {
+                // The scenario when the user recasts to a `Yes` vote. 
                 Vote::Yes => {
                     self.voting_yes_vault.put(lp_tokens);
 
+                    // Retrieves the Proposal NFT data to be changed.
                     let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
 
                     proposal_data.yes_counter += vote_weight;
@@ -646,10 +783,11 @@ blueprint!{
                     info!("[Vote Recast]: You have voted 'Yes' for the proposal.");
                     info!("[Vote Recast]: The weight of your vote is {:?}.", vote_weight);
 
-                    // Logic for changing VoteBadge
+                    // Logic for changing the Vote Badge NFT
                     let mut vote_badge_data = vote_badge.non_fungible::<VoteBadge>().data();
                     vote_badge_data.vote = Vote::Yes;
 
+                    // Authorizes the updates for the Proposal NFT and the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(||
                         vote_badge.non_fungible().update_data(vote_badge_data)
                     );
@@ -657,6 +795,7 @@ blueprint!{
                         resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                     );
 
+                    // Retrieves the Proposal NFT data again since the previous value has been consumed.
                     let proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
 
                     let yes_counter = proposal_data.yes_counter;
@@ -667,6 +806,7 @@ blueprint!{
                     info!("[Vote Recast]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                     yes_counter, no_counter, no_with_veto_counter, abstain_counter);
                 }
+                // The scenario when the user recasts to a `No` vote. 
                 Vote::No => {
                     self.voting_no_vault.put(lp_tokens);
 
@@ -698,6 +838,7 @@ blueprint!{
                     info!("[Vote Recast]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                     yes_counter, no_counter, no_with_veto_counter, abstain_counter);
                 }
+                // The scenario when the user recasts to a `No with veto` vote. 
                 Vote::NoWithVeto => {
                     self.voting_no_with_veto_vault.put(lp_tokens);
 
@@ -736,6 +877,21 @@ blueprint!{
             }
         }
 
+        /// This is the helper function for the `recast_vote` method.
+        /// 
+        /// It essentially removes the LP Tokens from their respective vote vaults and changes the Proposal NFT data to reflect as such.
+        /// 
+        /// This method performs a single check:
+        /// 
+        /// * **Check 1:** Checks that there is enough LP Tokens to be redeemed.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `vote_badge` (&Proof) - The reference to the proof of the Vote Badge NFT.
+        /// 
+        /// # Returns:
+        /// 
+        /// * `Bucket` - The bucket that contains the LP Tokens.
         fn reallocate_lp_token(
             &mut self,
             vote_badge: &Proof
@@ -756,6 +912,7 @@ blueprint!{
             // Evaluates the current vote from Vote Badge NFT data and removes allocation based on matched criteria.
             // Data manipulation only happens with Proposal NFT data. 
             let lp_tokens: Bucket = match vote {
+                // The scenario where the Vote Badge NFT has a `Yes` vote.
                 Vote::Yes => {
                     assert!(
                         self.voting_yes_vault.amount() >= lp_tokens_allocated,
@@ -767,6 +924,7 @@ blueprint!{
 
                     proposal_data.yes_counter -= vote_weight;
 
+                    // Authorizes the Proposal NFT data change.
                     self.nft_proposal_admin.authorize(|| 
                         resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                     );
@@ -778,6 +936,7 @@ blueprint!{
 
                     lp_tokens
                 }
+                // The scenario where the Vote Badge NFT has a `No` vote.
                 Vote::No => {
                     assert!(
                         self.voting_no_vault.amount() >= lp_tokens_allocated,
@@ -789,6 +948,7 @@ blueprint!{
 
                     proposal_data.no_counter -= vote_weight;
 
+                    // Authorizes the Proposal NFT data change.
                     self.nft_proposal_admin.authorize(|| 
                         resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                     );
@@ -800,6 +960,7 @@ blueprint!{
 
                     lp_tokens
                 }
+                // The scenario where the Vote Badge NFT has a `No with veto` vote.
                 Vote::NoWithVeto => {
                     assert!(
                         self.voting_no_with_veto_vault.amount() >= lp_tokens_allocated,
@@ -811,6 +972,7 @@ blueprint!{
 
                     proposal_data.no_with_veto_counter -= vote_weight;
 
+                    // Authorizes the Proposal NFT data change.
                     self.nft_proposal_admin.authorize(|| 
                         resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                     );
@@ -827,6 +989,7 @@ blueprint!{
             return lp_tokens
         }
 
+        /// The method simply retrieves the LP Token amounts within each vote vaults.
         pub fn vault_amounts(
             &self,
         )
@@ -836,22 +999,38 @@ blueprint!{
             info!("No with veto: {:?}", self.voting_no_with_veto_vault.amount());
         }
 
-        pub fn get_tracking_tokens_supply(
-            &self,
-        ) -> Decimal
-        {
-            let liquidity_pool: LiquidityPool = self.liquidity_pool.unwrap().into();
-            let tracking_token_address = liquidity_pool.tracking_token_address();
-            let tracking_tokens_manager: &ResourceManager = borrow_resource_manager!(tracking_token_address);
-            let tracking_amount: Decimal = tracking_tokens_manager.total_supply(); 
-            return tracking_amount
-        }
-
-        /// Checks if a finish condition is reached. Sends funds if such a condition is reached
+        /// Checks if a finish condition is reached.
+        /// 
+        /// This method has a few scenarios.
+        /// 
+        /// * **Scenario 1:** - If there is a simple majority of `Yes` votes casted & the vote threshold is above 30% & the `No with veto`
+        /// votes are less tha 33.4%.
+        /// 
+        /// * **Resolution:** The proposal passes and the Proposal NFT is sent to the liquidity pool to change pool parameters. 
+        /// 
+        /// * **Scenario 2:** - If there is a simple majority of `No` votes casted & the vote threshold is abouve 30%.
+        /// There is no requirement for a `No with veto` condition, since there is already a simply majority within the participating votes.
+        /// 
+        /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// 
+        /// * **Scenario 3:** - If the `No with veto` votes is equal to or greater than 33.4%.
+        /// 
+        /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// 
+        /// * **Scenario 4:** - The time for the Voting Process stage has lapsed.
+        /// 
+        /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// 
+        /// This method does not perform any checks.
+        /// 
+        /// This method does not request any arguments to be passed.
+        /// 
+        /// This method does not return any assets. It evaluates the Proposal NFT in the Voting Process stage.
         pub fn resolve_proposal(
             &mut self
         )
         {
+            // Retrieves vote calculations.
             let yes_vote = self.voting_yes_vault.amount();
             let no_vote = self.voting_no_vault.amount();
             let no_with_veto_vote = self.voting_no_with_veto_vault.amount();
@@ -859,24 +1038,40 @@ blueprint!{
             let yes_counter = yes_vote / participating_vote;
             let no_counter = no_vote / participating_vote;
             let no_with_veto_counter = no_with_veto_vote / participating_vote;
+
+            // Retrieves LiquidityPool component.
             let liquidity_pool: LiquidityPool = self.liquidity_pool.unwrap().into();
+
+            // Retrieves LP Token resource address.
             let tracking_token_address = liquidity_pool.tracking_token_address();
+
+            // Retrieves LP Token data.
             let tracking_tokens_manager: &ResourceManager = borrow_resource_manager!(tracking_token_address);
+
+            // Calculates the vote threshold.
             let tracking_amount: Decimal = tracking_tokens_manager.total_supply();
             let vote_threshold = participating_vote / tracking_amount;
 
+            // Scenario 1
             if yes_counter > no_counter && vote_threshold >= self.vote_quorom && no_with_veto_counter < self.no_with_veto_threshold {
                 
+                // Retrieves the Proposal NFT to be evaluated.
                 let proposal_id = self.proposal_in_voting_period.pop().unwrap();
+
+                // Retrieves the Proposal NFT from the proposal vault.
                 let proposal = self.proposal_vault.take_non_fungible(&proposal_id);
+
+                // Retrieves the Proposal NFT data.
                 let mut proposal_data = proposal.non_fungible::<Proposal>().data();
                 
                 proposal_data.resolution = Resolution::Passed;
                 
+                // Authorizes the Proposal NFT data chnage.
                 self.nft_proposal_admin.authorize(|| 
                     proposal.non_fungible().update_data(proposal_data)
                 );
 
+                // Retrieves the Proposal NFT data again since it the previous has been consumed.
                 let proposal_data = proposal.non_fungible::<Proposal>().data();
                 
                 info!("[Proposal Resolution]: The proposal {:?} has passed!", proposal_id);
@@ -888,11 +1083,16 @@ blueprint!{
                     proposal_data.token_1_weight, proposal_data.token_2_weight, proposal_data.fee_to_pool
                 );
                 
+                // Sends to the liquidity pool.
                 liquidity_pool.resolve_proposal(proposal);
 
+            // Scenario 2
             } else if no_counter > yes_counter && vote_threshold >= self.vote_quorom {
+
                 let proposal_id = self.proposal_in_voting_period.pop().unwrap();
+
                 let proposal = self.proposal_vault.take_non_fungible(&proposal_id);
+
                 let mut proposal_data = proposal.non_fungible::<Proposal>().data();
                 
                 proposal_data.resolution = Resolution::Failed;
@@ -908,10 +1108,13 @@ blueprint!{
 
                 liquidity_pool.resolve_proposal(proposal);
 
+            // Scenario 3
             } else if no_with_veto_counter >= self.no_with_veto_threshold {
 
                 let proposal_id = self.proposal_in_voting_period.pop().unwrap();
+
                 let proposal = self.proposal_vault.take_non_fungible(&proposal_id);
+
                 let mut proposal_data = proposal.non_fungible::<Proposal>().data();
                 
                 proposal_data.resolution = Resolution::Failed;
@@ -927,10 +1130,13 @@ blueprint!{
 
                 liquidity_pool.resolve_proposal(proposal);
 
+            // Scenario 4
             } else if Runtime::current_epoch() > self.voting_end_epoch {
 
                 let proposal_id = self.proposal_in_voting_period.pop().unwrap();
+
                 let proposal = self.proposal_vault.take_non_fungible(&proposal_id);
+
                 let mut proposal_data = proposal.non_fungible::<Proposal>().data();
                 
                 proposal_data.resolution = Resolution::Failed;
@@ -947,6 +1153,19 @@ blueprint!{
             info!("[Proposal Resolution]: No end condition reached");
         }
 
+        /// This method allows user to retrieve the LP Tokens
+        /// 
+        /// This method performs a single check:
+        /// 
+        /// * **Check 1:** - Checks that the Vote Badge NFT belongs to this protocol.
+        /// 
+        /// # Arguments:
+        /// 
+        /// * `vote_badge` (Bucket) - The bucket that contains the Vote Badge NFT.
+        /// 
+        /// # Returns:
+        /// 
+        /// * `Bucket` - The LP Tokens redeemed.
         pub fn retrieve_lp_tokens(
             &mut self,
             vote_badge: Bucket
@@ -954,29 +1173,48 @@ blueprint!{
         {
             assert_eq!(vote_badge.resource_address(), self.vote_badge_address, "Incorrect badge");
 
+            // Retrieves the Vote Badge NFT data.
             let vote_badge_data = vote_badge.non_fungible::<VoteBadge>().data();
+
             let amount = vote_badge_data.lp_tokens_allocated;
             let vote = vote_badge_data.vote;
 
+            // Matches the vote to its respective scenarios.
             match vote {
+                // Scenario when the vote casted was a `Yes`.
                 Vote::Yes => {
+                    // Redeems the LP Token.
                     let return_lp: Bucket = self.voting_yes_vault.take(amount);
+
+                    // Burns the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(|| vote_badge.burn());
+
                     return_lp
                 }
+                // Scenario when the vote casted was a `No`.
                 Vote::No => {
+                    // Redeems the LP Token.
                     let return_lp: Bucket = self.voting_no_vault.take(amount);
+
+                    // Burns the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(|| vote_badge.burn());
+
                     return_lp
                 }
+                // Scenario when the vote casted was a `No with veto`.
                 Vote::NoWithVeto => {
+                    // Redeems the LP Token.
                     let return_lp: Bucket = self.voting_no_with_veto_vault.take(amount);
+
+                    // Burns the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(|| vote_badge.burn());
+
                     return_lp
                 }
             }
         }
 
+        /// This method submits the resource address of the Proposal NFT to the liquidity pool.
         pub fn push_nft_proposal_address(
             &self
         )
