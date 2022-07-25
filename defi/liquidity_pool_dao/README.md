@@ -185,7 +185,7 @@ Since `$ACC_ADDRESS2` has provided 50 XRD as well, which represents `amount1=50`
 
 Now how can we tell the owernship percentage between these two accounts? Since each owns 100 LP Tokens and now there are a total supply of 200 LP Tokens minted, each now own 50% of the liquidity pool.
 
-Let's continue on with `$ACC_ADDRESS3` and add liquidity for the account by running the [resim run ./transactions/add_liquidity_from_acc3.rtm](resim run ./transactions/add_liquidity_from_acc3.rtm).
+Let's continue on with `$ACC_ADDRESS3` and add liquidity for the account by running the [./transactions/add_liquidity_from_acc3.rtm](./transactions/add_liquidity_from_acc3.rtm).
 
 ```sh
 resim set-default-account $ACC_ADDRESS3 $PRIV_KEY3
