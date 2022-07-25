@@ -1,2 +1,2 @@
-CALL_METHOD ComponentAddress("0213ee9469593b72bedc0f859b9e07840baac2ad63c19a887cf59e") "get_pool_info";
-CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("02e06c3bb4552141a89b3043ec76023d6849d37067339a1ed1024c") "deposit_batch";
+CALL_METHOD ComponentAddress("${COMPONENT}") "get_pool_info";
+

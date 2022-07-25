@@ -516,11 +516,12 @@ blueprint!{
         /// 
         /// # Note:
         /// 
-        /// * Design question: Not sure if should provide 1 token per LP or have the LP token itself be used to vote.
-        /// * If use LP token to vote, then they can vote different selection i.e allocate portions between Yes and No... but why would they wanna do this?
-        /// * Same problem will occur if provide voting tokens for LP. And if each LP only get 1, then it would be unfair for LP that has most ownership in the pool?
+        /// * I've used fungible LP Tokens as a way to cast votes. I understand that this can create a situation in which LPs can disperse their LP Tokens 
+        /// across multiple votes. Although, I did not find a good reason to prevent LPs from doing that since doing so seems moot. Votes counted this way is 
+        /// quite elegant as the LPs receive LP Token that represent their ownership of the liquidity pool. Therefore, their votes will be weighted as such, giving 
+        /// more influence to those who have more skin in the game. 
         /// * Also note that there are two counters. One are the vaults where LP Tokens are allocated towards with each respective vote. The second are the data fields
-        /// from the Proposal NFT to count votes. The reason for this is that the NFT data fields can be accessed outside of  
+        /// from the Proposal NFT to count votes. However, the vote vaults only count nominal amount and the Proposal NFT data field represents weighted amounts.   
         pub fn vote_proposal(
             &mut self,
             lp_tokens: Bucket,
@@ -1019,15 +1020,19 @@ blueprint!{
         /// * **Scenario 2:** - If there is a simple majority of `No` votes casted & the vote threshold is above 30%.
         /// There is no requirement for a `No with veto` condition, since there is already a simply majority within the participating votes.
         /// 
-        /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// * **Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
         /// 
         /// * **Scenario 3:** - If the `No with veto` votes is equal to or greater than 33.4%.
         /// 
-        /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// * **Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
         /// 
         /// * **Scenario 4:** - The time for the Voting Period stage has lapsed.
         /// 
-        /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// * **Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
+        /// 
+        /// * **Scenario 5:** - No condition has reached.
+        /// 
+        /// * **Resolution:** - Nothing happens. 
         /// 
         /// This method does not perform any checks.
         /// 
@@ -1083,7 +1088,7 @@ blueprint!{
                 let proposal_data = proposal.non_fungible::<Proposal>().data();
                 
                 info!("[Proposal Resolution]: The proposal {:?} has passed!", proposal_id);
-                info!("[Proposal Resolution]: 'No' count ({:?}) has the simple majority against the 'Yes' count ({:?}).",
+                info!("[Proposal Resolution]: 'Yes' count ({:?}) has the simple majority against the 'No' count ({:?}).",
                     yes_counter, no_counter
                 );
                 info!("[Proposal Resolution]: The pool paramaters has now changed to:");
@@ -1156,9 +1161,13 @@ blueprint!{
                 liquidity_pool.resolve_proposal(proposal);
 
                 info!("[Proposal Resolution]: The proposal {:?} has run out of time and failed!", proposal_id);
-            }
 
-            info!("[Proposal Resolution]: No end condition reached");
+            // Scenario 5
+            } else {
+
+                info!("[Proposal Resolution]: No end condition reached");
+
+            }
         }
 
         /// This method allows LPs to retrieve the LP Tokens.
@@ -1199,8 +1208,11 @@ blueprint!{
                 Vote::Yes => {
                     // Removes vote
                     if self.proposal_in_voting_period.contains(&proposal_id) {
+
                         let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+
                         proposal_data.yes_counter -= vote_weight;
+
                         self.nft_proposal_admin.authorize(|| 
                             resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                         );
@@ -1222,8 +1234,11 @@ blueprint!{
                 Vote::No => {
                     // Removes vote
                     if self.proposal_in_voting_period.contains(&proposal_id) {
+
                         let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+
                         proposal_data.no_counter -= vote_weight;
+
                         self.nft_proposal_admin.authorize(|| 
                             resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                         );
@@ -1245,8 +1260,11 @@ blueprint!{
                 Vote::NoWithVeto => {
                     // Removes vote
                     if self.proposal_in_voting_period.contains(&proposal_id) {
+
                         let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+
                         proposal_data.no_with_veto_counter -= vote_weight;
+
                         self.nft_proposal_admin.authorize(|| 
                             resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                         );

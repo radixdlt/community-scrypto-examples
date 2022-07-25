@@ -1,9 +1,9 @@
 ## DAO-style liquidity pools
-This package includes two blueprints: `LiquidtyPool` and `LiquidityPoolDAO`. It implements a DAO governance to allows Liquidity Providers (LP) to change the parameters of the pool. This project was inspired by [Osmosis](https://osmosis.gitbook.io/o/) DEX on Cosmos. The `LiquidtyPool` blueprint is mostly Omar's work from his RaDEX submission to the DEX challenge (no need to reinvent the wheel).
+This package includes two blueprints: `LiquidtyPool` and `LiquidityPoolDAO`. It implements a DAO governance to allows Liquidity Providers (LP) to change the parameters of the pool. This project was inspired by [Osmosis](https://osmosis.gitbook.io/o/) DEX on Cosmos. The `LiquidtyPool` blueprint is mostly Omar's work from his [RaDEX submission](https://github.com/radixdlt/scrypto-challenges/tree/main/1-exchanges/RaDEX) to the DEX challenge (no need to reinvent the wheel).
 
 Osmosis is an AMM protocol built using the Cosmos SDK that will allow developers to design, build, and deploy their own customized AMMs. Osmosis is designed such that the most efficient solution is reachable through the process of experimentation. It achieves this by offering deep customizability to AMM designers, and a governance mechanism by which each AMM pool’s stakeholders (i.e. liquidity providers) can govern and direct their pools. The Osmo token is a governance token and primarily used for voting on protocol upgrades, allocating liquidity mining rewards for liquidity pools, and setting the base network swap fee.
 
-Currently, you can only change token weights and swap fees. 
+Currently, you can only change token weights and swap fees. How the voting proposal and voting process works is explained in the [Governance](#governance) section.
 
 ## Main Features
 * **Propose protocol change** - Allows LPs to propose a change to the pool parameters.
@@ -85,6 +85,7 @@ export PUB_KEY3=$(echo "$OP3" | sed -nr "s/Public key: ([[:alnum:]_]+)/\1/p")
 export ACC_ADDRESS3=$(echo "$OP3" | sed -nr "s/Account component address: ([[:alnum:]_]+)/\1/p")
 ```
 
+Let's also create an environment variable for XRD for convenience. 
 
 ```sh
 export XRD=030000000000000000000000000000000000000000000000000004
@@ -263,7 +264,7 @@ Logs: 12
 ├─ [INFO ] [Proposal Info]: Yes: 0
 ├─ [INFO ] [Proposal Info]: No: 0
 ├─ [INFO ] [Proposal Info]: No with veto: 0
-├─ [INFO ] [Proposal Info]: Abstain: 0
+├─ [INFO ] [Proposal Info]: Abstain: 1
 ├─ [INFO ] [Proposal Info]: Current stage of the proposal: DepositPhase
 ├─ [INFO ] [Proposal Info]: Voting period ends in: 10 epoch
 ├─ [INFO ] [Proposal Info]: Deposit Phase period ends in: 5 epoch
@@ -332,10 +333,10 @@ Logs: 5
 └─ [INFO ] [Voting]: Your badge proof is 035ef327d7814deb897a38e5bb334ad041c6ac8029f666ed43bc6c
 ```
 
-Calling this method will provide us with a Vote Badge NFT. We can view our Vote Badge NFT by running the following transaction manifest file [./transactions/check_vote.rtm](./transactions/check_vote.rtm).
+Calling this method will provide us with a Vote Badge NFT. We can view our Vote Badge NFT by running the following transaction manifest file [./transactions/acc3_acc3_check_vote.rtm](./transactions/acc3_check_vote.rtm).
 
 ```sh
-resim run ./transactions/check_vote.rtm
+resim run ./transactions/acc3_check_vote.rtm
 ```
 ```sh
 Logs: 4
@@ -362,7 +363,7 @@ Logs: 12
 ├─ [INFO ] [Proposal Info]: Yes: 0.333333333333333333
 ├─ [INFO ] [Proposal Info]: No: 0
 ├─ [INFO ] [Proposal Info]: No with veto: 0
-├─ [INFO ] [Proposal Info]: Abstain: 0.666666666666666666
+├─ [INFO ] [Proposal Info]: Abstain: 0.666666666666666667
 ├─ [INFO ] [Proposal Info]: Current stage of the proposal: VotingPeriod
 ├─ [INFO ] [Proposal Info]: Voting period ends in: 10 epoch
 ├─ [INFO ] [Proposal Info]: Deposit Phase period ends in: 5 epoch
@@ -440,13 +441,191 @@ Logs: 12
 └─ [INFO ] [Proposal Info]: Resolution: InProcess
 ```
 
-
 ### Recasting our vote
 
-```sh
-resim run ./transactions/recast_vote_no.rtm
+Since all three accounts have casted their votes, we can now resolve this proposal. However, to show more functionalities, let's first take a look at what recasting our vote looks like.
+
+The arguments for calling `recast_vote` is as follows:
+```rust
+pub fn recast_vote(
+    &mut self,
+    vote_badge: Proof,
+    vote_submission: Vote,
+)
 ```
+
+And we can run the following transaction manifest file [./transactions/acc2_recast_vote_yes.rtm](./transactions/acc2_recast_vote_yes.rtm)
+
+```sh
+resim run ./transactions/acc2_recast_vote_yes.rtm
+```
+```sh
+Logs: 5
+├─ [INFO ] [Vote Recast]: Your allocations towards your 'No' cast has been decreased by 100.
+├─ [INFO ] [Vote Recast]: Your weighted vote towards 'No' cast has been decreased by 0.333333333333333333
+├─ [INFO ] [Vote Recast]: You have voted 'Yes' for the proposal.
+├─ [INFO ] [Vote Recast]: The weight of your vote is 0.333333333333333333.
+└─ [INFO ] [Vote Recast]: The current count for the vote is: Yes - 0.666666666666666666 | No - 0.333333333333333333 | No with veto - 0 | Abstain - 0.000000000000000001
+```
+We can check our proposal again.
+
+```sh
+resim run ./transactions/check_proposal.rtm
+```
+```sh
+Logs: 12
+├─ [INFO ] [Proposal Info]: Proposal ID: 0bac4138262c7c050f46dfdc67acfcd8
+├─ [INFO ] [Proposal Info]: Token 1 weight: 0.7
+├─ [INFO ] [Proposal Info]: Token 2 weight: 0.3
+├─ [INFO ] [Proposal Info]: Fee to Pool: 0.01
+├─ [INFO ] [Proposal Info]: Amount required to be deposited to advance this proposal: 500
+├─ [INFO ] [Proposal Info]: Deposit resource: 030000000000000000000000000000000000000000000000000004
+├─ [INFO ] [Proposal Info]: Amount deposited to this proposal: 500
+├─ [INFO ] [Proposal Info]: Yes: 0.666666666666666666
+├─ [INFO ] [Proposal Info]: No: 0.333333333333333333
+├─ [INFO ] [Proposal Info]: No with veto: 0
+├─ [INFO ] [Proposal Info]: Abstain: 0.000000000000000001
+├─ [INFO ] [Proposal Info]: Current stage of the proposal: VotingPeriod
+├─ [INFO ] [Proposal Info]: Voting period ends in: 10 epoch
+├─ [INFO ] [Proposal Info]: Deposit Phase period ends in: 5 epoch
+├─ [INFO ] [Proposal Info]: Current epoch: 0
+└─ [INFO ] [Proposal Info]: Resolution: InProcess
+```
+
+And check our Vote Bage NFT.
+
+```sh
+resim call-method $DAO check_vote 1,$PROOF
+```
+```sh
+Logs: 4
+├─ [INFO ] [Vote Info]: Proposal: 0bac4138262c7c050f46dfdc67acfcd8
+├─ [INFO ] [Vote Info]: Vote: Yes
+├─ [INFO ] [Vote Info]: Vote weight: 0.333333333333333333
+└─ [INFO ] [Vote Info]: LP tokens allocated: 100
+```
+
+### Retrieving LP Token
+
+At this point we can resolve the proposal and since the proposal currently has a simply majority vote of `Yes` the proposal will pass. But let's take the opportunity to take a look at what happens when an LP retrieves their LP Token in the middle of a Voting Period.
+
+Let's run the transaction manifest file
+
+```sh
+resim run ./transactions/acc2_retrieve_lp_tokens.rtm
+```
+```sh
+Logs: 3
+├─ [INFO ] [Retrieve LP Tokens]: You have withdrawn 100 LP Tokens
+├─ [INFO ] [Retrieve LP Tokens]: Your `Yes` vote weight has been decreased by 0.333333333333333333
+└─ [INFO ] [Retrieve LP Tokens]: Your Vote Badge NFT has been burnt.
+```
+Let's check the proposal again
+
+```sh
+resim run ./transactions/check_proposal.rtm
+```
+```sh
+Logs: 12
+├─ [INFO ] [Proposal Info]: Proposal ID: 0bac4138262c7c050f46dfdc67acfcd8
+├─ [INFO ] [Proposal Info]: Token 1 weight: 0.7
+├─ [INFO ] [Proposal Info]: Token 2 weight: 0.3
+├─ [INFO ] [Proposal Info]: Fee to Pool: 0.01
+├─ [INFO ] [Proposal Info]: Amount required to be deposited to advance this proposal: 500
+├─ [INFO ] [Proposal Info]: Deposit resource: 030000000000000000000000000000000000000000000000000004
+├─ [INFO ] [Proposal Info]: Amount deposited to this proposal: 500
+├─ [INFO ] [Proposal Info]: Yes: 0.333333333333333333
+├─ [INFO ] [Proposal Info]: No: 0.333333333333333333
+├─ [INFO ] [Proposal Info]: No with veto: 0
+├─ [INFO ] [Proposal Info]: Abstain: 0.333333333333333334
+├─ [INFO ] [Proposal Info]: Current stage of the proposal: VotingPeriod
+├─ [INFO ] [Proposal Info]: Voting period ends in: 10 epoch
+├─ [INFO ] [Proposal Info]: Deposit Phase period ends in: 5 epoch
+├─ [INFO ] [Proposal Info]: Current epoch: 0
+└─ [INFO ] [Proposal Info]: Resolution: InProcess
+```
+
+Since your Vote Badge NFT has been burnt we can review our wallet.
+
+```sh
+resim show $ACC_ADDRESS2
+```
+```sh
+Resources:
+├─ { amount: 0, resource address: 035ef327d7814deb897a38e5bb334ad041c6ac8029f666ed43bc6c, name: "Vote Badge", symbol: "VB" }
+├─ { amount: 100, resource address: 034b34b5e68d5de29bee9fa7e11d94503e078c28c9a27e404125a3, name: "03f59d354b010c9c003dd8ce40a28cbd8e7f1fd8d11218f1d1fc39-XRD LP Tracking Token", symbol: "TT" }
+├─ { amount: 999950, resource address: 030000000000000000000000000000000000000000000000000004, name: "Radix", symbol: "XRD" }
+└─ { amount: 99950, resource address: 03f59d354b010c9c003dd8ce40a28cbd8e7f1fd8d11218f1d1fc39 }
+```
+
+We can now see that we've retrieved `$ACC_ADDRESS2` LP Tokens and we no longer have a Vote Badge NFT.
 
 ### Resolving our proposal
 
+To show what proposal resolution looks like let's have `$ACC_ADDRESS2` recast their vote again.
 
+This time `$ACC_ADDRESS2` will be voting `Yes` by running the transaction manifest file [./transactions/acc2_vote_yes.rtm](./transactions/acc2_vote_yes.rtm)
+
+```sh
+resim run ./transactions/acc2_vote_yes.rtm
+```
+```sh
+Logs: 5
+├─ [INFO ] [Voting]: The current count for the vote is: Yes - 0.666666666666666666 | No - 0.333333333333333333 | No with veto - 0 | Abstain - 0.000000000000000001
+├─ [INFO ] [Voting]: You have voted 'Yes' for the proposal.
+├─ [INFO ] [Voting]: The weight of your vote is 0.333333333333333333.
+├─ [INFO ] [Voting]: You've received a badge for your vote!
+└─ [INFO ] [Voting]: Your badge proof is 035ef327d7814deb897a38e5bb334ad041c6ac8029f666ed43bc6c
+```
+
+If you wish, you can check the proposal once more, but for the sake of brevity, we'll now begin to move on to passing the proposal since it now has a simply majority vote of `Yes`.
+
+Let's first check again what our pool parameters are to see how the changes happen with this proposal being passed. Run the transactions manifest file [./transactions/get_pool_info.rtm](./transactions/get_pool_info.rtm)
+
+```sh
+resim run ./transactions/get_pool_info.rtm
+```
+```sh
+Logs: 3
+├─ [INFO ] Token 1 weight: 0.5
+├─ [INFO ] Token 2 weight: 0.5
+└─ [INFO ] Pool fee: 0.02
+```
+
+[./transactions/resolve_proposal.rtm](./transactions/resolve_proposal.rtm)
+
+```sh
+resim run ./transactions/resolve_proposal.rtm
+```
+```sh
+Logs: 5
+├─ [INFO ] [Proposal Resolution]: The proposal 0bac4138262c7c050f46dfdc67acfcd8 has passed!
+├─ [INFO ] [Proposal Resolution]: 'Yes' count (0.666666666666666666) has the simple majority against the 'No' count (0.333333333333333333).
+├─ [INFO ] [Proposal Resolution]: The pool paramaters has now changed to:
+├─ [INFO ] [Proposal Resolution]: Token 1 weight: 0.7 | Token 2 weight: 0.3 | Fee to pool: 0.01
+```
+
+As the old Russian adage goes, "trust, but verify."
+
+```sh
+resim run ./transactions/get_pool_info.rtm
+```
+```sh
+Logs: 3
+├─ [INFO ] Token 1 weight: 0.7
+├─ [INFO ] Token 2 weight: 0.3
+└─ [INFO ] Pool fee: 0.01
+```
+
+Success! That's the rundown of how proposals are advanced through different stage. The Proposal NFT has now been burnt and LPs and the protocol has now succesfully been changed through a DAO governance vote.
+
+So what happens when the proposal fails? The Proposal is simply burnt!
+
+```sh
+Logs: 3
+├─ [INFO ] [Proposal Resolution]: The proposal 0e645ff3d871a92f25182dcdea985371 has failed!
+├─ [INFO ] [Proposal Resolution]: 'No' count (1) has the simple majority against the 'Yes' count (0).
+```
+
+But let's get back to the scenario where the proposal has passed. What happens to the token if the they are over or under the new weights? Currently, nothing happens to the tokens.
+Theoretically, one asset would be more expensive or cheaper priced than the rest of the market when the weight changes. Market forces takes place and arbitrageurs can take advantage of the free value until it meets equilibrium with the rest of the market. Although, I've yet to see this happen in real time.

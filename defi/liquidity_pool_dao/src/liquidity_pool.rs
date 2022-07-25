@@ -798,7 +798,7 @@ blueprint!{
         /// 
         /// * When the pool parameter is changed, nothing happens to the current supply in the pool.
         /// * One asset would be more expensive or cheaper priced than the rest of the market when the weight changes. 
-        /// * Market forces takes place and take advantage of the free value until it meets equilibrium with the rest of the market.
+        /// * Market forces takes place and arbitrageurs can take advantage of the free value until it meets equilibrium with the rest of the market.
         pub fn resolve_proposal(
             &mut self,
             proposal: Bucket
@@ -821,9 +821,9 @@ blueprint!{
                 Resolution::Passed => {
                     // Pool parameter changes.
                     self.token_1_weight = proposal_data.token_1_weight;
-                    self.token_1_weight = proposal_data.token_2_weight;
+                    self.token_2_weight = proposal_data.token_2_weight;
                     self.fee_to_pool = proposal_data.fee_to_pool;
-                    
+          
                     // Proposal NFT is burnt.
                     self.nft_proposal_admin.authorize(|| proposal.burn());
                 }
@@ -835,7 +835,7 @@ blueprint!{
                 }
                 // Scenario 3
                 Resolution::InProcess => {
-                    info!("The vote is still in progress.")
+                    info!("The vote is still in progress.");
                 }
             }
         }

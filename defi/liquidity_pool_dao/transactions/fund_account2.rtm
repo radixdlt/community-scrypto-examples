@@ -3,3 +3,5 @@ CALL_METHOD ComponentAddress("${ACC_ADDRESS1}") "withdraw_by_amount" Decimal("20
 TAKE_FROM_WORKTOP Decimal("100000") ResourceAddress("${USD}") Bucket("bucket1");
 CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS2}") "deposit" Bucket("bucket1");
 
+TAKE_FROM_WORKTOP Decimal("100000") ResourceAddress("${USD}") Bucket("bucket2");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS3}") "deposit" Bucket("bucket2");
