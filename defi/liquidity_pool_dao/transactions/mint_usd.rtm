@@ -1,0 +1,2 @@
+CALL_FUNCTION PackageAddress("010000000000000000000000000000000000000000000000000001") "System" "new_resource" Enum("Fungible", 18u8) HashMap<String, String>() HashMap<Enum, Tuple>(Enum("Withdraw"), Tuple(Enum("AllowAll"), Enum("LOCKED"))) Some(Enum("Fungible", Decimal("1000000")));
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS1}") "deposit_batch";

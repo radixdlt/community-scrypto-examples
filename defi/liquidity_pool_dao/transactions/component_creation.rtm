@@ -1,0 +1,6 @@
+CALL_METHOD ComponentAddress("${ACC_ADDRESS1}") "withdraw_by_amount" Decimal("50") ResourceAddress("030000000000000000000000000000000000000000000000000004");
+TAKE_FROM_WORKTOP_BY_AMOUNT Decimal("50") ResourceAddress("030000000000000000000000000000000000000000000000000004") Bucket("bucket1");
+CALL_METHOD ComponentAddress("${ACC_ADDRESS1}") "withdraw_by_amount" Decimal("50") ResourceAddress("${USD}");
+TAKE_FROM_WORKTOP_BY_AMOUNT Decimal("50") ResourceAddress("${USD}") Bucket("bucket2");
+CALL_FUNCTION PackageAddress("${PACKAGE}") "LiquidityPool" "new" Decimal("0.5") Decimal("0.5") Bucket("bucket1") Bucket("bucket2") Decimal("0.02");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS1}") "deposit_batch";

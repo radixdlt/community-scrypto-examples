@@ -1,0 +1,2 @@
+CALL_METHOD ComponentAddress("${DAO}") "propose" Decimal("0.7") Decimal("0.3") Decimal("0.01");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS1}") "deposit_batch";
