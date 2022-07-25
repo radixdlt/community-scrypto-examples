@@ -128,13 +128,13 @@ The `LiquiduityPool` component calls for a few arguments in order for it to be i
 The arguments we must pass are as follows:
 
 ```rust
-        pub fn new(
-            token_1_weight: Decimal,
-            token_2_weight: Decimal,
-            token1: Bucket,
-            token2: Bucket,
-            fee_to_pool: Decimal
-        ) 
+pub fn new(
+    token_1_weight: Decimal,
+    token_2_weight: Decimal,
+    token1: Bucket,
+    token2: Bucket,
+    fee_to_pool: Decimal
+) 
 ```
 
 The transactions manifest file [./transactions/component_creation.rtm](./transactions/component_creation.rtm) already have a predetermined set of arguments that I've passed for demonstration purposes. For simplicity, I passed the weight for Token 1 to be 50%, the weight for Token 2 to be 50%, and likewise and equally, the amounts for each tokens to be 50. Finally, I set the swap fee to 2%. 
