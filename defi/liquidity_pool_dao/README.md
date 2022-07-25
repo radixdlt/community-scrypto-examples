@@ -51,9 +51,9 @@ The voting period is currently 10 epoch. Again, the choice of using 10 epoch is 
 
 There are four criteria to passing a proposal:
 1. A minimum deposit of 500 XRD is required for the proposal to enter the voting period.
-2. The deposit must be reached within 5 epoch.
+2. The deposit must be reached within 5 epochs.
 3. A minimum of 30% of the protocol's voting power (quorum) is required to participate to make the proposal valid.
-4. A simple majority (greater than 50%) of the participating voting power must back the 'Yes' vote within 10 epoch.
+4. A simple majority (greater than 50%) of the participating voting power must back the 'Yes' vote within 10 epochs.
 5. Less than 33.4% of participating voting power votes 'No with veto'
 
 * The `Yes` vote signifies support of the proposal.
@@ -62,7 +62,7 @@ There are four criteria to passing a proposal:
 system by abusing or spamming pointless proposals just to send a message. 
 
 ### Deposit fee
-The deposit fee asset is chosen by default as XRD to encourage the utilizaiton of the XRD token. Currently, there is no use for the deposit fee and can be considered burnt.
+The deposit fee asset is chosen by default as XRD to encourage the utilization of the XRD token. Currently, there is no use for the deposit fee and can be considered burnt.
 
 ## Demonstration
 
