@@ -39,7 +39,7 @@ The Vote Badge NFT will be required to be deposited if LPs wish to retrieve thei
 ### Governance
 I've primarily followed how governance is done on Cosmos which can be viewed [here](https://github.com/osmosis-labs/governance/blob/main/overview.md).
 
-The basic gestalt is that there is an on-chain governance mechanism where LPs can participate in on-chain governance by creating and voting for governance proposals. These proposal can change the protocol pool parameters. Currently, only the token weights and swap fees can be changed, but can be easily implemented depending on your needs. Only LPs can participate in the creation and voting of governance proposal. 
+The basic gestalt is that there is an on-chain governance mechanism where LPs can participate in on-chain governance by creating and voting for governance proposals. These proposal can change the protocol pool parameters. Currently, only the token weights and swap fees can be changed, but additional things can be easily implemented depending on your needs. Only LPs can participate in the creation and voting of governance proposal. 
 
 There are two phases to the governance process: 
 1. Deposit phase.
@@ -49,7 +49,7 @@ During the deposit phase where a proposal is being promoted, a minimum of 500 XR
 
 The voting period is currently 10 epoch. Again, the choice of using 10 epoch is for demonstration purposes only. During the voting period, participants may select a vote of either 'Yes', 'No', or 'No with veto'. Voters may change their vote at any time before the voting period ends.
 
-There are four criteria to passing a proposal:
+There are five criterias to passing a proposal:
 1. A minimum deposit of 500 XRD is required for the proposal to enter the voting period.
 2. The deposit must be reached within 5 epochs.
 3. A minimum of 30% of the protocol's voting power (quorum) is required to participate to make the proposal valid.
