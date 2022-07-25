@@ -1,0 +1,4 @@
+CALL_METHOD ComponentAddress("${ACC_ADDRESS2}") "withdraw_by_amount" Decimal("1") ResourceAddress("${PROOF}");
+TAKE_FROM_WORKTOP_BY_AMOUNT Decimal("1") ResourceAddress("${PROOF}") Bucket("bucket1");
+CALL_METHOD ComponentAddress("${DAO}") "retrieve_lp_tokens" Bucket("bucket1");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS2}") "deposit_batch";

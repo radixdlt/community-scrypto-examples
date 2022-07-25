@@ -1,2 +1,2 @@
-CALL_METHOD ComponentAddress("${DAO}") "check_proposal" NonFungibleId("${PROPOSAL_ID");
+CALL_METHOD ComponentAddress("${DAO}") "check_proposal" NonFungibleId("${PROPOSAL_ID}");
 

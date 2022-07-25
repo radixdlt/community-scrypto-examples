@@ -1,0 +1,2 @@
+CALL_METHOD ComponentAddress("0256f27595a58bcd1ef090ff207ae920194f5a0a3eaf7ba52839f7") "resolve_proposal";
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("02e06c3bb4552141a89b3043ec76023d6849d37067339a1ed1024c") "deposit_batch";

@@ -75,9 +75,9 @@ blueprint!{
     /// automatically instantiated when a liquidity pool is created. It has a couple NFTs that faciliates the governance proposal and its voting. 
     /// There are two phases to the governance process. One is the "Deposit Phase" to which LP's will decide which proposal is worth voting for
     /// by depositing XRD to a vault contained within the `LiquidityPoolDAO` component. It is still undetermined how the fees will be used for.
-    /// Once a minimum of 500 XRD has been deposited, the proposal can advance to the next stage; the Voting Process.  Proposal NFT's are minted 
-    /// and are contained within the `proposal_vault`. Multiple proposals can be created. However, only one can be advanced for the Voting Process
-    /// stage. There is a time limit for each stage. Currently, it is set to 5 epochs for the Deposit Phase and 10 epochs for the Voting Process
+    /// Once a minimum of 500 XRD has been deposited, the proposal can advance to the next stage; the Voting Period.  Proposal NFT's are minted 
+    /// and are contained within the `proposal_vault`. Multiple proposals can be created. However, only one can be advanced for the Voting Period
+    /// stage. There is a time limit for each stage. Currently, it is set to 5 epochs for the Deposit Phase and 10 epochs for the Voting Period
     /// stage. This is for demonstration purposes only. At least 30% of the LPs will need to vote in order for there to be a resolution. There is also
     /// a `No with veto` threshold of 33.4% that must be maintained or else the proposal will not pass. While `No` votes signlas a disagreement to the 
     /// proposal, a `No with veto` signals a significantly stronger disagreement, where you may feel the proposal is actively harming the governance 
@@ -97,19 +97,19 @@ blueprint!{
         voting_no_vault: Vault,
         /// This is the vault where LP Tokens are allocated towards a `No with veto` vault.
         voting_no_with_veto_vault: Vault,
-        /// This is the time constraint for the Voting Process.
+        /// This is the time constraint for the Voting Period.
         voting_end_epoch: u64,
         /// This is the minimum amount of votes that need to resolve the proposal.
         vote_quorom: Decimal,
         /// This is the maximum amount of `No with veto` votes that a proposal can have.
         no_with_veto_threshold: Decimal,
-        /// This is the minimum XRD required to advance the proposal from the Deposit Phase to the Voting Process stage.
+        /// This is the minimum XRD required to advance the proposal from the Deposit Phase to the Voting Period stage.
         minimum_xrd: Decimal,
         /// This is where the XRD deposits will be contained. Undetermined yet how this will be used.
         xrd_vault: Vault,
         /// This is the time constraint for the Deposit Phase.
         proposal_end_epoch: u64,
-        /// This is where proposal(s) who have advanced to the Voting Process will be contained. Only one can advance to the Voting Process at a time. 
+        /// This is where proposal(s) who have advanced to the Voting Period will be contained. Only one can advance to the Voting Period at a time. 
         proposal_in_voting_period: Vec<NonFungibleId>,
         /// This is the component address of the liquidity pool to change the pool parameter if the proposal succeeds.
         liquidity_pool: Option<ComponentAddress>,
@@ -224,7 +224,7 @@ blueprint!{
             // Retrieves the resource address of the tracking_token
             let tracking_token_address = liquidity_pool.tracking_token_address();
 
-            asserts_eq!(lp_proof.resource_address(), tracking_token_address, 
+            assert_eq!(lp_proof.resource_address(), tracking_token_address, 
                 "LP Token does not belong to this liquidity pool"
             );
             assert!((token_1_weight + token_2_weight) <= dec!("1.0"), 
@@ -282,7 +282,7 @@ blueprint!{
             info!("[Governance Proposal]: The conditions to advance this proposal to the Voting Period are as follows:"); 
             info!("[Governance Proposal]: Condition 1 - A minimum of {:?} in XRD must be deposited.", 
                 self.minimum_xrd);
-            info!("[Governance Proposal]: The voting process will end in {:?} epoch.", self.proposal_end_epoch);
+            info!("[Governance Proposal]: The Voting Period will end in {:?} epoch.", self.proposal_end_epoch);
 
             // Puts the Proposal NFT ID in its respective vault.
             self.proposal_vault.put(nft_proposal);
@@ -297,7 +297,7 @@ blueprint!{
         /// * **Check 1:** Checks that the proposal exists.
         /// * **Check 2:** Checks that the bucket passed contains XRD.
         /// * **Check 3:** Checks that the user has not deposited more than what is required to advance the proposal.
-        /// * **Check 4:** Checks that no more than one Proposal NFT can be advanced to the Voting Process.
+        /// * **Check 4:** Checks that no more than one Proposal NFT can be advanced to the Voting Period.
         /// 
         /// # Arguments:
         /// 
@@ -361,10 +361,10 @@ blueprint!{
                     resource_manager.update_non_fungible_data(&proposal_id, proposal_data)
                 );
 
-                // This helper function is used to ensure that no more than one Proposal NFT has advanced to the Voting Process.
+                // This helper function is used to ensure that no more than one Proposal NFT has advanced to the Voting Period.
                 self.check_voting_stage();
 
-                // Pushes the Proposal NFT that has advanced to the Voting Process.
+                // Pushes the Proposal NFT that has advanced to the Voting Period.
                 self.proposal_in_voting_period.push(proposal_id);
 
                 assert_eq!(self.proposal_in_voting_period.len(), 1, "Cannot have more than one proposal in the voting period.");
@@ -454,21 +454,29 @@ blueprint!{
             );
             let resource_manager = borrow_resource_manager!(self.nft_proposal_address);
             let proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
+            info!("[Proposal Info]: Proposal ID: {:?}", proposal_id);
             info!("[Proposal Info]: Token 1 weight: {:?}", proposal_data.token_1_weight);
             info!("[Proposal Info]: Token 2 weight: {:?}", proposal_data.token_2_weight);
             info!("[Proposal Info]: Fee to Pool: {:?}", proposal_data.fee_to_pool);
+            info!("[Proposal Info]: Amount required to be deposited to advance this proposal: {:?}", self.minimum_xrd);
+            info!("[Proposal Info]: Deposit resource: {:?}", self.xrd_vault.resource_address());
             info!("[Proposal Info]: Amount deposited to this proposal: {:?}", proposal_data.amount_deposited);
             info!("[Proposal Info]: Yes: {:?}", proposal_data.yes_counter);
             info!("[Proposal Info]: No: {:?}", proposal_data.no_counter);
             info!("[Proposal Info]: No with veto: {:?}", proposal_data.no_with_veto_counter);
-            info!("[Proposal Info]: Current stage of the proposal: {:?}", proposal_data.stage);
-            info!("[Proposal Info]: Voting period ends in: {:?} epoch", proposal_data.vote_ends_in_epoch);
-            info!("[Proposal Info]: Deposit Phase period ends in: {:?} epoch", proposal_data.proposal_end_epoch);
+            info!("[Proposal Info]: Abstain: {:?}", 
+                (
+                    dec!("1.0") - (proposal_data.yes_counter + proposal_data.no_counter + proposal_data.no_with_veto_counter)
+                )
+            );
+            info!("[Proposal Info]: Current stage of the proposal: {:?}", proposal_data.vote_ends_in_epoch);
+            info!("[Proposal Info]: Deposit Phase period ends in: {:?} epoch", proposal_data.stage);
+            info!("[Proposal Info]: Voting period ends in: {:?} epoch", proposal_data.proposal_end_epoch);
             info!("[Proposal Info]: Current epoch: {:?}", proposal_data.current_epoch);
             info!("[Proposal Info]: Resolution: {:?}", proposal_data.resolution);
         }
         
-        /// This method simply is used to view the Proposal NFT that is in the Voting Process.
+        /// This method simply is used to view the Proposal NFT that is in the Voting Period.
         /// 
         /// This method does not perform any checks.
         /// 
@@ -493,8 +501,8 @@ blueprint!{
         /// 
         /// * **Check 1:** Checks that the Proposal NFT exists.
         /// * **Check 2:** Checks that the correct LP Tokens have been passed.
-        /// * **Check 3:** Checks whether the Proposal NFT has advanced to the Voting Process stage.
-        /// * **Check 4:** Checks that the Proposal NFT has advanced to the Voting Process stage... but in a different way.
+        /// * **Check 3:** Checks whether the Proposal NFT has advanced to the Voting Period stage.
+        /// * **Check 4:** Checks that the Proposal NFT has advanced to the Voting Period stage... but in a different way.
         /// 
         /// # Arguments:
         /// 
@@ -579,7 +587,7 @@ blueprint!{
                     let yes_counter = proposal_data.yes_counter;
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
 
                     info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                         yes_counter, no_counter, no_with_veto_counter, abstain_counter
@@ -623,7 +631,7 @@ blueprint!{
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
 
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
                     info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                         yes_counter, no_counter, no_with_veto_counter, abstain_counter
                     );
@@ -664,7 +672,7 @@ blueprint!{
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
     
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
                     info!("[Voting]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                         yes_counter, no_counter, no_with_veto_counter, abstain_counter
                     );
@@ -802,7 +810,7 @@ blueprint!{
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
     
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
                     info!("[Vote Recast]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                     yes_counter, no_counter, no_with_veto_counter, abstain_counter);
                 }
@@ -834,7 +842,7 @@ blueprint!{
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
     
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
                     info!("[Vote Recast]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                     yes_counter, no_counter, no_with_veto_counter, abstain_counter);
                 }
@@ -866,11 +874,11 @@ blueprint!{
                     let no_counter = proposal_data.no_counter;
                     let no_with_veto_counter = proposal_data.no_with_veto_counter;
     
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
                     info!("[Vote Recast]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                     yes_counter, no_counter, no_with_veto_counter, abstain_counter);
     
-                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter);
+                    let abstain_counter = dec!("1.0") - (yes_counter + no_counter + no_with_veto_counter);
                     info!("[Vote Recast]: The current count for the vote is: Yes - {:?} | No - {:?} | No with veto - {:?} | Abstain - {:?}",
                     yes_counter, no_counter, no_with_veto_counter, abstain_counter);
                 }
@@ -1008,7 +1016,7 @@ blueprint!{
         /// 
         /// * **Resolution:** The proposal passes and the Proposal NFT is sent to the liquidity pool to change pool parameters. 
         /// 
-        /// * **Scenario 2:** - If there is a simple majority of `No` votes casted & the vote threshold is abouve 30%.
+        /// * **Scenario 2:** - If there is a simple majority of `No` votes casted & the vote threshold is above 30%.
         /// There is no requirement for a `No with veto` condition, since there is already a simply majority within the participating votes.
         /// 
         /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
@@ -1017,7 +1025,7 @@ blueprint!{
         /// 
         /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
         /// 
-        /// * **Scenario 4:** - The time for the Voting Process stage has lapsed.
+        /// * **Scenario 4:** - The time for the Voting Period stage has lapsed.
         /// 
         /// * Resolution:** - The proposal fails and the Proposal NFT is sent to the liquidity pool to be burnt.
         /// 
@@ -1025,7 +1033,7 @@ blueprint!{
         /// 
         /// This method does not request any arguments to be passed.
         /// 
-        /// This method does not return any assets. It evaluates the Proposal NFT in the Voting Process stage.
+        /// This method does not return any assets. It evaluates the Proposal NFT in the Voting Period stage.
         pub fn resolve_proposal(
             &mut self
         )
@@ -1153,7 +1161,9 @@ blueprint!{
             info!("[Proposal Resolution]: No end condition reached");
         }
 
-        /// This method allows user to retrieve the LP Tokens
+        /// This method allows LPs to retrieve the LP Tokens.
+        /// 
+        /// It removes the LPs votes if they have already voted in an on-going proposal in the Voting Period.
         /// 
         /// This method performs a single check:
         /// 
@@ -1187,8 +1197,8 @@ blueprint!{
             match vote {
                 // Scenario when the vote casted was a `Yes`.
                 Vote::Yes => {
-
-                    if self.proposals_in_voting_period.contains(&proposal_id) {
+                    // Removes vote
+                    if self.proposal_in_voting_period.contains(&proposal_id) {
                         let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
                         proposal_data.yes_counter -= vote_weight;
                         self.nft_proposal_admin.authorize(|| 
@@ -1202,12 +1212,16 @@ blueprint!{
                     // Burns the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(|| vote_badge.burn());
 
+                    info!("[Retrieve LP Tokens]: You have withdrawn {:?} LP Tokens", amount);
+                    info!("[Retrieve LP Tokens]: Your `Yes` vote weight has been decreased by {:?}", vote_weight);
+                    info!("[Retrieve LP Tokens]: Your Vote Badge NFT has been burnt.");
+
                     return_lp
                 }
                 // Scenario when the vote casted was a `No`.
                 Vote::No => {
-
-                    if self.proposals_in_voting_period.contains(&proposal_id) {
+                    // Removes vote
+                    if self.proposal_in_voting_period.contains(&proposal_id) {
                         let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
                         proposal_data.no_counter -= vote_weight;
                         self.nft_proposal_admin.authorize(|| 
@@ -1221,12 +1235,16 @@ blueprint!{
                     // Burns the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(|| vote_badge.burn());
 
+                    info!("[Retrieve LP Tokens]: You have withdrawn {:?} LP Tokens", amount);
+                    info!("[Retrieve LP Tokens]: Your `No` vote weight has been decreased by {:?}", vote_weight);
+                    info!("[Retrieve LP Tokens]: Your Vote Badge NFT has been burnt.");
+
                     return_lp
                 }
                 // Scenario when the vote casted was a `No with veto`.
                 Vote::NoWithVeto => {
-
-                    if self.proposals_in_voting_period.contains(&proposal_id) {
+                    // Removes vote
+                    if self.proposal_in_voting_period.contains(&proposal_id) {
                         let mut proposal_data: Proposal = resource_manager.get_non_fungible_data(&proposal_id);
                         proposal_data.no_with_veto_counter -= vote_weight;
                         self.nft_proposal_admin.authorize(|| 
@@ -1239,6 +1257,10 @@ blueprint!{
 
                     // Burns the Vote Badge NFT.
                     self.nft_proposal_admin.authorize(|| vote_badge.burn());
+
+                    info!("[Retrieve LP Tokens]: You have withdrawn {:?} LP Tokens", amount);
+                    info!("[Retrieve LP Tokens]: Your `No with veto` vote weight has been decreased by {:?}", vote_weight);
+                    info!("[Retrieve LP Tokens]: Your Vote Badge NFT has been burnt.");
 
                     return_lp
                 }

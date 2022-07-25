@@ -1,0 +1,4 @@
+CALL_METHOD ComponentAddress("${ACC_ADDRESS2}") "withdraw_by_amount" Decimal("100") ResourceAddress("${TT}");
+TAKE_FROM_WORKTOP_BY_AMOUNT Decimal("100") ResourceAddress("${TT}") Bucket("bucket1");
+CALL_METHOD ComponentAddress("${DAO}") "vote_proposal" Bucket("bucket1") Enum("No") NonFungibleId("${PROPOSAL_ID}");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS2}") "deposit_batch";
