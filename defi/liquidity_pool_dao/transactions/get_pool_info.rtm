@@ -1,0 +1,2 @@
+CALL_METHOD ComponentAddress("${COMPONENT}") "get_pool_info";
+

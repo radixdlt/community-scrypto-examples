@@ -1,0 +1,4 @@
+CALL_METHOD ComponentAddress("${ACC_ADDRESS3}") "create_proof_by_amount" Decimal("1") ResourceAddress("${TT}");
+POP_FROM_AUTH_ZONE Proof("proof1");
+CALL_METHOD ComponentAddress("${DAO}") "propose" Proof("proof1") Decimal("0.7") Decimal("0.3") Decimal("0.01");
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("${ACC_ADDRESS3}") "deposit_batch";

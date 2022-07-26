@@ -1,0 +1,2 @@
+CALL_METHOD ComponentAddress("${DAO}") "resolve_proposal";
+

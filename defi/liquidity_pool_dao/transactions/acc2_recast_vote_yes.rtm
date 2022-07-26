@@ -1,0 +1,4 @@
+CALL_METHOD ComponentAddress("${ACC_ADDRESS2}") "create_proof_by_amount" Decimal("1") ResourceAddress("${PROOF}");
+POP_FROM_AUTH_ZONE Proof("proof1");
+
+CALL_METHOD ComponentAddress("${DAO}") "recast_vote" Proof("proof1") Enum("Yes");
