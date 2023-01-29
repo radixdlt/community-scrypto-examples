@@ -84,25 +84,31 @@ blueprint! {
         }
 
         /*
+            Die roll function, external available for comparison
+        */
+        pub fn roll_dice_old(&mut self) -> i8 {
+            let random = Runtime::generate_uuid();
+            let dieval:i8 = ((random % 6) + 1) as i8;
+            dieval
+        }
+        /*
             Alterniative Die roll function, used internally, but should be external accessable
             The modulo (%) function is pratically a division, 
             this routine could be "cheaper" in network execution
         */
         pub fn roll_dice_alt(&mut self) -> i8 {
-            let mut dieval : i8 = 0;
-            while dieval == 0 {
+            loop{
                 let mut random:u128 = Runtime::generate_uuid();
                 while random > 0{
                     let myval = random & 0x7;
-                    if myval & 0x6 == 0x6{ // if 0x6 or 0x7 throw away result and redo check on new bits.
-                        random = random >> 3; // get 3 new bits
-                    }else{
-                        dieval = (myval as i8) + 1;
-                        break;
+                    // if 0x6 or 0x7 throw away result and redo check on 3 new bits.
+                    if myval < 0x6{ 
+                        return (myval+1) as i8 ;
                     }
+                    // get 3 new bits but shift 4 because 128/3 != integer
+                    random = random >> 4; 
                 }
             }
-            dieval
         }
 
         /*
