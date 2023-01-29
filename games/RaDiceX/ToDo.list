@@ -1,0 +1,8 @@
+#Todo List
+    
+Players could hold more than one Ticket in their wallet. 
+Since these tokens are unique there is a need to select an individual tokens for gameplay. 
+At the moment only one token seems to be playable/redeemable/burnable.
+Only when the first token is burned (or moved to another wallet) the next one can be used.
+Maybe this problem needs to be moved to the front-end interface?
+

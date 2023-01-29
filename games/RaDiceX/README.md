@@ -6,8 +6,13 @@ Buy a RaDiCeX Ticket and play against the House. The game controlled Ticket (NFT
 
 ## Gameplay:
     A New Ticket will start at level 10.
-    In a play round the you and the house will roll dice. The difference between player die and house die is determined
-    This difference is added/subtracted from the Ticket's level. This play continues until the either level=0 or level=25 is reached. On level=0 the ticket can be renewed with a discount. On ticket level=25 the ticket can be redeemed for a price of 5 time buy-in. Finished with playing, the ticket can be burned.
+    In a play round the you and the house will roll dice.
+    The difference between player die and house die is determined
+    This difference is added/subtracted from the Ticket's level. 
+    This play continues until the either level=0 or level=25 is reached. 
+    On level=0 the ticket can be renewed with a discount. 
+    On ticket level=25 the ticket can be redeemed for a price of 5 time buy-in.
+    Finished with playing, the ticket can be burned.
 
 ## Getting Started
 -   Source the reinit.sourceme on Linux/Bash for an easy start.
