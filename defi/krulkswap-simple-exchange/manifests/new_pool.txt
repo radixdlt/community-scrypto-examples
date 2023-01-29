@@ -1,0 +1,7 @@
+CALL_METHOD ComponentAddress("[account_address]") "withdraw" Decimal("[amount]") ResourceAddress("[token_a_address]");
+
+CALL_METHOD ComponentAddress("[account_address]") "withdraw" Decimal("[amount]") ResourceAddress("[token_b_address]");
+
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("[exchange_component]") "add_pool";
+
+CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("[recipient_account_address]") "deposit_batch";
