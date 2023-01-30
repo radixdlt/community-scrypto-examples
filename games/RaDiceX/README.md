@@ -35,9 +35,9 @@ Buy a RaDiCeX Ticket and play against the House. The game controlled Ticket (NFT
 
         %-> resim call-method $component reinit_ticket 1,$ticket 10,$radix
 
--   If the ticket level=25 dedeem your prize
+-   If the ticket level=25 redeem your prize
 
-        %-> resim call-method $component redeem_prize 2,$ticket
+        %-> resim call-method $component redeem_prize 1,$ticket
 
 
 -   As Admin, get yourself a free ticket.
