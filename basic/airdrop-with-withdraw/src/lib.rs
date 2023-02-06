@@ -8,7 +8,8 @@ pub struct AirdropWithWithdrawData {
     is_collected: bool,
 }
 
-blueprint! {
+#[blueprint]
+mod airdrop_with_withdraw {
     struct AirdropWithWithdraw {
         admin_badge: ResourceAddress,
         tokens: Vault,

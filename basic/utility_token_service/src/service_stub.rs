@@ -8,7 +8,8 @@ No actual service is provided but two stub services (regular and premium) are de
 
 use crate::util_token_fac::UtilityTokenFactory;
 
-blueprint! {
+#[blueprint]
+mod service_stub {
     struct ServiceStub {
         utf: UtilityTokenFactory,
         used_tokens: Vault,

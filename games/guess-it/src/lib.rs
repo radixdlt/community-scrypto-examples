@@ -212,7 +212,8 @@ struct PlayerNft {
     name: String,
 }
 
-blueprint! {
+#[blueprint]
+mod guess_it {
     struct GuessIt {
         bank: Vault,
         badges: Vault,

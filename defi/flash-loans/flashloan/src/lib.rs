@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod flash_loan {
     struct FlashLoan {
         interest: Decimal,
         vault: Vault

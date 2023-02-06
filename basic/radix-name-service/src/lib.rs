@@ -17,7 +17,8 @@ struct DomainName {
 // This is a very rough estimate, of course
 const EPOCHS_PER_YEAR: u64 = 15_000;
 
-blueprint! {
+#[blueprint]
+mod radix_name_service {
 
     struct RadixNameService {
         admin_badge: ResourceAddress,

@@ -1,8 +1,11 @@
 extern crate proc_macro;
-use proc_macro::{TokenStream};
-use proc_macro2::{Span};
-use quote::{quote};
-use syn::{parse_macro_input, ItemImpl, ImplItem, ImplItemMethod, ItemTrait, TraitItem, Ident, Block, Visibility, VisPublic, token::Pub};
+use proc_macro::TokenStream;
+use proc_macro2::Span;
+use quote::quote;
+use syn::{
+    parse_macro_input, token::Pub, Block, Ident, ImplItem, ImplItemMethod, ItemImpl, ItemTrait,
+    TraitItem, VisPublic, Visibility,
+};
 //use syn::{ReturnType};
 
 /// a macro to generate an empty blueprint just to get the stub functions for inter-blueprint calls
@@ -66,42 +69,37 @@ pub fn blueprint_stub(_metadata: TokenStream, input: TokenStream) -> TokenStream
                 */
                 let block = parse_macro_input!(empty_block as Block);
                 method.default = Some(block.clone());
-                // now update the vec of ImplItem::Method from the TraitItem::Method 
-                the_impl.items.push(
-                    ImplItem::Method(ImplItemMethod {
-                        attrs: the_impl.attrs.clone(), // copy the #[allow(unused)] to each method
-                        vis: Visibility::Public(
-                            VisPublic{
-                                pub_token: Pub{
-                                    span: Span::call_site()
-                                }
-                            }
-                        ),
-                        defaultness: None,
-                        sig: method.sig.clone(),
-                        block: block
-                    }
-                )
-
-                );
-            },
+                // now update the vec of ImplItem::Method from the TraitItem::Method
+                the_impl.items.push(ImplItem::Method(ImplItemMethod {
+                    attrs: the_impl.attrs.clone(), // copy the #[allow(unused)] to each method
+                    vis: Visibility::Public(VisPublic {
+                        pub_token: Pub {
+                            span: Span::call_site(),
+                        },
+                    }),
+                    defaultness: None,
+                    sig: method.sig.clone(),
+                    block: block,
+                }));
+            }
             _ => {}
         }
     }
 
     // create the final output
-    // a blueprint! with the geenerated impl, but all inside a module so the code is not callable
+    // a blueprint with the geenerated impl, but all inside a module so the code is not callable
     // then reexport only the stubs
     let mod_name = Ident::new(&format!("internal_{}", ident), Span::call_site());
-    TokenStream::from(quote!{
-        mod #mod_name {
-        use super::*;
-        blueprint! {
-            struct #ident {}
-            #the_impl
-        }
-        }
-        // reexport the stub only
-        pub use #mod_name::#ident;
-    })
+    TokenStream::from(quote! {
+            mod #mod_name {
+            use super::*;
+            #[blueprint]
+    mod  {
+                struct #ident {}
+                #the_impl
+            }
+            }
+            // reexport the stub only
+            pub use #mod_name::#ident;
+        })
 }

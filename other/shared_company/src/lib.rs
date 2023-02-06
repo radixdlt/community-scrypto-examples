@@ -9,7 +9,8 @@ Funds can be spend using [Proposal] if accepted by a majority (of company_voting
 This is only a demonstration. There are known security flaws in this design.
 (like: Buy a lot of shares, make proposal to send you all company_radix, vote for it).
 */
-blueprint! {
+#[blueprint]
+mod shared_company {
 
     struct SharedCompany {
         company_radix: Vault,

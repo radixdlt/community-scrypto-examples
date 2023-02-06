@@ -5,7 +5,8 @@ use scrypto::prelude::*;
  * This component is not meant to be used by itself. 
  * You should use it inside another component.
  */
-blueprint! {
+#[blueprint]
+mod single_token_liquidity_pool {
     struct SingleTokenLiquidityPool {
         pool: Vault,
         fees: Vault,

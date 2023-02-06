@@ -1,7 +1,8 @@
 use sbor::*;
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod candy_dex {
     struct CandyDex {        
         // XRD vault.
         collected_xrd: Vault,         

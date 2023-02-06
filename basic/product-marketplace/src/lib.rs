@@ -46,7 +46,8 @@ pub struct BuyerNftData {
     has_been_sent_by_seller: bool,
 }
 
-blueprint! {
+#[blueprint]
+mod product_market_place {
     struct ProductMarketPlace {
         // Vault thats containe the fees
         fees_vault: Vault,

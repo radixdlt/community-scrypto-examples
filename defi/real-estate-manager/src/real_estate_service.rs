@@ -125,7 +125,8 @@ pub struct Land {
     pub contain: Option<NonFungibleId>
 }
 
-blueprint! {
+#[blueprint]
+mod real_estate_service {
 
     struct RealEstateService {
 

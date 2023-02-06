@@ -10,7 +10,8 @@ pub struct StakingData {
     paid: Decimal
 }
 
-blueprint! {
+#[blueprint]
+mod staking {
     struct Staking {
         token_minter: Vault,
         token_id_counter: u64,

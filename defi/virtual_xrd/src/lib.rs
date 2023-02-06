@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod virtual_xrd {
     struct VirtualXrd {
         vxrd_resource_def: ResourceAddress,
         xrd_vault: Vault,

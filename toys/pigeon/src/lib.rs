@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod pigeon {
     struct Pigeon {
         head_vault: Vault,
         body_vault: Vault,

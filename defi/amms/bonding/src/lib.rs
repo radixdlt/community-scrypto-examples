@@ -56,7 +56,8 @@ declare_resource!(RESERVE); // resource type used for the reserve pool, collater
 declare_resource!(CONTINUOUS); // resource type minted/burned by the bonding curve
 declare_resource!(AUTH); // resource type for authority (badges) for mint/burn and authentication
 
-blueprint! {
+#[blueprint]
+mod bonding_amm {
     struct BondingAMM {
         reserve: VaultOf<RESERVE>,
         continuous: VaultOf<CONTINUOUS>,

@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod airdrop {
     struct Airdrop {
         admin_badge: ResourceAddress,
         recipients: Vec<ComponentAddress>,

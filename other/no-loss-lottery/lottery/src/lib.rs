@@ -105,7 +105,8 @@ pub struct LotteryData {
     winner: Option<NonFungibleId>
 }
 
-blueprint! {
+#[blueprint]
+mod lottery {
     struct Lottery {
         // staking component
         staking: Staking,

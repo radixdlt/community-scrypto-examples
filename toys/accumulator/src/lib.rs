@@ -1,7 +1,8 @@
 use scrypto::prelude::*;
 use std::convert::TryFrom;
 
-blueprint! {
+#[blueprint]
+mod accumulating_vault {
   struct AccumulatingVault {
     badge_def: ResourceAddress,
     mint_badge: Vault,

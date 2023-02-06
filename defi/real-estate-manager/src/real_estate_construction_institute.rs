@@ -33,7 +33,8 @@ pub struct Construction {
     construction: ConstructionType
 }
 
-blueprint! {
+#[blueprint]
+mod real_estate_construction_institute {
 
     struct RealEstateConstructionInstitute {
 

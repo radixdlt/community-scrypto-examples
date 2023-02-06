@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod bank {
     struct Bank {
         bank_account: Vault,
         cash: Vault,

@@ -5,7 +5,8 @@ use scrypto::prelude::*;
  *  flash loan from another component to make more XRD and repay the loan
  */
 
-blueprint! {
+#[blueprint]
+mod caller {
     struct Caller {
         // Address of the flashloan component
         loaner_component: ComponentAddress,

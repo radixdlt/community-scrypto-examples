@@ -1,8 +1,8 @@
 use crate::trading_pair::*;
 use scrypto::prelude::*;
 
-blueprint! {
-
+#[blueprint]
+mod dex {
     /// The Dex component is the central component of this system's architecture.
     /// Admins can use it to register trading pairs and users can use it to discover those trading pairs
     /// and their respective component addresses.
@@ -32,10 +32,16 @@ blueprint! {
             .instantiate();
 
             let access_rules = AccessRules::new()
-                .method("add_trading_pair", rule!(require(admin_badge.resource_address())))
+                .method(
+                    "add_trading_pair",
+                    rule!(require(admin_badge.resource_address())),
+                )
                 .default(rule!(allow_all));
 
-            (component.add_access_check(access_rules).globalize(), admin_badge)
+            (
+                component.add_access_check(access_rules).globalize(),
+                admin_badge,
+            )
         }
 
         /// Adds a trading pair for the given base_resource_address and quote_resource_address.
@@ -57,10 +63,8 @@ blueprint! {
             );
 
             // Instantiate a new TradingPair component on the ledger
-            let trainding_pair_component = TradingPair::instantiate(
-                base_resource_address,
-                quote_resource_address,
-            );
+            let trainding_pair_component =
+                TradingPair::instantiate(base_resource_address, quote_resource_address);
 
             // Save the info on the newly created trading pair in the trading_pairs HashMap
             self.trading_pairs.insert(

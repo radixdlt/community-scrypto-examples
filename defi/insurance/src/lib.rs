@@ -1,7 +1,8 @@
 use scrypto::prelude::*;
 
 
-blueprint! {
+#[blueprint]
+mod insurance {
     struct Insurance {
         /// Mint authorization to TL tokens.
         org_vault: Vault,

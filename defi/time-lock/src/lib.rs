@@ -1,7 +1,8 @@
 use scrypto::prelude::*;
 
 
-blueprint! {
+#[blueprint]
+mod time_lock {
     struct TimeLock {
         /// Mint authorization to TL badges.
         tl_minter_vault: Vault,

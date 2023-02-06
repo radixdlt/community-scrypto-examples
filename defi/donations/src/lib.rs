@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod donations {
     struct Donations {
         admin_vault: Vault,
         admin_badge: ResourceAddress,

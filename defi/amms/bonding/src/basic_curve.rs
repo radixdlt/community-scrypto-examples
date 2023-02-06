@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod basic_bonding_curve {
     struct BasicBondingCurve {}
 
     impl BasicBondingCurve {

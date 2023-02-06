@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod crowdsourcing_campaign {
     struct CrowdsourcingCampaign {
         // Collected XRD for the crowdsourcing campaign.
         collected_xrd: Vault,

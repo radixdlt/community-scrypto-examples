@@ -15,7 +15,8 @@ use scrypto::prelude::*;
         - many more...
 */
 
-blueprint! {
+#[blueprint]
+mod candy_shop {
     struct CandyShop {
         // The different kinds of candies are kept here with each in a tuple
         // with a unique tag string that doubles as the candies' token symbol.

@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod liquidity_pool {
     struct LiquidityPool {
         pool: Vault,
         lp_mint_badge: Vault,

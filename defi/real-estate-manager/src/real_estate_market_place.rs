@@ -10,7 +10,8 @@ use crate::utility::*;
 #[derive(NonFungibleData)]
 pub struct Order {}
 
-blueprint! {
+#[blueprint]
+mod real_estate_market_place {
     struct RealEstateMarketPlace {
 
         /// Component controller badge

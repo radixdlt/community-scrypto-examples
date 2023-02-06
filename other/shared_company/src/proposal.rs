@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 // A proposal that unlocks funds if accepted.
-blueprint! {
+#[blueprint]
+mod proposal {
     struct Proposal {
         // Fund which are looked for the vote
         cost_vault: Vault,

@@ -10,7 +10,8 @@ struct UbiStatus {
     last_mint_epoch: u64
 }
 
-blueprint! {
+#[blueprint]
+mod ubi {
 
     struct UBI {
         ubi_token: ResourceAddress,

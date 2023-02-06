@@ -2,7 +2,8 @@ use std::cmp::min;
 
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod token_sale {
     struct TokenSale {
         admin_badge: ResourceAddress,
         tokens_for_sale: Vault,

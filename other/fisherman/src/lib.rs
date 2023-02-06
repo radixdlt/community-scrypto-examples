@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod fisherman {
     struct Fisherman {
         admin_badge: ResourceAddress,
         fee: Decimal,

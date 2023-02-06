@@ -4,8 +4,8 @@ use scrypto::prelude::*;
 
 use crate::model::*;
 
-blueprint! {
-
+#[blueprint]
+mod trading_pair {
     /// This component represents a trading pair like e.g. XRD/rUSD. It can be used by traders to
     /// create limit and market orders.
     struct TradingPair {
@@ -28,23 +28,23 @@ blueprint! {
     impl TradingPair {
         /// Instantiates a new TradingPair component for the given base_resource and quote_resource.
         /// To create a trading pair XRD/rUSD, one would issue a call like this: `instantiate(xrd_address, rusd_address)`
-        pub fn instantiate(base_resource: ResourceAddress, quote_resource: ResourceAddress) -> ComponentAddress {
+        pub fn instantiate(
+            base_resource: ResourceAddress,
+            quote_resource: ResourceAddress,
+        ) -> ComponentAddress {
             assert_is_fungible(&base_resource);
             assert_is_fungible(&quote_resource);
 
-            let minter =
-                ResourceBuilder::new_fungible().divisibility(DIVISIBILITY_NONE).initial_supply(1);
+            let minter = ResourceBuilder::new_fungible()
+                .divisibility(DIVISIBILITY_NONE)
+                .initial_supply(1);
 
             // This NFR represents the orders managed by this trading pair.
             // Orders an be minted, burned and updated by this component.
             let order_resource = ResourceBuilder::new_non_fungible()
                 .metadata(
                     "name",
-                    format!(
-                        "Dex limit order ({}/{})",
-                        base_resource,
-                        quote_resource
-                    ),
+                    format!("Dex limit order ({}/{})", base_resource, quote_resource),
                 )
                 .mintable(rule!(require(minter.resource_address())), LOCKED)
                 .burnable(rule!(require(minter.resource_address())), LOCKED)
@@ -58,7 +58,8 @@ blueprint! {
                 base_funds: Vault::new(base_resource),
                 quote_funds: Vault::new(quote_resource),
             }
-            .instantiate().globalize()
+            .instantiate()
+            .globalize()
         }
 
         /// Creates a new limit order. The side of the order (Ask/Bid) is derived form the given funds bucket.
@@ -91,8 +92,7 @@ blueprint! {
 
             // Mint a new NFR representing the order and give it to the user
             self.minter.authorize(|| {
-                borrow_resource_manager!(self.order_resource)
-                    .mint_non_fungible(&order_key, order)
+                borrow_resource_manager!(self.order_resource).mint_non_fungible(&order_key, order)
             })
         }
 
@@ -108,8 +108,7 @@ blueprint! {
                 "Invalid resource supplied: bucket does not contain an order"
             );
             // Load the data belonging to the order NFR
-            let order: LimitOrder =
-                order_bucket.non_fungible::<LimitOrder>().data();
+            let order: LimitOrder = order_bucket.non_fungible::<LimitOrder>().data();
 
             // If the order has not been filled completely, it still is referenced in the order book so we have to remove it.
             // If the order has already been filled completely, it will already have been removed from the order book.
@@ -117,8 +116,7 @@ blueprint! {
                 self.order_book.remove_limit_order(&order);
             }
             // Burn the order NFR. It is no longer needed as the order will no longer exist after this method finishes.
-            self.minter
-                .authorize(|| order_bucket.burn());
+            self.minter.authorize(|| order_bucket.burn());
 
             // Calculate 1) the amount the user must be refunded if their order has not been filled completely
             // and 2) the amount that the user has traded successfully if their order has been (at least partially) filled.
@@ -173,8 +171,8 @@ blueprint! {
                     .clone();
 
                 // Using the order key, load the data for the limit order
-                let mut limit_order: LimitOrder =
-                    borrow_resource_manager!(self.order_resource).get_non_fungible_data(&limit_order_key);
+                let mut limit_order: LimitOrder = borrow_resource_manager!(self.order_resource)
+                    .get_non_fungible_data(&limit_order_key);
 
                 // Save the limit order's price as the last known price
                 last_price = limit_order.price;
@@ -198,7 +196,7 @@ blueprint! {
                 // Depending on the limit order side, take an appropriate amount of the market order funds and store them in this component.
                 // The market maker user will be able to claim them later. Also add the traded funds that the taker user will receive to the
                 // funds_to_return bucket.
-                
+
                 let bucket_to_add = match limit_order_side {
                     Side::Ask => {
                         self.quote_funds
@@ -214,7 +212,7 @@ blueprint! {
 
                 match funds_to_return.as_mut() {
                     Some(bucket) => bucket.put(bucket_to_add),
-                    None => funds_to_return = Some(bucket_to_add)
+                    None => funds_to_return = Some(bucket_to_add),
                 }
 
                 // Check if the limit order has been filled completely.
@@ -226,10 +224,8 @@ blueprint! {
 
                 // Update the data of the limit order NFR
                 self.minter.authorize(|| {
-                    borrow_resource_manager!(self.order_resource).update_non_fungible_data(
-                        &limit_order_key,
-                        limit_order
-                    )
+                    borrow_resource_manager!(self.order_resource)
+                        .update_non_fungible_data(&limit_order_key, limit_order)
                 });
             }
 

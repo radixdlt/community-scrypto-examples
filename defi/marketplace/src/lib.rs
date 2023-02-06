@@ -4,7 +4,8 @@ use scrypto::prelude::*;
 
 use data::*;
 
-blueprint! {
+#[blueprint]
+mod market {
     struct Market {
         order_count: i64,
         currency: Address,

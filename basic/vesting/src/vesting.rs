@@ -1,7 +1,8 @@
 use crate::beneficiary::*;
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod vesting {
     /// The vesting blueprint allows for a vesting schedule to be setup whereby "beneficiaries" are given tokens over a
     /// period of time with a specific cliff and vesting period. The vesting blueprint follows a linear graph to vesting
     /// whereby no tokens are vested between the enrollment and the cliff epoch. Then, from the cliff epoch all the way
@@ -20,8 +21,8 @@ blueprint! {
     ///
     /// The termination of the vesting of tokens at any point of time without prior notice can be of worry especially
     /// to people waiting for their funds to vest. Therefore, the vesting blueprint allows for the admin to give up
-    /// their termination rights which may be needed in some cases. In a vesting component with multiple admins, the 
-    /// majority of the admins are required to agree to agree to the giving up of termination rights before they're 
+    /// their termination rights which may be needed in some cases. In a vesting component with multiple admins, the
+    /// majority of the admins are required to agree to agree to the giving up of termination rights before they're
     /// given up.
     ///
     /// An interactive version of the vesting graph may be found [here](https://www.desmos.com/calculator/7qetg3g31f)
@@ -95,7 +96,10 @@ blueprint! {
                     "description",
                     "An admin badge with the authority to terminate the vesting of tokens",
                 )
-                .mintable(rule!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
+                .mintable(
+                    rule!(require(internal_admin_badge.resource_address())),
+                    Mutability::LOCKED,
+                )
                 .initial_supply(dec!("1"));
 
             // Creating the beneficiary's badge which is used to keep track of their vesting schedule.
@@ -105,7 +109,10 @@ blueprint! {
                     "description",
                     "A badge provided to beneficiaries by the vesting component for authentication",
                 )
-                .mintable(rule!(require(internal_admin_badge.resource_address())), Mutability::LOCKED)
+                .mintable(
+                    rule!(require(internal_admin_badge.resource_address())),
+                    Mutability::LOCKED,
+                )
                 .no_initial_supply();
 
             // Setting up the auth for the vesting component. With v0.4.0 of Scrypto we can now make the authentication
@@ -113,24 +120,34 @@ blueprint! {
             // impose quite a number of rules on who is authorized to access what.
             let auth: AccessRules = AccessRules::new()
                 // Only people who have at least 1 admin badge in their auth zone may make calls to these methods.
-                .method("add_beneficiary", rule!(require(admin_badge.resource_address())))
-                
-                // Only transactions where a minimum of `min_admins_required_for_multi_admin` admin badges are present 
-                // in the auth zone are allowed to make calls to these methods. This makes these methods dynamic as this 
+                .method(
+                    "add_beneficiary",
+                    rule!(require(admin_badge.resource_address())),
+                )
+                // Only transactions where a minimum of `min_admins_required_for_multi_admin` admin badges are present
+                // in the auth zone are allowed to make calls to these methods. This makes these methods dynamic as this
                 // value will change as admins are added.
                 .method(
-                    "terminate_beneficiary", 
-                    rule!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address()))
+                    "terminate_beneficiary",
+                    rule!(require_amount(
+                        "min_admins_required_for_multi_admin",
+                        admin_badge.resource_address()
+                    )),
                 )
                 .method(
                     "add_admin",
-                    rule!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
+                    rule!(require_amount(
+                        "min_admins_required_for_multi_admin",
+                        admin_badge.resource_address()
+                    )),
                 )
                 .method(
                     "disable_termination",
-                    rule!(require_amount("min_admins_required_for_multi_admin",admin_badge.resource_address())),
+                    rule!(require_amount(
+                        "min_admins_required_for_multi_admin",
+                        admin_badge.resource_address()
+                    )),
                 )
-                
                 // We do not want to handle the authentication of other methods through the auth zone. Instead, we would
                 // like to handle them all on our own.
                 .default(rule!(allow_all));
@@ -181,7 +198,8 @@ blueprint! {
         ) -> Bucket {
             // Performing checks to ensure that the beneficiary may be added.
             assert!(
-                borrow_resource_manager!(funds.resource_address()).resource_type() != ResourceType::NonFungible,
+                borrow_resource_manager!(funds.resource_address()).resource_type()
+                    != ResourceType::NonFungible,
                 "[Add Beneficiary]: Can't vest non-fungible tokens for the beneficiary."
             );
             assert!(
@@ -242,7 +260,8 @@ blueprint! {
             let unclaimed_funds: Bucket = self.funds.get_mut(&beneficiary_id).unwrap().take_all();
 
             // Removing the empty vault from the hashmap and into the vaults of dead vaults
-            self.dead_vaults.push(self.funds.remove(&beneficiary_id).unwrap());
+            self.dead_vaults
+                .push(self.funds.remove(&beneficiary_id).unwrap());
 
             return unclaimed_funds;
         }
@@ -262,7 +281,8 @@ blueprint! {
         /// * `Bucket` - A bucket of admin badges.
         pub fn add_admin(&mut self, admin_badges_to_mint: Decimal) -> Bucket {
             // Getting the resource manager of the admin badge
-            let admin_resource_manager: &ResourceManager = borrow_resource_manager!(self.admin_badge);
+            let admin_resource_manager: &ResourceManager =
+                borrow_resource_manager!(self.admin_badge);
 
             // Minting a new admin badge for the caller
             let admin_badge: Bucket = self
@@ -271,12 +291,16 @@ blueprint! {
 
             // Determining the amount of admins required for a multi-admin call to be made. This number will always be
             // 50% or more depending on the total amount of admin badges.
-            self.min_admins_required_for_multi_admin = if admin_resource_manager.total_supply() <= dec!("2") {
-                admin_resource_manager.total_supply()
-            } else {
-                (admin_resource_manager.total_supply() / dec!("2")).ceiling()
-            };
-            info!("[Add Admin]: Minimum required admins is: {}", self.min_admins_required_for_multi_admin);
+            self.min_admins_required_for_multi_admin =
+                if admin_resource_manager.total_supply() <= dec!("2") {
+                    admin_resource_manager.total_supply()
+                } else {
+                    (admin_resource_manager.total_supply() / dec!("2")).ceiling()
+                };
+            info!(
+                "[Add Admin]: Minimum required admins is: {}",
+                self.min_admins_required_for_multi_admin
+            );
 
             // Returning the newly created admin badge back to the caller
             return admin_badge;
@@ -332,8 +356,8 @@ blueprint! {
             // The amount that we should return back is the difference between the amount of funds in the vault right
             // now and the amount that should have not have vested yet.
             let beneficiary_vault: &mut Vault = self.funds.get_mut(&beneficiary_id).unwrap();
-            let claim_amount: Decimal =
-                beneficiary_vault.amount() - beneficiary_vesting_schedule.get_unvested_amount(Runtime::current_epoch());
+            let claim_amount: Decimal = beneficiary_vault.amount()
+                - beneficiary_vesting_schedule.get_unvested_amount(Runtime::current_epoch());
             info!(
                 "[Withdraw Funds]: Withdraw successful. Withdrawing {} tokens",
                 claim_amount
@@ -344,7 +368,7 @@ blueprint! {
         /// Disables the termination of vesting schedules globally across all admins.
         ///
         /// This is an authenticated method which may only be called by admins. When this method is called, termination
-        /// of vesting schedules is disabled for all admins. 
+        /// of vesting schedules is disabled for all admins.
         pub fn disable_termination(&mut self) {
             self.admin_may_terminate = false;
         }

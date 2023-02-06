@@ -23,7 +23,8 @@ struct Article {
     unit_price: Decimal,
 }
 
-blueprint! {
+#[blueprint]
+mod catalog {
     struct Catalog {
         sequence: u32,
         references: HashMap<u32, Reference>,

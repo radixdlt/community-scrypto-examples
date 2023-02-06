@@ -2,7 +2,8 @@ use scrypto::prelude::*;
 
 // Component allowing multiple parties to approve a transaction
 // before it gets sent
-blueprint! {
+#[blueprint]
+mod multi_sig_maker {
     struct MultiSigMaker {
         badge_minter_badge: Vault,
         signer_badge: ResourceAddress,

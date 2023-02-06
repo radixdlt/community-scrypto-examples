@@ -7,7 +7,8 @@ pub struct Baker {
     weight:u8,
 }
 
-blueprint! {
+#[blueprint]
+mod zombo_bakery {
     struct ZomboBakery {
         baker_nft_minter:Vault,
         baker_nft_resource_address:ResourceAddress,

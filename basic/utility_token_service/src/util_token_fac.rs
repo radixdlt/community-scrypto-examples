@@ -4,7 +4,8 @@ use scrypto::prelude::*;
 A blueprint for creating and managing a utility token.
 */
 
-blueprint! {
+#[blueprint]
+mod utility_token_factory {
     struct UtilityTokenFactory {
         ut_minter_vault: Vault,
         ut_minter_badge: ResourceAddress,

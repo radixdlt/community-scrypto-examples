@@ -14,7 +14,8 @@ struct BorrowedBook {
     user_id: ResourceAddress,
 }
 
-blueprint! {
+#[blueprint]
+mod library {
     struct Library {
         // librarian (admin) badge
         librarian_badge_def: ResourceAddress,

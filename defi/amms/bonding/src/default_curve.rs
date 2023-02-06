@@ -143,7 +143,8 @@ fn get_return_amount(
     decimal_from_number(result, precision_bits).unwrap()
 }
 
-blueprint! {
+#[blueprint]
+mod ratio_bonding_curve {
     struct RatioBondingCurve {
         reserve_ratio_n: u32,
         reserve_ratio_d: u32,

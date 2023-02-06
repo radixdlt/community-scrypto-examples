@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod transit {
     struct Transit {
         /// Ticket Resource Definition and Mint/Burn Authorization
         ticket_resource_address: ResourceAddress,

@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod escrow {
     struct Escrow {
         token_a: Vault,
         token_b: Vault,

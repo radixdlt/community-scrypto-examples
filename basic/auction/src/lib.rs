@@ -9,7 +9,8 @@ struct Bidder {
     bid_bond_reclaimed: bool,
 }
 
-blueprint! {
+#[blueprint]
+mod auction {
     struct Auction {
         offering: Vault,
         bid_bonds: Vault,
