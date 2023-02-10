@@ -22,7 +22,7 @@ blueprint! {
         /// Does NOT reward liquidity providers in any way or provide a way to remove liquidity from the pool.
         /// Minting LP tokens for rewards, and removing liquidity, is covered in other examples, such as:
         /// https://github.com/radixdlt/scrypto-examples/tree/main/defi/radiswap
-        pub fn instantiate_default(initial_liquidity: Bucket,loan_fee_rate:Decimal) -> (ComponentAddress,Bucket) {
+        pub fn instantiate_default(pool_resource_addresse: ResourceAddress,loan_fee_rate:Decimal) -> (ComponentAddress,Bucket) {
 
             assert!(
                 loan_fee_rate > dec!(0),
@@ -54,7 +54,7 @@ blueprint! {
             .initial_supply(1);
 
             let mut  flash_loan_component = Self {
-                loan_vault: Vault::with_bucket(initial_liquidity),
+                loan_vault: Vault::new(pool_resource_addresse),
                 auth_vault: Vault::with_bucket(auth_token),
                 transient_resource_address: address,
                 loan_fee_rate,

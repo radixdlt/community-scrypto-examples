@@ -51,7 +51,7 @@ const setEnvValue = (key, value) => {
  */
 const resetEnvs = (key, value) => {
   fs.writeFileSync(envFilePath, '');
-  process.env = {}
+  // process.env = {}
 };
 
 /**

@@ -2,14 +2,13 @@
 
 /**
  * run following commands for test
- *      npx zx ./test_script.mjs
- *      source .env      
+ *      npx zx ./run.mjs && source .env      
  */
 
 const { randomInt } = require('crypto');
 const { setEnvValue, resetEnvs, e } = require('./utils')
 
-resetEnvs()
+// resetEnvs()
 
 await $`resim reset`
 
@@ -49,7 +48,7 @@ const pub_package = (await e($`resim publish .. --owner-badge ${deploy_badge}`))
 setEnvValue('package', pub_package);
 
 // Create an empty liquidity pool
-output = await e($`resim call-function ${pub_package} FlashLoanService new ${pub_package} ${pub_package} "LPT" "LP_Token"`)
+output = await e($`resim call-function ${pub_package} FlashLoanService new ${pub_package} ${pub_package} ${tokenXRD} "LPT" "LP_Token"`, false)
 
 const flashloanpool_component = output[0]
 const poolmanager_component = output[1]
@@ -74,14 +73,14 @@ await e($`resim set-default-account ${account1} ${privkey1}`)
 await e($`resim call-method ${service_component} add_liquidity 900,${tokenXRD}`)
 
 // simulate pool first fee collection
-await take_flash_loan(e);
+await take_flash_loan(e, 2);
 
 // add same amount fo liquidity from account2
 await e($`resim set-default-account ${account2} ${privkey2}`)
 await e($`resim call-method ${service_component} add_liquidity 900,${tokenXRD}`)
 
 // simulate pool first fee collection
-await take_flash_loan(e);
+await take_flash_loan(e, 2);
 
 // Remove all liquidity in the pool
 await e($`resim set-default-account ${account1} ${privkey1}`)

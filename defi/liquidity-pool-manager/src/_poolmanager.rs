@@ -2,16 +2,13 @@ use scrypto::prelude::*;
 
 blueprint! {
     struct PoolManager {
-        // pool: Decimal,
         lp_mint_badge: Vault,
         lp_resource_address: ResourceAddress,
         lp_per_asset_ratio:Decimal,
-        fee_colledted:Decimal,
     }
 
     impl PoolManager {
-        /// Creates a LiquidityPool component and returns the component address
-        /// along with the initial LP tokens.
+        /// Creates a PoolManager component and returns the component address
         pub fn new(
             lp_symbol: String,
             lp_name: String,
@@ -23,7 +20,7 @@ blueprint! {
                 .metadata("name", "LP Token Mint Auth")
                 .initial_supply(1);
 
-                            // Mint the badge needed to mint LP Tokens
+            // Mint the badge needed to mint LP Tokens
             let admin_badge = ResourceBuilder::new_fungible()
             .divisibility(DIVISIBILITY_NONE)
             .metadata("name", "PoolManager admin bage")
@@ -40,13 +37,9 @@ blueprint! {
 
 
             let mut liquidity_pool = Self {
-                // pool: dec!(0),
-
                 lp_mint_badge: Vault::with_bucket(lp_mint_badge),
                 lp_resource_address,
-
                 lp_per_asset_ratio: Decimal::one(),
-                fee_colledted: Decimal::zero(),
             }
             .instantiate();
 

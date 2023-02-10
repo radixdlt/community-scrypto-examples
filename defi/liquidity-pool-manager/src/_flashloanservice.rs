@@ -4,7 +4,7 @@ use scrypto::prelude::*;
 // Define the functions on the Radiswap blueprint
 external_blueprint! {
     FlashLoanPoolTarget {
-        fn instantiate_default(initial_liquidity: Bucket, loan_interest:Decimal) -> (ComponentAddress,Bucket);
+        fn instantiate_default(pool_resource_addresse: ResourceAddress, loan_interest:Decimal) -> (ComponentAddress,Bucket);
     }
 }
 
@@ -43,9 +43,9 @@ blueprint! {
 
     impl FlashLoanService {
 
-        pub fn new(flashloanpool_package_address:PackageAddress,poolmanager_package_address:PackageAddress,lp_symbol: String, lp_name: String) -> ComponentAddress{
+        pub fn new(flashloanpool_package_address:PackageAddress,poolmanager_package_address:PackageAddress,pool_resource_addresse: ResourceAddress,lp_symbol: String, lp_name: String) -> ComponentAddress{
 
-            let (flashloanpool,flashloanpool_admin_badge) =   FlashLoanPoolTarget::at(flashloanpool_package_address,"FlashLoanPool").instantiate_default(Bucket::new(RADIX_TOKEN),dec!("0.01"));
+            let (flashloanpool,flashloanpool_admin_badge) =   FlashLoanPoolTarget::at(flashloanpool_package_address,"FlashLoanPool").instantiate_default( pool_resource_addresse,dec!("0.01"));
 
             let (poolmanager,poolmanager_admin_badge) =   PoolManagerTarget::at(poolmanager_package_address,"PoolManager").new(lp_symbol,lp_name);
 
