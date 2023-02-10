@@ -38,19 +38,29 @@ const setEnvValue = (key, value) => {
     envVars.splice(targetLineIndex, 1, `${key}="${value}"`);
   } else {
     // create new key value
-    envVars.push(`${key}="${value}"`);
+    envVars.push(`${key}=${value}`);
   }
   // write everything back to the file system
   fs.writeFileSync(envFilePath, envVars.join(os.EOL));
+
+  process.env[key] = value;
 };
 
 /**
- * Empty .en file
+ * Empty .env file
  */
 const resetEnvs = (key, value) => {
   fs.writeFileSync(envFilePath, '');
+  process.env = {}
 };
 
+/**
+* This function run a command and parse its output.
+* The function runs the command passed as an argument either quietly (if isQuiet is true, the default value), or not. The function returns the result of running the command as an array of strings, which are the matched values of a regular expression pattern.
+* The regular expression regexResim is defined at the top of the function. It looks for patterns that match specific text strings, such as "New Package", "Account component address", etc., and captures the following characters as a group (group 2).
+* The matchAll method is used on the stdout property of the result of running the command, and for loop is used to iterate over all matches. For each match, the second captured group (the matched value) is pushed into the outputs array.
+* Finally, the outputs array is returned as the result of the function.
+ */
 async function e(command, isQuiet = true) {
   const regexResim = /(New Package|Account component address|Private key|Public key|└─ Component|├─ Component|└─ Resource|├─ Resource|NFAddress): ([\d|A-Za-z|_|:|#]+)/gm
 
