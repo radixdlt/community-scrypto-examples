@@ -1,8 +1,8 @@
 # Krulkswap simple exchange
 This is a Blueprint for a simple object oriented DEX in Scrypto.
 <h2> Warning! This is a simple example of scrypto code, and is not meant to be used in production as is.</h2> <br>
-S
-The structure of this project consists of one main component which keeps track of multiple different liquidity pool components. This main component is the component that you use when making calls to the exchange. The liquidity pool components are instantiated by the main component when the add_pool() method is called. These sattelite components are owned by the main component.
+
+The structure of this project consists of one main component which keeps track of multiple different liquidity pool components. This main component is the component that you use when making calls to the exchange. The liquidity pool components are instantiated by the main component when the `add_pool()` method is called. These sattelite components are owned by the main component.
 
 It swaps using the very standard and simple `k = a * b` equation used in a lot of decentralized exchanges.
 
@@ -36,7 +36,7 @@ Where: <br>
 
  * `[token_a_address]` and `[token_b_address]` should be the token addresses for the tokens you would like to use from your wallet to create a pool respectively.
 
- * `[exchange_component]` is the component address of the main exchange component, obtained from the instantiation of the component using the new_exchange() function.
+ * `[exchange_component]` is the component address of the main exchange component, obtained from the instantiation of the component using the `new_exchange()` function.
 
  * `[recipient_account_address]` should be the account address where the LP tokens obtained from creating the pool are deposited.
 
