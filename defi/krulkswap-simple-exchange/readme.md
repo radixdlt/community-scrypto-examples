@@ -10,7 +10,7 @@ You cannot create multiple pools for a token pair. All liquidity for a token pai
 # Instantiation
 To instantiate a krulkswap component, first publish this package using the Radix dashboard.
 
-Then, you can create an instantce of the krulkswap component using this transaction manifest:
+Then, you can create an instance of the krulkswap component using this transaction manifest:
 
 ```js
 CALL_FUNCTION PackageAddress("[exchange_package]") "Exchange" "new_exchange";
@@ -44,4 +44,4 @@ Now, the exchange is set up with one pool. You can add more pools for other toke
 
 The code contains plenty of comments for you to understand what's going on. Have fun :)
 
-Please report any mistakes i may have made. I did not have the opportunity to thoroughly test this blueprint.
+Please report any mistakes I may have made. I did not have the opportunity to thoroughly test this blueprint.
