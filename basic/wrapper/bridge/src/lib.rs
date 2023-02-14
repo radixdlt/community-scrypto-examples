@@ -63,15 +63,11 @@ blueprint! {
 
             let _subscription_rule: AccessRule = rule!(require(subscription_ticket));
 
-                // set the access rules for the Admin-only and internal functions.
+            // set the access rules for the Admin-only and internal functions.
             let access_rules = AccessRules::new()
                 .method("retreive_badge", admin_rule.clone(), AccessRule::DenyAll)
                 .method("withdrawal_all", admin_rule.clone(), rule!(deny_all))
                 .method("admin_subscription_ticket", admin_rule.clone(), rule!(deny_all))
-                // the bridge functions need proof of subscriptionticket 
-                // proof is moved back to method as argument, since we want to check content of NFT
-//                .method("simple_bridge", subscription_rule.clone(), rule!(deny_all))
-//                .method("restricted_bridge", subscription_rule.clone(), rule!(deny_all))
                 .default(AccessRule::AllowAll, AccessRule::DenyAll);
 
             let mut component = Self {
@@ -90,6 +86,7 @@ blueprint! {
             // Return the instantiated component and the admin badge that was just minted
             (component, my_admin_badge)
         }
+
         /*
             simple bridge to the awesome service public method.
         */
@@ -117,7 +114,7 @@ blueprint! {
         }
 
         /*
-            bridge to the awesome service restricted method.
+            bridge to the awesome service requiring System Level Authentication.
         */
         pub fn restricted_bridge(&mut self,  auth: Proof) -> i8 {
 
@@ -144,6 +141,35 @@ blueprint! {
             let result = self.service_vault.authorize(
                 ||component.call::<i8>("awesome_service", args![]));
 
+            result
+        }
+
+        /*
+            bridge to the awesome service requiring Application Level Authentication.
+        */
+        pub fn second_bridge(&mut self,  auth: Proof) -> i8 {
+
+            let validated_proof = auth.validate_proof(
+                ProofValidationMode::ValidateResourceAddress(self.subscription_ticket)
+            ).expect("invalid proof");
+
+            let auth_id = validated_proof.non_fungible_id();
+        
+            let resource_manager: &mut ResourceManager = 
+                borrow_resource_manager!(self.subscription_ticket);
+        
+            let subscription_data: Subscription = resource_manager.get_non_fungible_data(&auth_id);
+
+            let now: i64 = Clock::current_time(TimePrecision::Minute).seconds_since_unix_epoch;
+            
+            assert!((subscription_data.expire_unix_epoch - now).is_positive(), 
+                "Subscription has expired");
+
+            assert!(!self.service_vault.is_empty(), "Need the service badge!");
+            
+            let component = borrow_component!(self.awesome_service);
+            let my_proof: Proof = self.service_vault.create_proof_by_amount(dec!("1"));
+            let result = component.call::<i8>("second_service", args![my_proof]);
             result
         }
 

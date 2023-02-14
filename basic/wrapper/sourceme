@@ -43,5 +43,6 @@ echo "subscriptionbadge:" $subscriptionbadge
 echo "--------------------------------------------------------------------------------------------"
 echo "     call the bridged functions:"
 echo "     resim call-method \$bridgecomponent restricted_bridge 1,\$subscriptionbadge"
+echo "     resim call-method \$bridgecomponent second_bridge 1,\$subscriptionbadge"
 echo "     resim call-method \$bridgecomponent simple_bridge 1,\$subscriptionbadge"
 echo "--------------------------------------------------------------------------------------------"

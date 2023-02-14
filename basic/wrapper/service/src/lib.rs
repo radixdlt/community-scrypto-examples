@@ -4,6 +4,9 @@ blueprint! {
     struct Service {
         my_range: u32,
         my_random: [u8;16],
+       // resourceaddress of the admin badge
+        admin_badge_address: ResourceAddress,
+
     }
 
     impl Service {
@@ -29,6 +32,7 @@ blueprint! {
             let mut component = Self {
                 my_range: u32::MAX,
                 my_random: Runtime::generate_uuid().to_le_bytes(),
+                admin_badge_address: my_admin_badge.resource_address(),
 //                my_random: [0u8; 16],
             }
           
@@ -53,13 +57,39 @@ blueprint! {
             self.my_random = sha256_twice(data).lower_16_bytes();
             u128::from_le_bytes(self.my_random)
         }
+        
         /*
             Restricted access service
+            a call to this method requires System Level Authentication
         */
         pub fn awesome_service(&mut self) -> i8 {
             loop{
                 let mut random:u128 = self.generate_random();
 //                let mut random:u128 = Runtime::generate_uuid();
+                while random > 0{
+                    let myval = random & 0x7;
+                    // if 0x6 or 0x7 throw away result and redo check on 3 new bits.
+                    if myval < 0x6{ 
+                        return (myval+1) as i8 ;
+                    }
+                    // get 3 new bits but shift 4 because 128/3 != integer
+                    random = random >> 4; 
+                }
+            }
+        }
+
+        /*
+            Restricted access service
+            a call to this method requires Application Level Authentication
+        */
+        pub fn second_service(&mut self, auth: Proof) -> i8 {
+
+            let _validated_proof = auth.validate_proof(
+                ProofValidationMode::ValidateResourceAddress(self.admin_badge_address)
+            ).expect("invalid proof");
+
+            loop{
+                let mut random:u128 = Runtime::generate_uuid();
                 while random > 0{
                     let myval = random & 0x7;
                     // if 0x6 or 0x7 throw away result and redo check on 3 new bits.
