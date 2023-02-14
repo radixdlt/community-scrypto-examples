@@ -5,10 +5,10 @@ This is a Blueprint for a simple object oriented DEX in Scrypto.
 The structure of this project consists of one main component which keeps track of multiple different liquidity pool components. This main component is the component that you use when making calls to the exchange. The liquidity pool components are instantiated by the main component when the `add_pool()` method is called. These sattelite components are owned by the main component.
 
 It swaps using the very standard and simple `k = a * b` equation used in a lot of decentralized exchanges.
-
 You cannot create multiple pools for a token pair. All liquidity for a token pair is aggregated into a single pool.
 
-To instantiate a krulkswap component, first follow the instructions on <> to publish this package.
+# Instantiation
+To instantiate a krulkswap component, first publish this package using the Radix dashboard.
 
 Then, you can create an instantce of the krulkswap component using this transaction manifest:
 
