@@ -7,7 +7,6 @@ pub struct Ticket {
     #[mutable]
     last_throw: String,
 }
-
 #[blueprint]
 mod mod_radicex{
     struct Radicex {
@@ -148,7 +147,7 @@ mod mod_radicex{
                 buyin.resource_address() == self.radix_vault.resource_address(),
                 "The Buy-in can only be done with Radix tokens"
             );
-            assert!(buyin.amount()>dec!("0.9"), "There are not enough tokens in your account");
+            assert!(!(buyin.amount()<dec!("0.9")), "Not enough XRD supplied");
             assert!(NFTTicket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
 
             let validated_proof = NFTTicket.validate_proof(
@@ -214,9 +213,9 @@ mod mod_radicex{
                 buyin.resource_address() == self.radix_vault.resource_address(),
                 "The Buy-in can only be done with Radix tokens"
             );
-            assert!(buyin.amount()>dec!("1"), "There are not enough tokens in your account");
+            assert!(!(buyin.amount()<dec!("1")), "Not enough XRD supplied");
             
-            let amount: Decimal = dec!("1");             
+            let amount: Decimal = dec!("1");
  
             let NFT_bucket = self.admin_ticket();
 
