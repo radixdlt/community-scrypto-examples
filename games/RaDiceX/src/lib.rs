@@ -1,15 +1,15 @@
 use scrypto::prelude::*;
-use scrypto::runtime::Runtime;
 
 #[derive(NonFungibleData)]
 pub struct Ticket {
-    #[scrypto(mutable)]
+    #[mutable]
     level: i8,
-    #[scrypto(mutable)]
+    #[mutable]
     last_throw: String,
 }
 
-blueprint! {
+#[blueprint]
+mod mod_radicex{
     struct Radicex {
         // vault to store radix, buy-in go here and prices are redeemed from here.
         radix_vault: Vault,
@@ -21,7 +21,7 @@ blueprint! {
         admin_vault: Vault,
 
         // keep track of the number of NFTs generated, this number will be used for the NFT-Id
-        nrNFTsgenerated: u32,
+        nrNFTsgenerated: u64,
     }
 
     impl Radicex {
@@ -34,7 +34,7 @@ blueprint! {
             let mut my_admin_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Admin Badge for RaDiceX")
-                .initial_supply(2);
+                .mint_initial_supply(2);
 
             // put one admin badge and put in in the admin vault
             let local_admin_badge: Bucket = my_admin_badge.take(1);
@@ -42,14 +42,14 @@ blueprint! {
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
             // Create our Ticket NFT
-            let my_non_fungible_ticket = ResourceBuilder::new_non_fungible(NonFungibleIdType::U32)
+            let my_non_fungible_ticket = ResourceBuilder::new_integer_non_fungible()
                 .metadata("name", "Ticket for RaDiceX")
                 .burnable(admin_rule.clone(), LOCKED)
                 .mintable(rule!(require(my_admin_badge.resource_address())), LOCKED)
                 .updateable_non_fungible_data(admin_rule.clone(), LOCKED)
                 .restrict_withdraw(rule!(allow_all), LOCKED)
                 .restrict_deposit(AccessRule::AllowAll, LOCKED)
-                .no_initial_supply();
+                .create_with_no_initial_supply();
 
             // set the access rules for the Admin-only and internal functions.
             let access_rules = AccessRules::new()
@@ -155,7 +155,7 @@ blueprint! {
                 ProofValidationMode::ValidateResourceAddress(self.my_non_fungible_ticket)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_id();
+            let nft_id = validated_proof.non_fungible_local_id();
         
             let resource_manager: &mut ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
@@ -192,11 +192,11 @@ blueprint! {
                 last_throw: "New Ticket, no play history".to_string(),
             };
 
-            self.nrNFTsgenerated = self.nrNFTsgenerated + 1;
+            self.nrNFTsgenerated = self.nrNFTsgenerated.wrapping_add(1u64);
 
             let NFT_bucket = self.admin_vault.authorize(||{
                 borrow_resource_manager!(self.my_non_fungible_ticket).mint_non_fungible(
-                &NonFungibleId::U32(self.nrNFTsgenerated),
+                &NonFungibleLocalId::Integer(self.nrNFTsgenerated.into()),
                 NFT_data
                 )
             });
@@ -240,7 +240,7 @@ blueprint! {
                 ProofValidationMode::ValidateResourceAddress(self.my_non_fungible_ticket)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_id();
+            let nft_id = validated_proof.non_fungible_local_id();
         
             let resource_manager: &mut ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
@@ -276,7 +276,7 @@ blueprint! {
                 ProofValidationMode::ValidateResourceAddress(self.my_non_fungible_ticket)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_id();
+            let nft_id = validated_proof.non_fungible_local_id();
         
             let resource_manager: &mut ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
