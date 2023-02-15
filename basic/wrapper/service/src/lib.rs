@@ -1,6 +1,7 @@
 use scrypto::prelude::*;
 
-blueprint! {
+#[blueprint]
+mod mod_service {
     struct Service {
         my_range: u32,
         my_random: [u8;16],
@@ -19,7 +20,7 @@ blueprint! {
             let my_admin_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Admin Badge for Service")
-                .initial_supply(1);
+                .mint_initial_supply(1);
 
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 

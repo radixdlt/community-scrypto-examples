@@ -4,14 +4,14 @@ use scrypto::prelude::*;
 // this struck could hold timestamps/epoch inforamtion 
 // or other tracking to make the subscription expire.
 pub struct Subscription {
-    #[scrypto(mutable)]
+    #[mutable]
     issued_unix_epoch: i64,
-    #[scrypto(mutable)]
+    #[mutable]
     expire_unix_epoch: i64,
 }
 
-
-blueprint! {
+#[blueprint]
+mod mod_bridge {
     struct Bridge {
         // vault to store radix, buy-in go here.
         radix_vault: Vault,
@@ -26,7 +26,7 @@ blueprint! {
         admin_vault: Vault,
 
         // keep track of the number of subscriptions issued
-        subscriptions_issued: u32,
+        subscriptions_issued: u64,
 
         // address of the component we are bridging to 
         awesome_service: ComponentAddress,
@@ -44,7 +44,7 @@ blueprint! {
             let mut my_admin_badge = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Admin Badge for Bridge")
-                .initial_supply(2);
+                .mint_initial_supply(2);
 
             // put one admin badge and put in in the admin vault
             let local_admin_badge: Bucket = my_admin_badge.take(1);
@@ -52,14 +52,14 @@ blueprint! {
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
             // Create our Ticket NFT
-            let subscription_ticket = ResourceBuilder::new_non_fungible(NonFungibleIdType::U32)
+            let subscription_ticket = ResourceBuilder::new_integer_non_fungible()
                 .metadata("name", "Ticket for Bridge Subscription")
                 .burnable(admin_rule.clone(), LOCKED)
                 .mintable(rule!(require(my_admin_badge.resource_address())), LOCKED)
                 .updateable_non_fungible_data(admin_rule.clone(), LOCKED)
                 .restrict_withdraw(rule!(allow_all), LOCKED)
                 .restrict_deposit(AccessRule::AllowAll, LOCKED)
-                .no_initial_supply();
+                .create_with_no_initial_supply();
 
             let _subscription_rule: AccessRule = rule!(require(subscription_ticket));
 
@@ -75,7 +75,7 @@ blueprint! {
                 service_vault: Vault::new(extbadge),
                 subscription_ticket,
                 admin_vault: Vault::with_bucket(local_admin_badge),
-                subscriptions_issued : 0u32,
+                subscriptions_issued : 0u64,
                 awesome_service: extcomponent,
             }
           
@@ -96,7 +96,7 @@ blueprint! {
                 ProofValidationMode::ValidateResourceAddress(self.subscription_ticket)
             ).expect("invalid proof");
 
-            let auth_id = validated_proof.non_fungible_id();
+            let auth_id = validated_proof.non_fungible_local_id();
         
             let resource_manager: &mut ResourceManager = 
                 borrow_resource_manager!(self.subscription_ticket);
@@ -122,7 +122,7 @@ blueprint! {
                 ProofValidationMode::ValidateResourceAddress(self.subscription_ticket)
             ).expect("invalid proof");
 
-            let auth_id = validated_proof.non_fungible_id();
+            let auth_id = validated_proof.non_fungible_local_id();
         
             let resource_manager: &mut ResourceManager = 
                 borrow_resource_manager!(self.subscription_ticket);
@@ -153,7 +153,7 @@ blueprint! {
                 ProofValidationMode::ValidateResourceAddress(self.subscription_ticket)
             ).expect("invalid proof");
 
-            let auth_id = validated_proof.non_fungible_id();
+            let auth_id = validated_proof.non_fungible_local_id();
         
             let resource_manager: &mut ResourceManager = 
                 borrow_resource_manager!(self.subscription_ticket);
@@ -227,7 +227,7 @@ blueprint! {
 
             let subscription_bucket = self.admin_vault.authorize(||{
                 borrow_resource_manager!(self.subscription_ticket).mint_non_fungible(
-                &NonFungibleId::U32(self.subscriptions_issued),
+                &NonFungibleLocalId::Integer(self.subscriptions_issued.into()),
                 service_data
                 )
             });
