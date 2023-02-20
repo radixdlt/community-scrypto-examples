@@ -15,18 +15,22 @@ Buy a RaDiCeX Ticket and play against the House. The game controlled Ticket (NFT
     Finished with playing, the ticket can be burned.
 
 ## Getting Started
--   Source the reinit.sourceme on Linux/Bash for an easy start.
+-   Source the sourceme on Linux/Bash for an easy start.
 
-        %-> source reinit.sourceme
+        %-> source sourceme
 -   put some XRD in the prizepool so winning tickets can be redeemed.
        
         %-> resim call-method $component deposit 100 101,$radix
--   Buy a Ticket
+-   Buy a Ticket,
 
         %-> resim call-method $component buy_ticket 2,$radix
 -   Obtain the resource of the ticket as $ticket and start playing by repeating this command multiple times.
 
         %-> resim call-method $component play_round 1,$ticket
+Note: If your account contains multiple playable tickets you can specify the ticket to use for gameplay
+
+        %-> resim call-method $component play_round $ticket:#NFT_ID#
+
 -   To check your Ticket status
 
         %-> resim show $account
@@ -47,6 +51,3 @@ Buy a RaDiCeX Ticket and play against the House. The game controlled Ticket (NFT
 -   As Admin, get all the cash out of the prizepool.
 
         %-> resim call-method $component withdrawal_all --proof 1,$proof
-
-## Footnote
-This code holds two functions to determine a die-roll result. The most obvious is a mod-6 on a random number. The other method is more bitwise oriented. With regards to network cost for execution, the bitwise oriented function seems to be 'cheaper' but due to its loops not always consistent.
