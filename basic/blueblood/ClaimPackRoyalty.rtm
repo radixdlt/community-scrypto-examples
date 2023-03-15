@@ -1,0 +1,15 @@
+CALL_METHOD
+    ComponentAddress("component_sim1qgehpqdhhr62xh76wh6gppnyn88a0uau68epljprvj3sxknsqr")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("${alice_account}")
+    "create_proof_by_ids"
+    Array<NonFungibleLocalId>(NonFungibleLocalId("#1#"))
+    ResourceAddress("${proof}");
+CLAIM_PACKAGE_ROYALTY
+    PackageAddress("${package}");
+CALL_METHOD
+    ComponentAddress("${alice_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

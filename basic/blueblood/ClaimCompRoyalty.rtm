@@ -1,0 +1,15 @@
+CALL_METHOD
+    ComponentAddress("component_sim1qgehpqdhhr62xh76wh6gppnyn88a0uau68epljprvj3sxknsqr")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("${bob_account}")
+    "create_proof_by_ids"
+    Array<NonFungibleLocalId>(NonFungibleLocalId("#1#"))
+    ResourceAddress("${bobproof}");
+CLAIM_COMPONENT_ROYALTY
+    ComponentAddress("${component}");
+CALL_METHOD
+    ComponentAddress("${bob_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

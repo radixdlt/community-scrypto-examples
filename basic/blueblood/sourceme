@@ -1,0 +1,60 @@
+#!/bin/bash
+
+resim reset
+temp_account=`resim new-account`
+export alice_account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
+export alice_priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
+export alicebadge=`echo "$temp_account" | grep -i NonFungibleGlobalId | grep -o "resource_.*"`
+export aliceproof=`echo "$alicebadge" | sed "s/:.*//"`
+
+# export alicebadge=`resim new-simple-badge | grep "NFA" | sed "s/NFAddress:\ //g"`
+# export package=`resim publish ./service --owner-badge $alicebadge | sed "s/Success! New Package: //"`
+export package=`resim publish . | sed "s/Success! New Package: //"`
+resim call-function $package BlueBlood set_blueprint_royalty 1 --proofs $alicebadge
+
+# export proof=`resim show $alice_account | grep "Admin Badge for Service" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
+export radix=`resim show $alice_account | grep "Radix" | grep -w -o "resource_.\S*" | sed -e "s/,//"`
+
+temp_account=`resim new-account`
+export bob_account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
+export bob_priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
+resim set-default-account $bob_account $bob_priv $alicebadge
+export bobbadge=`resim new-simple-badge | grep -i NonFungibleGlobalId | grep -o "resource_.*"`
+resim set-default-account $bob_account $bob_priv $bobbadge
+export bobproof=`echo "$bobbadge" | sed "s/:.*//"`
+
+export component=`resim call-function $package BlueBlood instantiate $bobbadge |grep -A 4 "New" |grep -o "component_.*"`
+resim call-function $package BlueBlood set_component_royalty $component 1 --proofs $bobbadge
+
+resim set-default-account $alice_account $alice_priv $alicebadge
+
+echo "Alice account: $alice_account"
+echo "Alice priv key: $alice_priv"
+echo "Bob account: $bob_account"
+echo "Bob priv key: $bob_priv"
+echo "alicebadge: $alicebadge"
+echo "aliceproof: $proof"
+echo "alicebadge: $alicebadge"
+echo "bobbadge: $bobbadge"
+echo "bobproof: $bobproof"
+echo "package: $package"
+echo "component: $component" 
+echo "radix: $radix"
+
+
+echo "--------------------------------------------------------------------------------------------"
+echo "     resim run freeToken.rtm   ==> free tokens for Alice                                    "
+echo "     resim run freeTokenBob.rtm   ==> free tokens for Bob                                   "
+echo ""
+echo "     package royalties on/off with alice_account being default                              " 
+echo "     resim call-function \$package BlueBlood set_blueprint_royalty 1/0 --proofs \$alicebadge  "
+echo ""
+echo "     component royalties on/off with bob account being default                              " 
+echo "     resim call-function \$package BlueBlood set_component_royalty \$component 1/0 --proofs \$bobbadge"
+echo ""
+echo "     resim run ClaimCompRoyalty.rtm --> claim component royalty to bob_account              "
+echo "     resim run ClaimPackageRoyalty.rtm --> claim component royalty to alice_account         "
+echo ""
+echo "     alternative way to claim component royalty with bob accoutn begin default              "
+echo "     resim call-function \$package BlueBlood claim_component_royalty \$component --proofs \$bobbadge"
+echo "--------------------------------------------------------------------------------------------"
