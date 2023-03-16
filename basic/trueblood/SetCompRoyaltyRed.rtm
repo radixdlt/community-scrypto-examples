@@ -1,0 +1,13 @@
+CALL_METHOD
+    ComponentAddress("${faucet}")
+    "lock_fee"
+    Decimal("10");
+SET_COMPONENT_ROYALTY_CONFIG
+    ComponentAddress("${redcomp}")
+    Tuple(Map<String, U32>("free", 1u32), 1u32);
+CALL_METHOD
+    ComponentAddress("${alice_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
+
+

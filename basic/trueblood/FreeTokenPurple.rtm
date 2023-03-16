@@ -1,0 +1,11 @@
+CALL_METHOD
+    ComponentAddress("${faucet}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("${purplecomp}")
+    "free_token";
+CALL_METHOD
+    ComponentAddress("${alice_account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

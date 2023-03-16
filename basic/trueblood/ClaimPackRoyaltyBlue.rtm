@@ -1,5 +1,5 @@
 CALL_METHOD
-    ComponentAddress("component_sim1qgehpqdhhr62xh76wh6gppnyn88a0uau68epljprvj3sxknsqr")
+    ComponentAddress("${faucet}")
     "lock_fee"
     Decimal("100");
 CALL_METHOD

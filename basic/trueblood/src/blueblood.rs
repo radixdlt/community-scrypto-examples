@@ -1,13 +1,10 @@
 use scrypto::prelude::*;
 
-#[derive(NonFungibleData)]
-struct NFData {}
-
 #[blueprint]
-mod mod_blood {
+mod mod_blueblood {
 
     struct BlueBlood {
-        // Define what resources and data will be managed by Hello components
+
         sample_vault: Vault,
 
         // my own component address
@@ -51,7 +48,9 @@ mod mod_blood {
     
             component.add_access_check(access_rules);
                   
-            // Storing the component address of this instantiation
+            /*
+                globalize_with_owner badge binds the royalty settings to this badge,
+             */
             let globalized_component: ComponentAddress = component.globalize_with_owner(badge);
             let global_ref: BlueBloodGlobalComponentRef = globalized_component.into();
             global_ref.set_component_address(globalized_component); 
@@ -93,7 +92,6 @@ mod mod_blood {
 
         /*
             Method that gives free tokens 
-            but calling could cost both Package and Component Royalties.
          */
         pub fn free_token(&mut self) -> Bucket {
             info!("My balance is: {} KingToken. Now giving away a token!", self.sample_vault.amount());
