@@ -1,10 +1,10 @@
 
 ![XRDmail Logo](./graphics/logo.png "XRDmail")
 
+## Problem
 Email is a vital communication tool in today's world, but it has numerous issues that cause dissatisfaction among users. The problems range from spam emails to overwhelming inboxes, making email frustrating. Email's open nature, which allows anyone to send anything without charge, makes it vulnerable to scammers and other malicious actors. Additionally, users typically have a single inbox for all correspondence, making it challenging to prioritize and organize emails. Centralized email services also have the power to revoke access at any time, leaving users with no control over their inbox. Furthermore, email lacks security measures and the ability to track email delivery.
 
-![XRDmail Overview](./graphics/xrdmail_diagram.png "XRDmail")
-
+## Solution
 Introducing *XRDmail*, a new mailing protocol built on the Radix Public Ledger that offers a solution to the problems associated with traditional email.
 The protocol consists of mailboxes that exist as components on ledger that can send and receive mail in the form of NFTs. This means that the mailbox is decentralized, and cannot be shut down or revoked by any central authority.
 
@@ -12,6 +12,8 @@ The XRDmail protocol offers several features that make it more secure and effici
 Additionally, XRDmail allows users to set fees for sending mail to their mailbox, which can deter spammers and scammers and if the mail is genuine. Furthermore XRDmail also allows users to set different fee tiers that require different or multiple badges. 
 
 This protocol is a great showcase of *Asset-Oriented* programming and the blueprint system of *Scrypto*. As well as the *Atomic-Composability* of Radix allowing mailboxes to send resources back and forth in an all-or-nothing way.
+
+![XRDmail Overview](./graphics/xrdmail_diagram.png "XRDmail")
 
 ## Mailbox Overview
 Upon instantiation the owner can specify a **badge** (such as a "contact" badge) that is required to post to the mailbox. Once the component is instantiated and globalized an **owner badge** is returned with metadata pointing to which mailbox it owns.
