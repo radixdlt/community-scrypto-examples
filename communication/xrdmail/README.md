@@ -1,8 +1,8 @@
 # XRDmail
-## Problem
+![XRDmail Logo](./graphics/logo.png "XRDmail")
 Email is a vital communication tool in today's world, but it has numerous issues that cause dissatisfaction among users. The problems range from spam emails to overwhelming inboxes, making email frustrating. Email's open nature, which allows anyone to send anything without charge, makes it vulnerable to scammers and other malicious actors. Additionally, users typically have a single inbox for all correspondence, making it challenging to prioritize and organize emails. Centralized email services also have the power to revoke access at any time, leaving users with no control over their inbox. Furthermore, email lacks security measures and the ability to track email delivery.
 
-## Solution
+![XRDmail Overview](./graphics/xrdmail_diagram.png "XRDmail")
 Introducing *XRDmail*, a new mailing protocol built on the Radix Public Ledger that offers a solution to the problems associated with traditional email.
 The protocol consists of mailboxes that exist as components on ledger that can send and receive mail in the form of NFTs. This means that the mailbox is decentralized, and cannot be shut down or revoked by any central authority.
 
