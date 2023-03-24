@@ -9,7 +9,7 @@ Introducing *XRDmail*, a new mailing protocol built on the Radix Public Ledger t
 The protocol consists of mailboxes that exist as components on ledger that can send and receive mail in the form of NFTs. This means that the mailbox is decentralized, and cannot be shut down or revoked by any central authority.
 
 The XRDmail protocol offers several features that make it more secure and efficient than traditional email. Users can create multiple mailboxes for different types of correspondence, which makes it easier to organize and prioritize emails. Users can also set badge requirements for sending emails to their mailbox. 
-Additionally, XRDmail allows users to set fees for sending mail to their mailbox, which can deter spammers and scammers and if the mail is genuine. Furthermore XRDmail also allows users to set different fee tiers that require different or multiple badges. 
+Additionally, XRDmail allows users to set fees for sending mail to their mailbox, which can deter spammers and scammers. Furthermore XRDmail also allows users to set different fee tiers that require different or multiple badges. 
 
 This protocol is a great showcase of *Asset-Oriented* programming and the blueprint system of *Scrypto*. As well as the *Atomic-Composability* of Radix allowing mailboxes to send resources back and forth in an all-or-nothing way.
 
@@ -19,10 +19,10 @@ This protocol is a great showcase of *Asset-Oriented* programming and the bluepr
 Upon instantiation the owner can specify a **badge** (such as a "contact" badge) that is required to post to the mailbox. Once the component is instantiated and globalized an **owner badge** is returned with metadata pointing to which mailbox it owns.
 The owner badge can be used to do the following actions:
 - Set the mailboxes mutable metadata such as "Name", "Description", "PGP_public_key" etc...
-- Set a mutable default fee for you mailbox (set to zero by default).
+- Set a mutable default fee for the mailbox (set to zero by default).
 - Set mutable pricing tiers for different or multiple badges.
-- Collect fees from your mailbox.
-- Withdraw or create Proofs of MailNfts in your inbox.
+- Collect fees from the mailbox.
+- Withdraw or create Proofs of MailNfts in the inbox.
 
 ## MailNft Overview
 The MailNft Data is **immutable** and has the following fields:
