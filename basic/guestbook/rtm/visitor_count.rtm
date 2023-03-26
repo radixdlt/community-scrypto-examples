@@ -1,0 +1,7 @@
+CALL_METHOD
+    ComponentAddress("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("${book}")
+    "visitor_count";

@@ -1,0 +1,12 @@
+CALL_METHOD
+    ComponentAddress("${account}")
+    "create_proof_by_amount"
+    Decimal("1")
+    ResourceAddress("${badge}");
+CALL_METHOD
+    ComponentAddress("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("${book}")
+    "open_book";
