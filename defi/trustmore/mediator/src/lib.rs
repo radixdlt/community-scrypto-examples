@@ -60,14 +60,20 @@ mod mod_mediator {
 
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
-            let access_rules: AccessRules = AccessRules::new()
+            let access_rules: AccessRulesConfig = AccessRulesConfig::new()
                 .method("withdrawal",admin_rule.clone(), rule!(deny_all))
                 .method("set_contract_package_info",admin_rule.clone(), rule!(deny_all))
                 .method("return_owner_badge",admin_rule.clone(), rule!(deny_all))
                 .default(rule!(allow_all), LOCKED);
+
+//            let access_rules: AccessRules = AccessRules::new()
+//                .method("withdrawal",admin_rule.clone(), rule!(deny_all))
+//                .method("set_contract_package_info",admin_rule.clone(), rule!(deny_all))
+//                .method("return_owner_badge",admin_rule.clone(), rule!(deny_all))
+//                .default(rule!(allow_all), LOCKED);
  
             // Instantiate a Hello component, populating its vault with our supply of 1000 HelloToken
-            let mut component: MediatorComponent = Self {
+            let component: MediatorComponent = Self {
                 radix_vault: Vault::new(RADIX_TOKEN),
                 admin_vault: Vault::with_bucket(local_admin_badge),
                 contracts: KeyValueStore::new(),
@@ -77,10 +83,10 @@ mod mod_mediator {
                 contract_instatiation_token: KeyValueStore::new(),
             }
             .instantiate();
-            component.add_access_check(access_rules);
+//            component.add_access_check(access_rules);
         
             // Setting up component address of this component
-            let globalized_component: ComponentAddress = component.globalize();
+            let globalized_component: ComponentAddress = component.globalize_with_access_rules(access_rules);
             let global_ref: MediatorGlobalComponentRef = globalized_component.into();
             global_ref.set_component_address(globalized_component); 
 
@@ -93,7 +99,7 @@ mod mod_mediator {
         pub fn set_component_address(&mut self, address: ComponentAddress) {
             match self.component_address {
                 None => self.component_address = Some(address),
-                Some(_) => panic!()
+                Some(_) => panic!("This method can only be called once")
             }
         }
 
@@ -137,7 +143,7 @@ mod mod_mediator {
             let xrd_buy_in: Bucket = payment.take(self.price_of_contract);
             self.radix_vault.put(xrd_buy_in);
  
-            let my_packet: &BorrowedPackage = borrow_package!(self.contract_package_address);
+            let my_packet: BorrowedPackage = borrow_package!(self.contract_package_address);
 
             let v:DataRef<Vault> = self.contract_instatiation_token.get(&self.contract_package_address).unwrap();
 
@@ -147,7 +153,7 @@ mod mod_mediator {
                 buyer_token, seller_token) 
                 = v.authorize(|| my_packet.call::
                         <(ComponentAddress, Bucket, Bucket, Bucket)>
-                        ("Contract", "new", args![my_component_addres]));
+                        ("Contract", "new", scrypto_args![my_component_addres]));
 
             if self.contracts.get(&contract_component).is_none() {
                 let v: Vault = Vault::with_bucket(contractbadge);
@@ -161,7 +167,7 @@ mod mod_mediator {
 
         pub fn return_owner_badge(&mut self)-> Bucket {
             
-            let mut v = 
+            let mut v: DataRefMut<Vault> = 
                 self.contract_instatiation_token.get_mut(&self.contract_package_address).unwrap();
             
             v.take_all()

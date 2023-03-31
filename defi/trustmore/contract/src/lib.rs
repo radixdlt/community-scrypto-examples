@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 
-#[derive(NonFungibleData, Clone)]
+#[derive(NonFungibleData, ScryptoSbor, Clone)]
 pub struct Info4Contract {
     contract_adress: ComponentAddress,
     mediator_address: ComponentAddress,
@@ -8,7 +8,7 @@ pub struct Info4Contract {
     validated: bool,
 }
 
-#[derive(NonFungibleData)]
+#[derive(NonFungibleData, ScryptoSbor)]
 pub struct Info4Mediator {
     contract_adress: ComponentAddress,
 }
@@ -56,21 +56,21 @@ mod mod_contract {
 
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
                 
-            let my_mediator_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible()
+            let my_mediator_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible::<Info4Mediator>()
                 .metadata("name", "Contract Mediator Badge")
                 .metadata("description", "Mediator Badge for Validated Contract Component")
                 .mintable(admin_rule.clone(), rule!(deny_all))
                 .updateable_non_fungible_data(admin_rule.clone(), rule!(deny_all))
                 .create_with_no_initial_supply();
 
-            let my_buyer_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible()
+            let my_buyer_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible::<Info4Contract>()
                 .metadata("name", "Contract Buyer Badge")
                 .metadata("description", "Buyer Badge for Validated Contract Component")
                 .mintable(admin_rule.clone(), rule!(deny_all))
                 .updateable_non_fungible_data(admin_rule.clone(), rule!(deny_all))
                 .create_with_no_initial_supply();
 
-            let my_seller_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible()
+            let my_seller_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible::<Info4Contract>()
                 .metadata("name", "Contract Seller Badge")
                 .metadata("description", "Seller Badge for Validated Contract Component")
                 .mintable(admin_rule.clone(), rule!(deny_all))
@@ -82,14 +82,14 @@ mod mod_contract {
             let _seller_rule: AccessRule = rule!(require(my_seller_badge));
 
 
-            let access_rules: AccessRules = AccessRules::new()
+            let access_rules: AccessRulesConfig = AccessRulesConfig::new()
                 .method("mint_and_init", rule!(allow_all), rule!(deny_all))
 //                .method("activate_seller_badge", seller_rule.clone(), rule!(deny_all))
 //                .method("activate_buyer_badge", buyer_rule.clone(), rule!(deny_all))
 //                .method("set_mediator_address", client_rule.clone(), rule!(deny_all))
                 .default(rule!(allow_all), LOCKED);
 
-            let mut component:ContractComponent = Self {
+            let component:ContractComponent = Self {
                 admin_vault: Vault::with_bucket(my_admin_badge),
                 my_buyer_badge,    
                 my_seller_badge,
@@ -98,10 +98,9 @@ mod mod_contract {
                 component_address: None,  
             }
             .instantiate();
-            component.add_access_check(access_rules);
 
             // Setting up component address of this component
-            let globalized_component = component.globalize();
+            let globalized_component: ComponentAddress = component.globalize_with_access_rules(access_rules);
             let global_ref: ContractGlobalComponentRef = globalized_component.into();
             let(seller_bucket, buyer_bucket, mediator_bucket) = 
                 global_ref.mint_and_init(globalized_component);
@@ -114,32 +113,32 @@ mod mod_contract {
             
             match self.component_address {
                 None => self.component_address = Some(my_component_addres),
-                Some(_) => panic!()
+                Some(_) => panic!("This method can only be called once")
             }
 
-            let nft_data = Info4Contract {
+            let nft_data: Info4Contract = Info4Contract {
                 contract_adress: my_component_addres,
                 mediator_address: self.calling_component,
                 validated: false,
             };
 
-            let seller_bucket = self.admin_vault.authorize( || {
+            let seller_bucket: Bucket = self.admin_vault.authorize( || {
                 borrow_resource_manager!(self.my_seller_badge).mint_uuid_non_fungible(
                 nft_data.clone()
                 )
             });
 
-            let buyer_bucket = self.admin_vault.authorize( || {
+            let buyer_bucket: Bucket = self.admin_vault.authorize( || {
                 borrow_resource_manager!(self.my_buyer_badge).mint_uuid_non_fungible(
                 nft_data.clone()
                 )
             });
 
-            let mediator_data = Info4Mediator {
+            let mediator_data: Info4Mediator = Info4Mediator {
                 contract_adress: my_component_addres,
             };
 
-            let mediator_bucket = self.admin_vault.authorize( || {
+            let mediator_bucket: Bucket = self.admin_vault.authorize( || {
                 borrow_resource_manager!(self.my_mediator_badge).mint_uuid_non_fungible(
                 mediator_data
                 )
@@ -155,13 +154,13 @@ mod mod_contract {
          */
         pub fn activate_seller_badge(&mut self, my_badge: Proof) {
             
-            let validated_proof = my_badge.validate_proof(
+            let validated_proof: ValidatedProof = my_badge.validate_proof(
                 ProofValidationMode::ValidateResourceAddress(self.my_seller_badge)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_local_id();
+            let nft_id: NonFungibleLocalId = validated_proof.non_fungible_local_id();
         
-            let resource_manager: &mut ResourceManager = 
+            let mut resource_manager: ResourceManager = 
                 borrow_resource_manager!(self.my_seller_badge);
         
             let mut local_data: Info4Contract = resource_manager.get_non_fungible_data(&nft_id);
@@ -169,8 +168,9 @@ mod mod_contract {
             local_data.validated = true;
 
             self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
-                &nft_id, 
-                local_data
+                &nft_id,
+                "validated", 
+                local_data.validated,
             ));
 
         }
@@ -183,13 +183,13 @@ mod mod_contract {
 
         pub fn activate_buyer_badge(&mut self, my_badge: Proof) {
             
-            let validated_proof = my_badge.validate_proof(
+            let validated_proof: ValidatedProof = my_badge.validate_proof(
                 ProofValidationMode::ValidateResourceAddress(self.my_buyer_badge)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_local_id();
+            let nft_id: NonFungibleLocalId = validated_proof.non_fungible_local_id();
         
-            let resource_manager: &mut ResourceManager = 
+            let mut resource_manager: ResourceManager = 
                 borrow_resource_manager!(self.my_buyer_badge);
         
             let mut local_data: Info4Contract = resource_manager.get_non_fungible_data(&nft_id);
@@ -197,8 +197,9 @@ mod mod_contract {
             local_data.validated = true;
 
             self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
-                &nft_id, 
-                local_data
+                &nft_id,
+                "validated", 
+                local_data.validated
             ));
 
         }
