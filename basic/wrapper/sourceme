@@ -4,7 +4,7 @@ resim reset
 temp_account=`resim new-account`
 export alice_account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
 export alice_priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
-export alicebadge=`echo "$temp_account" | grep -i NonFungibleGlobalId | grep -o "resource_.*"`
+export alicebadge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
 
 # export alicebadge=`resim new-simple-badge | grep "NFA" | sed "s/NFAddress:\ //g"`
 # export package=`resim publish ./service --owner-badge $alicebadge | sed "s/Success! New Package: //"`
@@ -16,19 +16,17 @@ export radix=`resim show $alice_account | grep "Radix" | grep -w -o "resource_.\
 temp_account=`resim new-account`
 export bob_account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
 export bob_priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
-#export bobbadge=`echo "$temp_account" | grep -i NonFungibleGlobalId | grep -o "resource_.*"`
+export bobbadge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
 
 resim transfer 1 $proof $bob_account
 
-resim set-default-account $bob_account $bob_priv $alicebadge
-export bobbadge=`resim new-simple-badge | grep -i NonFungibleGlobalId | grep -o "resource_.*"`
 resim set-default-account $bob_account $bob_priv $bobbadge
 # export bridgepackage=`resim publish ./bridge --owner-badge $bobbadge | sed "s/Success! New Package: //"`
 export bridgepackage=`resim publish ./bridge | sed "s/Success! New Package: //"`
 export bridgecomponent=`resim call-function $bridgepackage Bridge instantiate $component $proof |grep -A 4 "New" |grep -o "component_.*"`
 export bridgeproof=`resim show $bob_account | grep "Admin Badge for Bridge" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
-resim call-method $bridgecomponent deposit_badge 1,$proof
-resim call-method $bridgecomponent admin_subscription_ticket --proofs 1,$bridgeproof
+resim call-method $bridgecomponent deposit_badge $proof:1
+resim call-method $bridgecomponent admin_subscription_ticket --proofs $bridgeproof:1
 export subscriptionbadge=`resim show $bob_account | grep "Ticket for Bridge Subscription" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
 
 echo "Alice account: $alice_account"
@@ -47,7 +45,7 @@ echo "subscriptionbadge:" $subscriptionbadge
 
 echo "--------------------------------------------------------------------------------------------"
 echo "     call the bridged functions:"
-echo "     resim call-method \$bridgecomponent restricted_bridge 1,\$subscriptionbadge"
-echo "     resim call-method \$bridgecomponent second_bridge 1,\$subscriptionbadge"
-echo "     resim call-method \$bridgecomponent simple_bridge 1,\$subscriptionbadge"
+echo "     resim call-method \$bridgecomponent restricted_bridge \$subscriptionbadge:1"
+echo "     resim call-method \$bridgecomponent second_bridge \$subscriptionbadge:1"
+echo "     resim call-method \$bridgecomponent simple_bridge \$subscriptionbadge:1"
 echo "--------------------------------------------------------------------------------------------"

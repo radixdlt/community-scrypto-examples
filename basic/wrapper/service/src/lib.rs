@@ -4,7 +4,7 @@ use scrypto::prelude::*;
 mod mod_service {
     struct Service {
         my_range: u32,
-        my_random: [u8;16],
+        random_seed: [u8;16],
        // resourceaddress of the admin badge
         admin_badge_address: ResourceAddress,
 
@@ -17,7 +17,7 @@ mod mod_service {
 
             // creating our admin badges
             // use one badge for internal admin stuff, and send one to instantiate wallet address.
-            let my_admin_badge = ResourceBuilder::new_fungible()
+            let my_admin_badge: Bucket = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Admin Badge for Service")
                 .mint_initial_supply(1);
@@ -25,21 +25,18 @@ mod mod_service {
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
             // set the access rules for the Admin-only and internal functions.
-            let access_rules = AccessRules::new()
+            let access_rules:AccessRulesConfig = AccessRulesConfig::new()
                 .method("awesome_service", admin_rule.clone(), AccessRule::DenyAll)
-//                .method("generate_random", AccessRule::DenyAll, AccessRule::DenyAll)
                 .default(AccessRule::AllowAll, AccessRule::DenyAll);
                 
-            let mut component = Self {
+            let component: ServiceComponent = Self {
                 my_range: u32::MAX,
-                my_random: Runtime::generate_uuid().to_le_bytes(),
+                random_seed: scrypto::crypto::hash(Runtime::transaction_hash().to_vec()).lower_16_bytes(),
                 admin_badge_address: my_admin_badge.resource_address(),
-//                my_random: [0u8; 16],
             }
           
             .instantiate();
-            component.add_access_check(access_rules);
-            let component = component.globalize();
+            let component: ComponentAddress = component.globalize_with_access_rules(access_rules);
 
             // Return the instantiated component and the admin badge that was just minted
             (component, my_admin_badge)
@@ -49,16 +46,16 @@ mod mod_service {
             private function to this blueprint.
         */
         fn generate_random(&mut self) -> u128 {
-            let mut data = self.my_random.as_ref().to_vec();
-            // this random function will work less deterministic when time can be obtained in ns.
-            let my_time = Clock::current_time(TimePrecision::Minute).seconds_since_unix_epoch;
+            let mut data: Vec<u8> = self.random_seed.as_ref().to_vec();
+            let my_time: i64 = Clock::current_time(scrypto::blueprints::clock::TimePrecision::Minute).seconds_since_unix_epoch;
             self.my_range = self.my_range.wrapping_add(1);
             data.extend(self.my_range.to_le_bytes());
             data.extend(my_time.to_le_bytes());
-            self.my_random = sha256_twice(data).lower_16_bytes();
-            u128::from_le_bytes(self.my_random)
+            data.extend(Runtime::transaction_hash().to_vec());
+            self.random_seed = scrypto::crypto::hash(data).lower_16_bytes();
+            u128::from_le_bytes(self.random_seed)
         }
-        
+
         /*
             Restricted access service
             a call to this method requires System Level Authentication
@@ -68,7 +65,7 @@ mod mod_service {
                 let mut random:u128 = self.generate_random();
 //                let mut random:u128 = Runtime::generate_uuid();
                 while random > 0{
-                    let myval = random & 0x7;
+                    let myval: u128 = random & 0x7;
                     // if 0x6 or 0x7 throw away result and redo check on 3 new bits.
                     if myval < 0x6{ 
                         return (myval+1) as i8 ;
@@ -85,14 +82,14 @@ mod mod_service {
         */
         pub fn second_service(&mut self, auth: Proof) -> i8 {
 
-            let _validated_proof = auth.validate_proof(
+            let _validated_proof: ValidatedProof = auth.validate_proof(
                 ProofValidationMode::ValidateResourceAddress(self.admin_badge_address)
             ).expect("invalid proof");
 
             loop{
-                let mut random:u128 = Runtime::generate_uuid();
+                let mut random:u128 = self.generate_random();
                 while random > 0{
-                    let myval = random & 0x7;
+                    let myval: u128 = random & 0x7;
                     // if 0x6 or 0x7 throw away result and redo check on 3 new bits.
                     if myval < 0x6{ 
                         return (myval+1) as i8 ;
@@ -113,4 +110,3 @@ mod mod_service {
         }
     }
 }
-
