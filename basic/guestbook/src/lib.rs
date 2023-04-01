@@ -20,7 +20,6 @@
 //! [visitor_count]: crate::guestbook::Guestbook::visitor_count
 //! [who_was_there]: crate::guestbook::Guestbook::who_was_there
 
-
 use scrypto::prelude::*;
 
 /// This is just an alias we use for convenience, with details about a
@@ -64,7 +63,7 @@ mod guestbook {
                 .divisibility(0)
                 .mint_initial_supply(1);
             
-            let mut book =
+            let book =
                 Self {
                     visitors: Vec::new(),
                     admin_resource: admin_badge.resource_address(),
@@ -73,15 +72,19 @@ mod guestbook {
             .instantiate();
 
             let admin_res = admin_badge.resource_address();
-            book.add_access_check(AccessRules::new()
-                                  .method("open_book",     rule!(require(admin_res)), LOCKED)
-                                  .method("close_book",    rule!(require(admin_res)), LOCKED)
-                                  .method("i_was_here",    rule!(allow_all), LOCKED)
-                                  .method("visitor_count", rule!(allow_all), LOCKED)
-                                  .method("who_was_there", rule!(allow_all), LOCKED)
-                                  );
 
-            (book.globalize(), admin_badge)
+            let access =
+                AccessRulesConfig::new()
+                .method("open_book",     rule!(require(admin_res)), LOCKED)
+                .method("close_book",    rule!(require(admin_res)), LOCKED)
+                .method("i_was_here",    rule!(allow_all), LOCKED)
+                .method("visitor_count", rule!(allow_all), LOCKED)
+                .method("who_was_there", rule!(allow_all), LOCKED)
+                ;
+
+            let book = book.globalize_with_access_rules(access);
+            
+            (book, admin_badge)
         }
 
         /// The administrator can use this to open the book for
@@ -108,7 +111,7 @@ mod guestbook {
             // in the proof.
             let visitor = visitor.unsafe_skip_proof_validation();
             self.visitors.push((
-                Clock::current_time(TimePrecision::Minute).seconds_since_unix_epoch,
+                Clock::current_time_rounded_to_minutes().seconds_since_unix_epoch,
                 // This panics if the visitor proof doesn't contain an
                 // NFT:
                 NonFungibleGlobalId::new(visitor.resource_address(), visitor.non_fungible_local_id()),

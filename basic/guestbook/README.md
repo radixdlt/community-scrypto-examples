@@ -94,10 +94,6 @@ The book starts closed so you can't use it yet. The admin user has to
 first open it. Luckily that admin user is you and you have the badge
 for it:
 
-        $ resim call-method $book "open_book" --proofs 1,$badge
-
-Or use a transaction manifest:
-
         $ resim run rtm/open_book.rtm 
 
 Most of the output now doesn't matter except that it should say this:

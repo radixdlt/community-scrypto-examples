@@ -1,12 +1,12 @@
 CALL_METHOD
-    ComponentAddress("${account}")
+    Address("${account}")
     "create_proof_by_amount"
-    Decimal("1")
-    ResourceAddress("${badge}");
+    Address("${badge}")
+    Decimal("1");
 CALL_METHOD
-    ComponentAddress("${account}")
+    Address("${account}")
     "lock_fee"
     Decimal("100");
 CALL_METHOD
-    ComponentAddress("${book}")
+    Address("${book}")
     "close_book";

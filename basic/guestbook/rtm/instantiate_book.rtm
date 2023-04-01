@@ -1,12 +1,12 @@
 CALL_METHOD
-    ComponentAddress("${account}")
+    Address("${account}")
     "lock_fee"
     Decimal("100");
 CALL_FUNCTION
-    PackageAddress("${package}")
+    Address("${package}")
     "Guestbook"
     "instantiate_book";
 CALL_METHOD
-    ComponentAddress("${account}")
+    Address("${account}")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
