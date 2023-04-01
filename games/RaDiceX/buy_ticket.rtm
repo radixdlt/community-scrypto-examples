@@ -1,0 +1,21 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    Address("${account}")
+    "withdraw"
+    Address("${radix}")
+    Decimal("10");
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("10")
+    Address("${radix}")
+    Bucket("bucket1");
+CALL_METHOD
+    Address("${component}")
+    "buy_ticket"
+    Bucket("bucket1");
+CALL_METHOD
+    Address("${account}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

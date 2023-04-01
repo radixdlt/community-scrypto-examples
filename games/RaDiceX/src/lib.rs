@@ -1,6 +1,6 @@
 use scrypto::prelude::*;
 
-#[derive(NonFungibleData)]
+#[derive(NonFungibleData, ScryptoSbor)]
 pub struct Ticket {
     #[mutable]
     level: i8,
@@ -20,7 +20,11 @@ mod mod_radicex{
         admin_vault: Vault,
 
         // keep track of the number of NFTs generated, this number will be used for the NFT-Id
-        nrNFTsgenerated: u64,
+        nr_nfts_generated: u64,
+
+        // helper seed for random function. 
+        random_seed: [u8;16],
+        
     }
 
     impl Radicex {
@@ -30,7 +34,7 @@ mod mod_radicex{
 
             // creating our admin badges
             // use one badge for internal admin stuff, and send one to instantiate wallet address.
-            let mut my_admin_badge = ResourceBuilder::new_fungible()
+            let mut my_admin_badge: Bucket = ResourceBuilder::new_fungible()
                 .divisibility(DIVISIBILITY_NONE)
                 .metadata("name", "Admin Badge for RaDiceX")
                 .mint_initial_supply(2);
@@ -41,7 +45,7 @@ mod mod_radicex{
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
             // Create our Ticket NFT
-            let my_non_fungible_ticket = ResourceBuilder::new_integer_non_fungible()
+            let my_non_fungible_ticket: ResourceAddress = ResourceBuilder::new_integer_non_fungible::<Ticket>()
                 .metadata("name", "Ticket for RaDiceX")
                 .burnable(admin_rule.clone(), LOCKED)
                 .mintable(rule!(require(my_admin_badge.resource_address())), LOCKED)
@@ -51,33 +55,45 @@ mod mod_radicex{
                 .create_with_no_initial_supply();
 
             // set the access rules for the Admin-only and internal functions.
-            let access_rules = AccessRules::new()
+            let access_rules: AccessRulesConfig = AccessRulesConfig::new()
                 .method("admin_ticket", admin_rule.clone(), AccessRule::DenyAll)
                 .method("withdrawal_all", admin_rule.clone(), rule!(deny_all))
-                .method("roll_dice", rule!(deny_all), rule!(deny_all))
                 .default(AccessRule::AllowAll, AccessRule::DenyAll);
                 
-            let mut component = Self {
+            let component: RadicexComponent = Self {
                 radix_vault: Vault::new(RADIX_TOKEN),
                 my_non_fungible_ticket,
                 admin_vault: Vault::with_bucket(local_admin_badge),
-                nrNFTsgenerated: 0,
+                nr_nfts_generated: 0,
+                random_seed: scrypto::crypto::hash(Runtime::transaction_hash().to_vec()).lower_16_bytes(),
             }
           
             .instantiate();
-            component.add_access_check(access_rules);
-            let component = component.globalize();
+//            component.add_access_check(access_rules);
+            let component:ComponentAddress = component.globalize_with_access_rules(access_rules);
 
             // Return the instantiated component and the admin badge that was just minted
             (component, my_admin_badge)
         }
 
         /*
+            Random number generator... as random as possible.
+            With a smaller time precision this would be better.
+         */
+        fn generate_random(&mut self) -> u128 {
+            let mut data: Vec<u8> = self.random_seed.as_ref().to_vec();
+            let my_time: i64 = Clock::current_time(scrypto::blueprints::clock::TimePrecision::Minute).seconds_since_unix_epoch;
+            data.extend(my_time.to_le_bytes());
+            data.extend(Runtime::transaction_hash().to_vec());
+            self.random_seed = scrypto::crypto::hash(data).lower_16_bytes();
+            u128::from_le_bytes(self.random_seed)
+        }
+
+        /*
             Die roll function, used internally
-            This function is blocked for external call by access ruls
         */
-        pub fn roll_dice(&mut self) -> i8 {
-            let random = Runtime::generate_uuid();
+        fn roll_dice(&mut self) -> i8 {
+            let random: u128 = self.generate_random(); 
             let dieval:i8 = ((random % 6) + 1) as i8;
             dieval
         }
@@ -86,20 +102,18 @@ mod mod_radicex{
             Die roll function, external available for comparison
         */
         pub fn roll_dice_old(&mut self) -> i8 {
-            let random = Runtime::generate_uuid();
+            let random: u128 = self.generate_random(); 
             let dieval:i8 = ((random % 6) + 1) as i8;
             dieval
         }
         /*
-            Alterniative Die roll function, used internally, but should be external accessable
-            The modulo (%) function is pratically a division, 
-            this routine could be "cheaper" in network execution
+            Alterniative Die roll function
         */
         pub fn roll_dice_alt(&mut self) -> i8 {
             loop{
-                let mut random:u128 = Runtime::generate_uuid();
+                let mut random:u128 = self.generate_random(); 
                 while random > 0{
-                    let myval = random & 0x7;
+                    let myval: u128 = random & 0x7;
                     // if 0x6 or 0x7 throw away result and redo check on 3 new bits.
                     if myval < 0x6{ 
                         return (myval+1) as i8 ;
@@ -121,7 +135,7 @@ mod mod_radicex{
             );
             assert!(deposit.amount()>amount, "There are not enough tokens in your account");
 
-            let xrd_deposit = deposit.take(amount);
+            let xrd_deposit: Bucket = deposit.take(amount);
             self.radix_vault.put(xrd_deposit);
 
             // return the bucket incase of a surplus of tokens
@@ -133,7 +147,7 @@ mod mod_radicex{
             Admin only function.
         */
         pub fn withdrawal_all(&mut self) -> Bucket {
-            let xrd_withdrawal = self.radix_vault.take_all();
+            let xrd_withdrawal: Bucket = self.radix_vault.take_all();
             xrd_withdrawal
         }
 
@@ -141,22 +155,22 @@ mod mod_radicex{
             Reinitialize a ticket that has NFT level field set to 0
             Using this method gives a 10% discount compared to buying new ticket.
         */
-        pub fn reinit_ticket(&mut self, NFTTicket: Proof, mut buyin: Bucket) -> Bucket {
+        pub fn reinit_ticket(&mut self, nft_ticket: Proof, mut buyin: Bucket) -> Bucket {
 
             assert!(
                 buyin.resource_address() == self.radix_vault.resource_address(),
                 "The Buy-in can only be done with Radix tokens"
             );
             assert!(!(buyin.amount()<dec!("0.9")), "Not enough XRD supplied");
-            assert!(NFTTicket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
+            assert!(nft_ticket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
 
-            let validated_proof = NFTTicket.validate_proof(
+            let validated_proof: ValidatedProof = nft_ticket.validate_proof(
                 ProofValidationMode::ValidateResourceAddress(self.my_non_fungible_ticket)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_local_id();
+            let nft_id: NonFungibleLocalId = validated_proof.non_fungible_local_id();
         
-            let resource_manager: &mut ResourceManager = 
+            let mut resource_manager: ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
         
             let mut ticket_data: Ticket = resource_manager.get_non_fungible_data(&nft_id);
@@ -165,16 +179,24 @@ mod mod_radicex{
 
             let amount: Decimal = dec!("0.9");
 
-            let xrd_buy_in = buyin.take(amount);
+            let xrd_buy_in: Bucket = buyin.take(amount);
             self.radix_vault.put(xrd_buy_in);
 
             ticket_data.level = 10;
             ticket_data.last_throw = "Just reinitialized the Ticket".to_string();
             
             self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
-                &nft_id, 
-                ticket_data
+                &nft_id,
+                "level",
+                ticket_data.level,
             ));
+
+            self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
+                &nft_id,
+                "last_throw",
+                ticket_data.last_throw,
+            ));
+
 
             buyin
         }
@@ -186,21 +208,21 @@ mod mod_radicex{
         */
         pub fn admin_ticket(&mut self) -> Bucket {
           
-            let NFT_data = Ticket {
+            let nft_data: Ticket = Ticket {
                 level: 10,
                 last_throw: "New Ticket, no play history".to_string(),
             };
 
-            self.nrNFTsgenerated = self.nrNFTsgenerated.wrapping_add(1u64);
+            self.nr_nfts_generated = self.nr_nfts_generated.wrapping_add(1u64);
 
-            let NFT_bucket = self.admin_vault.authorize(||{
+            let nft_bucket: Bucket = self.admin_vault.authorize(||{
                 borrow_resource_manager!(self.my_non_fungible_ticket).mint_non_fungible(
-                &NonFungibleLocalId::Integer(self.nrNFTsgenerated.into()),
-                NFT_data
+                &NonFungibleLocalId::Integer(self.nr_nfts_generated.into()),
+                nft_data
                 )
             });
 
-            NFT_bucket
+            nft_bucket
         }
 
         /*
@@ -217,31 +239,31 @@ mod mod_radicex{
             
             let amount: Decimal = dec!("1");
  
-            let NFT_bucket = self.admin_ticket();
+            let nft_bucket: Bucket = self.admin_ticket();
 
-            let xrd_buy_in = buyin.take(amount);
+            let xrd_buy_in: Bucket = buyin.take(amount);
             self.radix_vault.put(xrd_buy_in);
  
-            (NFT_bucket, buyin)
+            (nft_bucket, buyin)
         }
 
         /*
             redeem a price if the NFT level field is equal to 25
         */
-        pub fn redeem_prize(&mut self, NFTTicket: Proof) -> Bucket {
+        pub fn redeem_prize(&mut self, nft_ticket: Proof) -> Bucket {
 
             let redeem_amount: Decimal = dec!("5");
             assert!(&redeem_amount <= &self.radix_vault.amount(), 
                 "Not enough funds in the vault to pay prize money");
-            assert!(NFTTicket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
+            assert!(nft_ticket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
 
-            let validated_proof = NFTTicket.validate_proof(
+            let validated_proof: ValidatedProof = nft_ticket.validate_proof(
                 ProofValidationMode::ValidateResourceAddress(self.my_non_fungible_ticket)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_local_id();
+            let nft_id: NonFungibleLocalId = validated_proof.non_fungible_local_id();
         
-            let resource_manager: &mut ResourceManager = 
+            let mut resource_manager: ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
         
             let mut ticket_data: Ticket = resource_manager.get_non_fungible_data(&nft_id);
@@ -252,11 +274,19 @@ mod mod_radicex{
             ticket_data.last_throw = "Just redeemed a level 25 Ticket".to_string();
             
             self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
-                &nft_id, 
-                ticket_data
+                &nft_id,
+                "level",
+                ticket_data.level,
             ));
 
-            let xrd_withdrawal =  self.radix_vault.take(redeem_amount);
+            self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
+                &nft_id,
+                "last_throw",
+                ticket_data.last_throw,
+            ));
+
+
+            let xrd_withdrawal: Bucket =  self.radix_vault.take(redeem_amount);
 
             xrd_withdrawal
         }
@@ -267,17 +297,16 @@ mod mod_radicex{
             If the player reaches level 25, this token can be redeemed for 5 XRD
             If the player reaches level 0, this ticket is no longer playable.
         */
-        pub fn play_round(&mut self, NFTTicket: Proof) {
+        pub fn play_round(&mut self, nft_ticket: Proof) {
+            assert!(nft_ticket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
 
-            assert!(NFTTicket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
-
-            let validated_proof = NFTTicket.validate_proof(
+            let validated_proof: ValidatedProof = nft_ticket.validate_proof(
                 ProofValidationMode::ValidateResourceAddress(self.my_non_fungible_ticket)
             ).expect("invalid proof");
 
-            let nft_id = validated_proof.non_fungible_local_id();
-        
-            let resource_manager: &mut ResourceManager = 
+            let nft_id: NonFungibleLocalId = validated_proof.non_fungible_local_id();
+
+            let mut resource_manager: ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
         
             let mut ticket_data: Ticket = resource_manager.get_non_fungible_data(&nft_id);
@@ -285,15 +314,15 @@ mod mod_radicex{
             assert!(ticket_data.level != 25, "Ticket Level = 25, Ticket not playable");
             assert!(ticket_data.level != 0, "Ticket Level = 0, Ticket not playable");
 
-            let house_die = self.roll_dice();
-            let player_die = self.roll_dice();
-            let mut diff_of_dice = &player_die - &house_die;
+            let house_die: i8 = self.roll_dice();
+            let player_die: i8 = self.roll_dice();
+            let mut diff_of_dice: i8 = &player_die - &house_die;
             // code in case both house and player die-roll is equal
             // die[1]=-3;die[2]=-2;die[3]=-1;die[4]=0;die[5]=1;die[6]=2;
             if diff_of_dice == 0 {
                 diff_of_dice = player_die.clone() - (4 as i8);
             }
-            let mut newlevel = ticket_data.level + &diff_of_dice;
+            let mut newlevel: i8 = ticket_data.level + &diff_of_dice;
             if newlevel < 0{
                 newlevel = 0;
             }
@@ -307,24 +336,31 @@ mod mod_radicex{
 
             self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
                 &nft_id, 
-                ticket_data
+                "level",
+                ticket_data.level
             ));
+            self.admin_vault.authorize(|| resource_manager.update_non_fungible_data(
+                &nft_id, 
+                "last_throw",
+                ticket_data.last_throw
+            ));
+
         }
         /*
             Burning of a NFT ticket
         */
-        pub fn burn_ticket(&mut self, NFTTicket: Bucket) {
+        pub fn burn_ticket(&mut self, nft_ticket: Bucket) {
             assert!(
-                NFTTicket.resource_address() == self.my_non_fungible_ticket,
+                nft_ticket.resource_address() == self.my_non_fungible_ticket,
                 "The supplied bucket does not contain the correct Ticket address"
             );
-            assert!(!NFTTicket.is_empty(), "The supplied bucket is empty");
-            assert!(NFTTicket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
+            assert!(!nft_ticket.is_empty(), "The supplied bucket is empty");
+            assert!(nft_ticket.amount()==dec!("1"), "Only one (1) ticket per call is supported");
 
-            let resource_manager: &mut ResourceManager = 
+            let resource_manager: ResourceManager = 
                 borrow_resource_manager!(self.my_non_fungible_ticket);
     
-            self.admin_vault.authorize(|| resource_manager.burn(NFTTicket));
+            self.admin_vault.authorize(|| resource_manager.burn(nft_ticket));
         }
 
     }

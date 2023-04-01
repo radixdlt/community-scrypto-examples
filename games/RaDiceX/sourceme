@@ -4,7 +4,7 @@ resim reset
 temp_account=`resim new-account`
 export account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
 export priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
-export badge=`echo "$temp_account" | grep -i NonFungibleGlobalId | grep -o "resource_.*"`
+export badge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
 
 #export account=`resim new-account | grep -i component | grep -o "account_.*"`
 #export badge=`resim new-simple-badge | grep "NFA" | sed "s/NFAddress:\ //g"`
@@ -14,7 +14,7 @@ export component=`resim call-function $package Radicex instantiate |grep -A 4 "N
 export proof=`resim show $account | grep "Admin Badge for RaDiceX" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
 export radix=`resim show $account | grep "Radix" | grep -w -o "resource_.\S*" | sed -e "s/,//"`
 
-resim call-method $component buy_ticket 2,$radix
+resim call-method $component buy_ticket $radix:4
 export ticket=`resim show $account | grep "Ticket for RaDiceX" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
 
 echo "account: $account"
@@ -28,7 +28,7 @@ echo "ticket: $ticket"
 
 echo "--------------------------------------------------------------------------------------------"
 echo "     Roll the dice:"
-echo "     resim call-method \$component play_round 1,\$ticket"
+echo "     resim call-method \$component play_round \$ticket:1"
 echo "     check the die result:"
 echo "     resim show \$account"
 echo "     check README.md for a list of all methods"
