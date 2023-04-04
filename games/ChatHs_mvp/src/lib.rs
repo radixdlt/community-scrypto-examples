@@ -17,6 +17,7 @@ pub struct ExchangeNFT {
 pub struct ReceiptNFT {
     
     exchange_nft_id: NonFungibleLocalId,
+    due_time: u64,
 
 }
 
@@ -47,7 +48,7 @@ mod chaths {
             .mint_initial_supply(1);
         
             let rules: AccessRules = AccessRules::new()
-            .method("respond", rule!(require(account.resouce_address())), LOCKED)
+            .method("respond", rule!(require(account.resource_address())), LOCKED)
             .default(rule!(allow_all), LOCKED);
 
             // mints the soulbound 'account' badge that will be returned to the caller
@@ -117,6 +118,8 @@ mod chaths {
 
                 (chaths_account_address, account)
 
+                // ***better to put the account address in the account NFT???***
+
                 
         }
 
@@ -126,28 +129,33 @@ mod chaths {
             // Mints a partial 'exchange' NFT and 
             // Returns a bucket containing a 'receipt' NFT and a bucket with any change.
 
-            Let time: u64 = Runtime::current_epoch();
+            let time: u64 = Runtime::current_epoch();
 
             // gets the current time
 
-            If time >= thread_time Let start_time: u64 = time // pseudocode
-            Else Let start_time = thread_time // pseudocode
+            if time >= self.thread_time {
+                let start_time: u64 = time;
+            } else {
+                let start_time: u64 = self.thread_time;
+            };
 
             // sets start_time at current time if it's later than the thread_time or
             // sets start_time as the thread_time
             
-            Let end_time: u64 = start time + 24 // pseudocode
+            let end_time: u64 = start_time + 24u64;
 
-            // sets end_time to 24h after start_time
+            // sets end_time to ~24h after start_time
 
-            Let required_payment_exponent =[ [ (end_time - time) / 24 ] rounded-up! ] -1 // pseudocode
+            let required_payment_exponent = ((end_time - time) / 24 ).ceil() -1;
+            
+            // pseudocode
 
             // calcutates the exponent for the required payment. Rounding it up ensures that
             // the required_payment will depend on the number of pending 'exchange' NFTs
 
             // ***will need to change its type to use in required_payment calc?***
 
-            Let required_payment: Decimal = 20 * (2^required_payment_exponent) // pseudocode
+            let required_payment: Decimal = 20 * (2^required_payment_exponent); // pseudocode
 
             // calculates the required_payment by multiplying 20 by the required payment
             // multiplier which is calculated by 2^required_payment_exponent
@@ -161,12 +169,12 @@ mod chaths {
                 price_paid: required_payment,
                 start_time: start_time,
                 end_time: end_time,
-                response: // Empty String or omit field ??!?
-                complete: FALSE,
+                response: "",// Empty String or omit field ??!?
+                complete: false,
             };
 
             let pending_prompt_bucket = self.internal_nft_mint_badge.authorize(|| {
-                borrow_resource_manager!(self.exchange_nfts.resouce_address).mint_uuid_non_fungible(
+                borrow_resource_manager!(self.exchange_nfts.resource_address).mint_uuid_non_fungible(
                     new_pending_prompt)                    
             });
 
@@ -182,6 +190,7 @@ mod chaths {
             
             let new_receipt = ReceiptNFT {
                 exchange_nft_id: exchange_nft_id,
+                due_time: end_time,
             };
 
             let new_receipt_bucket = self.internal_nft_mint_badge.authorize(|| {
@@ -191,41 +200,167 @@ mod chaths {
 
             // mints a new receipt NFT to return to the prompter
 
-            Let mut thread_time = end_time // pseudocode
+            let mut thread_time = end_time; // pseudocode
 
             // updates the thread_time because of the new pending 'exchange' NFT
 
-            Return payment,
-            Return new_receipt_bucket,
+            (payment, new_receipt_bucket)
+
+            // returns any excess payment and the receipt
 
         }
 
-        pub fn respond(&mut self, response: String) -> (Bucket) {
+        pub fn respond(&mut self, nft_id: NonFungibleLocalId, response: String) -> Bucket {
 
             // System-level authentication of responder holding soulbound 'account' badge
             // Accepts 'response' string and returns payment provided the response is submitted within
             // the appropriate timeframe
             //
             // Edits the 'exchange' NFT to append the 'response' string and change the 'complete' boolean to
-            // 'TRUE'.
+            // 'true'.
+
+            let exchange_nft_bucket = self.exchange_nfts.take_non_fungible(&nft_id);
+
+            // takes the appropriate exchange NFT from the exchange_nfts vault
             //
-            // ***how to get the component to select the correct exchange NFT to append the response to
-            // without requiring the caller to include its ID as an argument to the method??!??***
+            // note: should first assert that the NFT is actually there. Find out how to compare the
+            // nft_id argument to a BTreeSet of the NonFungibleIds contained in the vault.
+
+            let mut non_fungible_data: ExchangeNFT = exchange_nft_bucket.non_fungible().data();
+            non_fungible_data.response = response;
+            non_fungible_data.complete = true;
+            
+            self.internal_nft_mint_badge
+            .authorize(|| exchange_nft_bucket.non_fungible().update_data(non_fungible_data));
+
+            // appends the response to the 'exchange NFT' and marks it as complete
+
+            let payment_amount: Decimal = exchange_nft_bucket.ExchangeNFT.price_paid * 0.9;
+
+            let payment_bucket: Bucket = self.xrd_payments.take(payment_amount);
+
+            // calculates the payment to return, minus 10% commission
+
+            self.exchange_nfts.put(exchange_nft_bucket);
+
+            // puts the completed 'exchange NFT' back in the vault ready to be claimed.
+
+            payment_bucket
+
+            // returns the payment
+
+        }
+
+        pub fn claim_nft(&mut self, receipt: Bucket) -> Bucket {
+
+        // Accepts 'receipt' NFT and returns the appropriate 'exchange' NFT (if the 'exchange NFT' is marked
+        // complete). 
+
+            assert!(
+                receipt.resource_address() == self.receipt_nft_resource_address,
+                "Please submit a vaild receipt."
+            );
+
+            // checks that a vaild receipt has been submitted
+            
+            let time: u64 = Runtime::current_epoch();
+
+            let due_time: u64 = receipt.ReceiptNFT.due_time;
+
+            assert!(
+                time > due_time,
+                "This NFT is not claimable yet."
+            );
+            
+            let exchange_nft_id: NonFungibleLocalId = receipt.ReceiptNFT.exchange_nft_id;
+
+            // gets the exchange_nft_id from the receipt NFT (hopefully, may be wrong)
+
+            let exchange_nft_bucket = self.exchange_nfts.take_non_fungible(&exchange_nft_id);
+
+            // takes the appropriate exchange NFT from the exchange_nfts vault
+            //
+            // note that there's no check on whether it's in the vault because the existence of
+            // the receipt means that it is
+
+            assert!(
+                exchange_nft_bucket.ExchangeNFT.complete == true,
+                "There was no response to your prompt, please claim a refund."
+            );
+
+            // checks that the exchange NFT has been completed
+
+            self.internal_nft_mint_badge.authorize(|| {
+                receipt.burn();
+            });
+
+            // burns the receipt
+
+            exchange_nft_bucket
+
+            // returns the completed exchange NFT
             
         }
 
-        pub fn claim_nft(receipt: Bucket) -> (Bucket) {
+        pub fn claim_refund(&mut self, receipt: Bucket) -> Bucket {
 
-            // Accepts 'receipt' NFT and returns the appropriate 'exchange' NFT (if the 'exchange NFT is marked
-            // complete). 
+        // Accepts 'receipt' NFT and refunds the payment if the 'exchange' NFT has
+        // not been completed in the required timeframe
+
+            assert!(
+                receipt.resource_address() == self.receipt_nft_resource_address,
+                "Please submit a vaild receipt."
+            );
+
+            // checks that a vaild receipt has been submitted
+            
+            let time: u64 = Runtime::current_epoch();
+
+            let due_time: u64 = receipt.ReceiptNFT.due_time;
+
+            assert!(
+                time > due_time,
+                "A refund is not available yet."
+            );
+            
+            let exchange_nft_id: NonFungibleLocalId = receipt.ReceiptNFT.exchange_nft_id;
+
+            // gets the exchange_nft_id from the receipt NFT (hopefully, may be wrong)
+
+            let exchange_nft_bucket = self.exchange_nfts.take_non_fungible(&exchange_nft_id);
+
+            // takes the appropriate exchange NFT from the exchange_nfts vault
+            
+            assert!(
+                exchange_nft_bucket.ExchangeNFT.complete == false,
+                "There was a response to your prompt so a refund is unavailable. Please claim your completed NFT."
+            );
+
+            // checks that the exchange NFT is incomplete
+
+            let refund_amount: Decimal = exchange_nft_bucket.ExchangeNFT.price_paid;
+            
+            let refund_bucket: Bucket = self.xrd_payments.take(refund_amount);
+            
+            self.internal_nft_mint_badge.authorize(|| {
+                receipt.burn();
+            });
+
+            self.internal_nft_mint_badge.authorize(|| {
+                exchange_nft_bucket.burn();
+            });
+
+            // burns the receipt and the incomplete NFT
+
+            refund_bucket
+
+            // returns the completed exchange NFT
 
         }
 
-        pub fn claim_refund(receipt: Bucket) -> (Bucket) {
-
+        pub fn remove_commission() {
+            // todo
         }
-
-        pub fn remove_commission()
     }
 }
 
