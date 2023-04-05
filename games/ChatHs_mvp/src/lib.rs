@@ -123,7 +123,7 @@ mod chaths {
                 
         }
 
-        pub fn prompt(&mut self, payment: Bucket, prompt: String) -> (Bucket, Bucket) {
+        pub fn prompt(&mut self, mut payment: Bucket, prompt: String) -> (Bucket, Bucket) {
 
             // Accepts a 'prompt' string together with a payment in XRD (from anyone)
             // Mints a partial 'exchange' NFT and 
@@ -133,10 +133,10 @@ mod chaths {
 
             // gets the current time
 
-            if time >= self.thread_time {
-                let start_time: u64 = time;
+            let start_time: u64 = if time >= self.thread_time {
+                time
             } else {
-                let start_time: u64 = self.thread_time;
+                self.thread_time
             };
 
             // sets start_time at current time if it's later than the thread_time or
@@ -146,21 +146,31 @@ mod chaths {
 
             // sets end_time to ~24h after start_time
 
-            let required_payment_exponent = ((end_time - time) / 24 ).ceil() -1;
+            let time_to_due: u32 = end_time as u32 - time as u32;
+
+            let required_payment_exponent: u32 = ( (time_to_due + 23u32) / 24u32 ) -1;
+
+            // calcutates the exponent for the required payment. The '+23' is '+' the divisor
+            // '-1' and is intended to produce a ceiling division, rounding the exponent *up*.
+            // 
+            // Rounding it up ensures that the required_payment will depend on the number of pending
+            // 'exchange' NFTs
+            // 
+            // *** check this works! ***
             
-            // pseudocode
-
-            // calcutates the exponent for the required payment. Rounding it up ensures that
-            // the required_payment will depend on the number of pending 'exchange' NFTs
-
-            // ***will need to change its type to use in required_payment calc?***
-
-            let required_payment: Decimal = 20 * (2^required_payment_exponent); // pseudocode
+            let required_payment: u64 = ( 2u64.pow(required_payment_exponent) ) * 20u64;
 
             // calculates the required_payment by multiplying 20 by the required payment
             // multiplier which is calculated by 2^required_payment_exponent
+            // note that the 'pow' for u64 requires a u32 exponent
 
-            self.xrd_payments.put(payment.take(required_payment));
+            let required_payment: Decimal = required_payment.into();
+            
+            // puts the required_payment in a Decimal variable for later use
+
+            let take_payment = payment.take(required_payment);
+            
+            self.xrd_payments.put(take_payment);
 
             // OR PANIC WITH MESSAGE INDICATING REQUIRED PAYMENT
  
@@ -169,12 +179,12 @@ mod chaths {
                 price_paid: required_payment,
                 start_time: start_time,
                 end_time: end_time,
-                response: "",// Empty String or omit field ??!?
+                response: "".to_string(),
                 complete: false,
             };
 
             let pending_prompt_bucket = self.internal_nft_mint_badge.authorize(|| {
-                borrow_resource_manager!(self.exchange_nfts.resource_address).mint_uuid_non_fungible(
+                borrow_resource_manager!(self.exchange_nfts.resource_address()).mint_uuid_non_fungible(
                     new_pending_prompt)                    
             });
 
@@ -200,7 +210,7 @@ mod chaths {
 
             // mints a new receipt NFT to return to the prompter
 
-            let mut thread_time = end_time; // pseudocode
+            self.thread_time = end_time;
 
             // updates the thread_time because of the new pending 'exchange' NFT
 
@@ -229,17 +239,19 @@ mod chaths {
             let mut non_fungible_data: ExchangeNFT = exchange_nft_bucket.non_fungible().data();
             non_fungible_data.response = response;
             non_fungible_data.complete = true;
+
+            let payment_amount: Decimal = non_fungible_data.price_paid * dec!("0.9");
+
+            // calculates the payment to return, minus 10% commission
             
             self.internal_nft_mint_badge
             .authorize(|| exchange_nft_bucket.non_fungible().update_data(non_fungible_data));
 
             // appends the response to the 'exchange NFT' and marks it as complete
 
-            let payment_amount: Decimal = exchange_nft_bucket.ExchangeNFT.price_paid * 0.9;
-
             let payment_bucket: Bucket = self.xrd_payments.take(payment_amount);
 
-            // calculates the payment to return, minus 10% commission
+            // puts the payment in a bucket
 
             self.exchange_nfts.put(exchange_nft_bucket);
 
@@ -265,14 +277,16 @@ mod chaths {
             
             let time: u64 = Runtime::current_epoch();
 
-            let due_time: u64 = receipt.ReceiptNFT.due_time;
+            let non_fungible_data: ReceiptNFT = receipt.non_fungible().data();
+
+            let due_time: u64 = non_fungible_data.due_time;
 
             assert!(
                 time > due_time,
                 "This NFT is not claimable yet."
             );
             
-            let exchange_nft_id: NonFungibleLocalId = receipt.ReceiptNFT.exchange_nft_id;
+            let exchange_nft_id: NonFungibleLocalId = non_fungible_data.exchange_nft_id;
 
             // gets the exchange_nft_id from the receipt NFT (hopefully, may be wrong)
 
@@ -283,8 +297,10 @@ mod chaths {
             // note that there's no check on whether it's in the vault because the existence of
             // the receipt means that it is
 
+            let exchange_nft_non_fungible_data: ExchangeNFT = exchange_nft_bucket.non_fungible().data();
+
             assert!(
-                exchange_nft_bucket.ExchangeNFT.complete == true,
+                exchange_nft_non_fungible_data.complete == true,
                 "There was no response to your prompt, please claim a refund."
             );
 
@@ -316,29 +332,33 @@ mod chaths {
             
             let time: u64 = Runtime::current_epoch();
 
-            let due_time: u64 = receipt.ReceiptNFT.due_time;
+            let non_fungible_data: ReceiptNFT = receipt.non_fungible().data();
+
+            let due_time: u64 = non_fungible_data.due_time;
 
             assert!(
                 time > due_time,
                 "A refund is not available yet."
             );
             
-            let exchange_nft_id: NonFungibleLocalId = receipt.ReceiptNFT.exchange_nft_id;
+            let exchange_nft_id: NonFungibleLocalId = non_fungible_data.exchange_nft_id;
 
             // gets the exchange_nft_id from the receipt NFT (hopefully, may be wrong)
 
             let exchange_nft_bucket = self.exchange_nfts.take_non_fungible(&exchange_nft_id);
 
             // takes the appropriate exchange NFT from the exchange_nfts vault
+
+            let exchange_nft_non_fungible_data: ExchangeNFT = exchange_nft_bucket.non_fungible().data();
             
             assert!(
-                exchange_nft_bucket.ExchangeNFT.complete == false,
+                exchange_nft_non_fungible_data.complete == false,
                 "There was a response to your prompt so a refund is unavailable. Please claim your completed NFT."
             );
 
             // checks that the exchange NFT is incomplete
 
-            let refund_amount: Decimal = exchange_nft_bucket.ExchangeNFT.price_paid;
+            let refund_amount: Decimal = exchange_nft_non_fungible_data.price_paid;
             
             let refund_bucket: Bucket = self.xrd_payments.take(refund_amount);
             
