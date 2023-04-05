@@ -1,0 +1,27 @@
+CALL_METHOD
+    Address("${account_address}")
+    "lock_fee"
+    Decimal("100");
+
+# Withdraw 10 units of token_a from account and put it in bucket 
+CALL_METHOD
+    Address("${account_address}")
+    "withdraw"
+    Address("${token_a}")
+    Decimal("10");
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("10")
+    Address("${token_a}")
+    Bucket("bucket1");
+
+# Call swap method
+CALL_METHOD
+    Address("${component_address}")
+    "swap"
+    Bucket("bucket1");
+
+# Deposit token_b amount based on calculation back to the account
+CALL_METHOD
+    Address("${account_address}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
