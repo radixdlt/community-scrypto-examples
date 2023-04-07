@@ -1,0 +1,30 @@
+CALL_METHOD
+	ComponentAddress("${account}")
+	"lock_fee"
+	Decimal("10");
+    
+CALL_METHOD 
+    ComponentAddress("${account}") "withdraw_by_amount" Decimal("3") ResourceAddress("${tokenXRD}");
+    
+CALL_METHOD
+	ComponentAddress("${flashloanpool_component}")
+	"take_loan"
+	Decimal("300");
+
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("303") ResourceAddress("${tokenXRD}") Bucket("xrd_bucket");
+
+TAKE_FROM_WORKTOP
+    ResourceAddress("${transient_token}")
+    Bucket("transient_token_bucket");
+    
+CALL_METHOD
+	ComponentAddress("${flashloanpool_component}")
+	"repay_loan"
+	Bucket("xrd_bucket")
+    Bucket("transient_token_bucket");
+    
+CALL_METHOD
+	ComponentAddress("${account}")
+	"deposit_batch"
+	Expression("ENTIRE_WORKTOP");

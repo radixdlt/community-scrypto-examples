@@ -1,0 +1,24 @@
+# Locking 10 XRD in fees from the account component. 
+CALL_METHOD 
+    ComponentAddress("{account_address}") 
+    "lock_fee"
+    Decimal("10");
+
+CALL_METHOD
+    ComponentAddress("{radmail_manager_address}")
+    # Create new mail.
+    "compose_mail"
+    # Set Mail Subject.
+    "RadMail Subject"
+    # Provide main message.
+    "RadMail Message"
+    # Pass a Map of mail attachments.
+    Map<String, String>(
+        "Attachment Key", "Attachment Value"
+    );
+
+# Deposit mail NFT that is returned.
+CALL_METHOD
+    ComponentAddress("{account_component_address}") 
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
