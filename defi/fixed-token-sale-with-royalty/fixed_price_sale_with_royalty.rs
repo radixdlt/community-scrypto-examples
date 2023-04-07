@@ -1,7 +1,7 @@
 use scrypto::prelude::*;
 
 struct Royalty {
-    /// This is the valut of the royalty recipient.
+    /// This is the value of the royalty recipient.
     recipient: Vault,
 
     /// This is the percentage of the sale price that will be paid to the royalty recipient.
@@ -9,7 +9,7 @@ struct Royalty {
 }
 
 #[blueprint]
-mod fixed_price_sale {
+mod fixed_price_sale_with_royalty {
     /// This blueprint defines the state and logic involved in a fixed-price non-fungible token sale. People who
     /// instantiate components from this blueprint, signify their intent at selling their NFT(s) at a fixed price of
     /// their choosing and for a token of their choosing.
@@ -39,7 +39,7 @@ mod fixed_price_sale {
         royalties: Vec<Royalty>,
     }
 
-    impl FixedPriceSale {
+    impl FixedPriceSaleWithRoyalty {
         /// Instantiates a new fixed-price sale for the passed NFTs.
         ///
         /// This function is used to instantiate a new fixed-price sale for the passed bucket of NFTs. The fixed price
@@ -60,6 +60,7 @@ mod fixed_price_sale {
         /// * `accepted_payment_token` (ResourceAddress) - Payments may be accepted in XRD or non-XRD tokens. This
         /// argument specifies the resource address of the token the instantiator wishes to accept for payment.
         /// * `price` (Decimal) - The price of the bundle of NFTs given in `accepted_payment_token`.
+        /// * `royalties` (Vec<Royalty>) - A vector of royalties that will be paid out.
         ///
         /// # Returns:
         ///
