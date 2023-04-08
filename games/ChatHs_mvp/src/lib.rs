@@ -246,12 +246,12 @@ mod chaths {
             let end_time: u64 = non_fungible_data.end_time;
 
             assert!(
-                time > start_time,
+                time >= start_time,
                 "You cannot respond to this prompt yet."
             );
 
             assert!(
-                time < end_time,
+                time <= end_time,
                 "You can no longer respond to this prompt."
             );
 
