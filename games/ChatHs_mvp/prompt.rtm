@@ -1,0 +1,22 @@
+CALL_METHOD
+    ComponentAddress("component_sim1qgehpqdhhr62xh76wh6gppnyn88a0uau68epljprvj3sxknsqr")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("account_sim1qdywfl6q0u9803u9vsfvlfll2x0067zwq8hxlsu4j4gqmaaram")
+    "withdraw_by_amount"
+    Decimal("20")
+    ResourceAddress("resource_sim1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz8qety");
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("20")
+    ResourceAddress("resource_sim1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz8qety")
+    Bucket("bucket1");
+CALL_METHOD
+    ComponentAddress("component_sim1qf6c23g867ft03yr79gcpndnr3p8wal3lj7heu65vdxqarc6er")
+    "prompt"
+    Bucket("bucket1")
+    "testprompt";
+CALL_METHOD
+    ComponentAddress("account_sim1qdywfl6q0u9803u9vsfvlfll2x0067zwq8hxlsu4j4gqmaaram")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

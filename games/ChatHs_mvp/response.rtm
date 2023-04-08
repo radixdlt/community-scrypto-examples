@@ -1,0 +1,18 @@
+CALL_METHOD
+    ComponentAddress("account_sim1qdywfl6q0u9803u9vsfvlfll2x0067zwq8hxlsu4j4gqmaaram")
+    "create_proof_by_amount"
+    Decimal("1")
+    ResourceAddress("resource_sim1qp6c23g867ft03yr79gcpndnr3p8wal3lj7heu65vdxqcaqpxt");
+CALL_METHOD
+    ComponentAddress("component_sim1qgehpqdhhr62xh76wh6gppnyn88a0uau68epljprvj3sxknsqr")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    ComponentAddress("component_sim1qf6c23g867ft03yr79gcpndnr3p8wal3lj7heu65vdxqarc6er")
+    "respond"
+    NonFungibleLocalId("{542a3246-6b25-4a59-a699-5a9b00000000}")
+    "testresponse";
+CALL_METHOD
+    ComponentAddress("account_sim1qdywfl6q0u9803u9vsfvlfll2x0067zwq8hxlsu4j4gqmaaram")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

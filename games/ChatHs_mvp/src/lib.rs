@@ -9,6 +9,7 @@ pub struct ExchangeNFT {
     end_time: u64,
     #[mutable]
     response: String,
+    #[mutable]
     complete: bool,
     
 }
@@ -237,8 +238,30 @@ mod chaths {
             // nft_id argument to a BTreeSet of the NonFungibleIds contained in the vault.
 
             let mut non_fungible_data: ExchangeNFT = exchange_nft_bucket.non_fungible().data();
+            
+            let time: u64 = Runtime::current_epoch();
+
+            let start_time: u64 = non_fungible_data.start_time;
+
+            let end_time: u64 = non_fungible_data.end_time;
+
+            assert!(
+                time > start_time,
+                "You cannot respond to this prompt yet."
+            );
+
+            assert!(
+                time < end_time,
+                "You can no longer respond to this prompt."
+            );
+
+            // checks that the response is submitted within the appropriate timeframe
+            // ***check if it's necessary to define the additional variables***
+            
             non_fungible_data.response = response;
             non_fungible_data.complete = true;
+
+            // appends the response to the 'non_fungible_data' and marks it as complete
 
             let payment_amount: Decimal = non_fungible_data.price_paid * dec!("0.9");
 
