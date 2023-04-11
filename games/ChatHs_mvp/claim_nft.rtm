@@ -1,0 +1,21 @@
+CALL_METHOD
+    Address("component_sim1q0kryz5scup945usk39qjc2yjh6l5zsyuh8t7v5pk0tshjs68x")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    Address("account_sim1qsapjx6qxpufrmw2pgaf8np56he2cap3kle3mpafs85s6fsk2q")
+    "withdraw"
+    Address("resource_sim1q2dmghh24ysf636qu50d3v7kj0ycwtj6v78fx8yr9zdsjnp7k9")
+    Decimal("1");
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("1")
+    Address("resource_sim1q2dmghh24ysf636qu50d3v7kj0ycwtj6v78fx8yr9zdsjnp7k9")
+    Bucket("bucket1");
+CALL_METHOD
+    Address("component_sim1qdpq2xh9knah8sty4s2lee9yyymnutmr2d57tehmdrlquu4hs0")
+    "claim_nft"
+    Bucket("bucket1");
+CALL_METHOD
+    Address("account_sim1qsapjx6qxpufrmw2pgaf8np56he2cap3kle3mpafs85s6fsk2q")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
