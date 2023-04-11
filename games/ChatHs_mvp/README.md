@@ -18,50 +18,50 @@ Alternatively, to do so with a transaction manifest use:
 
 ```js
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "lock_fee"
     Decimal("100");
 CALL_FUNCTION
-    PackageAddress("your package address")
+    Address("your package address")
     "ChatHs"
     "instantiate_with_bio"
-    "your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio ";
+    "your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your bio your";
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
 ```
-This will instantiate the 'ChatHs account component' and return the soulbound NFT necessary to respond to prompts. The resources generated are, in order, the 'ChatHs account badge', the 'internal_nft_mint_badge', the 'Internal NFT Mint Badge', the 'Exchange NFT' and the 'Receipt NFT'. 
+This will instantiate the 'ChatHs account component' and return the soulbound NFT necessary to respond to prompts. The resources generated are, in order, the 'soulbound ChatHs account badge', the 'Internal NFT Mint Badge', the 'Exchange NFT' and the 'Receipt NFT'. 
 
-Make a note of the
+Make a note of the addresses of the 'ChatHs account component', your 'soubound ChatHs account badge' and your 'Receipt NFT'.
 
 To send a prompt with resim use:
 
-`resim call-method [your ChatHs account component address] prompt 20,resource_sim1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz8qety [your prompt]`
+`resim call-method [your ChatHs account component address] prompt resource_sim1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqs6d89k:20 [your prompt]`
 
 Alternatively, with a transaction manifest:
 
 ```js
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "lock_fee"
     Decimal("100");
 CALL_METHOD
-    ComponentAddress("your account component address")
-    "withdraw_by_amount"
-    Decimal("20")
-    ResourceAddress("resource_sim1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz8qety");
+    Address("your account component address")
+    "withdraw"
+    Address("resource_sim1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqs6d89k")
+    Decimal("20");
 TAKE_FROM_WORKTOP_BY_AMOUNT
     Decimal("20")
-    ResourceAddress("resource_sim1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqz8qety")
+    Address("resource_sim1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqs6d89k")
     Bucket("bucket1");
 CALL_METHOD
-    ComponentAddress("your ChatHs account component address")
-    "your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt"
+    Address("your ChatHs account component address")
+    "prompt"
     Bucket("bucket1")
-    "testprompt";
+    "your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your prompt your";
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
 ```
@@ -73,59 +73,58 @@ Note that the receipt data also includes the 'due_time' (as a u64) at which a re
 
 To respond to a prompt with resim use:
 
-`resim call-method [your ChatHs account component address] respond ("{your prompt NonFungibleLocalId in curly brackets}") [your response] --proofs 1,[your 'ChatHs account badge' resource address]`
+`resim call-method [your ChatHs account component address] respond ("{your prompt NonFungibleLocalId in curly brackets}") [your response] --proofs [your soulbound 'ChatHs account badge' resource address]:1`
 
 Alternatevely, with a manifest:
 
 ```js
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "create_proof_by_amount"
-    Decimal("1")
-    ResourceAddress("your soulbound ChatHs account badge' resource address");
+    Address("your soulbound ChatHs account badge' resource address")
+    Decimal("1");
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "lock_fee"
     Decimal("100");
 CALL_METHOD
-    ComponentAddress("your ChatHs account component address")
+    Address("your ChatHs account component address")
     "respond"
     NonFungibleLocalId("{your prompt NonFungibleLocalId in curly brackets}")
-    "your response your response your response your response your response your response your response your response your response your response your response your response your response your response your response ";
+    "your response your response your response your response your response your response your response your response your";
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
-
 ```
 This will return the payment minus 10% commission.
 
-To be able to claim a completed prompt-and-response 'Exchange NFT' you will need to adjust resim's epoch to after its due_time with `set-current-epoch`. Then, send the 'receipt' NFT to the ChatHs component. To do this with resim:
+To be able to claim a completed prompt-and-response 'Exchange NFT' you will need to adjust resim's epoch to after its due_time with `set-current-epoch` (eg. `resim set-current-epoch 26`). Then, send the 'receipt' NFT to the ChatHs component. To do this with resim:
 
-`resim call-method [your ChatHs account component address] claim_nft 1,[your receipt resource address]`
+`resim call-method [your ChatHs account component address] claim_nft [your receipt resource address]:1`
 
 In a manifest:
 
 ```js
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "lock_fee"
     Decimal("100");
 CALL_METHOD
-    ComponentAddress("your account component address")
-    "withdraw_by_amount"
-    Decimal("1")
-    ResourceAddress("your receipt resource address");
+    Address("your account component address")
+    "withdraw"
+    Address("your receipt resource address")
+    Decimal("1");
 TAKE_FROM_WORKTOP_BY_AMOUNT
     Decimal("1")
-    ResourceAddress("your receipt resource address")
+    Address("your receipt resource address")
     Bucket("bucket1");
 CALL_METHOD
-    ComponentAddress("your ChatHs account component address")
+    Address("your ChatHs account component address")
     "claim_nft"
     Bucket("bucket1");
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
 ```
@@ -133,30 +132,30 @@ You will now receive your completed prompt-and-response 'Exchange NFT'.
 
 If an 'Exchange NFT' is not completed in the appropriate timeframe, you can claim a refund. In resim:
 
-`resim call-method [your ChatHs account component address] claim_refund 1,[your receipt resource address]`
+`resim call-method [your ChatHs account component address] claim_refund [your receipt resource address]:1`
 
 With a manifest:
 
 ```js
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "lock_fee"
     Decimal("100");
 CALL_METHOD
-    ComponentAddress("your account component address")
-    "withdraw_by_amount"
-    Decimal("1")
-    ResourceAddress("your receipt resource address");
+    Address("your account component address")
+    "withdraw"
+    Address("your receipt resource address")
+    Decimal("1");
 TAKE_FROM_WORKTOP_BY_AMOUNT
     Decimal("1")
-    ResourceAddress("your receipt resource address")
+    Address("your receipt resource address")
     Bucket("bucket1");
 CALL_METHOD
-    ComponentAddress("your ChatHs account component address")
+    Address("your ChatHs account component address")
     "claim_refund"
     Bucket("bucket1");
 CALL_METHOD
-    ComponentAddress("your account component address")
+    Address("your account component address")
     "deposit_batch"
     Expression("ENTIRE_WORKTOP");
 ```
