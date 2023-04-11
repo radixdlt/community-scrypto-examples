@@ -1,0 +1,57 @@
+#!/bin/bash
+
+resim reset
+temp_account=`resim new-account`
+export alice_account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
+export alice_priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
+export alice_badge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
+
+export med_pack=`resim publish ./mediator | sed "s/Success! New Package: //"`
+export med_comp=`resim call-function $med_pack Mediator instantiate --proofs $alice_badge |grep -A 4 "New" |grep -o "component_.*"`
+
+export proof=`resim show $alice_account | grep "Mediator Admin Badge" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
+export radix=`resim show $alice_account | grep "Radix" | grep -w -o "resource_.\S*" | sed -e "s/,//"`
+
+temp_account=`resim new-account`
+export bob_account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
+export bob_priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
+export bob_badge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
+resim set-default-account $bob_account $bob_priv $bob_badge
+export bob_badge_id=`echo "$bob_badge" | sed -e "s/:#.*//"`
+
+export con_pack=`resim publish ./contract  | sed "s/Success! New Package: //"`
+
+resim transfer 1 $bob_badge_id $alice_account
+
+resim set-default-account $alice_account $alice_priv $alice_badge
+
+resim call-method $med_comp set_contract_package_info $con_pack $bob_badge_id:1 --proofs $proof:1
+
+export con_comp=`resim call-method $med_comp get_new_contract $radix:10 |grep -A 4 "New" |grep -o "component_.*"`
+
+echo "--------------------------------------------------------------------------------------------"
+echo "Alice account: $alice_account"
+echo "Alice priv key: $alice_priv"
+echo "Bob account: $bob_account"
+echo "Bob priv key: $bob_priv"
+echo "alicebadge: $alice_badge"
+echo "bobbadge: $bob_badge"
+echo "Mediator package: $med_pack"
+echo "Mediator component: $med_comp" 
+echo "proof: $proof"
+echo "radix: $radix"
+echo "contract package:" $con_pack
+echo "contract component:" $con_comp
+echo "--------------------------------------------------------------------------------------------"
+echo "  A new contract is just calling the get_new_contract method on the mediator component      "
+echo "  >>  resim call-method \$med_comp get_new_contract \$radix:10                                "
+echo "                                                                                            "
+echo "  To activate/validate the contract the seller needs to update his badge                    "
+echo "  >>  resim call-method \$con_comp activate_seller_badge <seller_token>:1                    "
+echo "                                                                                            "
+echo "  To activate/validate the contract the buyer needs to update his badge                     "
+echo "  >>  resim call-method \$con_comp activate_buyer_badge <buyer_token>:1                      "
+echo "                                                                                            "
+echo "  If the tokens are already activated before contract acceptance                            "
+echo "  the contract must be considred unsafe/tampered with                                       "
+echo "--------------------------------------------------------------------------------------------"
