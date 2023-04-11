@@ -1,0 +1,12 @@
+CALL_METHOD
+    Address("${account}")
+    "create_proof_by_amount"
+    Address("${badge}")
+    Decimal("1");
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    Address("${book}")
+    "close_book";

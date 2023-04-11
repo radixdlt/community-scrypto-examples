@@ -1,0 +1,7 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    Address("${book}")
+    "visitor_count";

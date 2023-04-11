@@ -1,0 +1,8 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    Address("${book}")
+    "who_was_there"
+    0u64;
