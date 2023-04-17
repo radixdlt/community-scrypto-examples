@@ -51,6 +51,11 @@ mod restricted_asset {
                     rule!(require(admin_badge.resource_address())),
                     LOCKED,
                 )
+                .method(
+                    "set_max_balance",
+                    rule!(require(admin_badge.resource_address())),
+                    LOCKED,
+                )
                 .default(rule!(require(component_badge.resource_address())), LOCKED);
 
             let component_address = Self {
