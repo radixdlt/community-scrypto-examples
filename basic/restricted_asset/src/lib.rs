@@ -27,8 +27,8 @@ mod restricted_asset {
                     .mint_initial_supply([(AuthBadgeData {})]),
             );
 
-            let admin_badge =
-                ResourceBuilder::new_uuid_non_fungible().mint_initial_supply([(AuthBadgeData {})]);
+            let admin_badge = ResourceBuilder::new_uuid_non_fungible::<AuthBadgeData>()
+                .mint_initial_supply([(AuthBadgeData {})]);
 
             let balance_res_address = ResourceBuilder::new_integer_non_fungible::<BalanceData>()
                 .mintable(rule!(require(component_badge.resource_address())), LOCKED)
@@ -40,6 +40,7 @@ mod restricted_asset {
                 .create_with_no_initial_supply();
 
             let access_rules = AccessRulesConfig::new()
+                .method("transfert", AccessRule::AllowAll, LOCKED)
                 .method(
                     "deposit",
                     rule!(require(admin_badge.resource_address())),
