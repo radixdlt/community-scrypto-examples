@@ -1,0 +1,16 @@
+CALL_METHOD
+    Address("${account}")
+    "lock_fee"
+    Decimal("100");
+CALL_METHOD
+    Address("${account}")
+    "create_proof_by_ids"
+    Address("${nfres}")
+    Array<NonFungibleLocalId>(NonFungibleLocalId("${nflid}"));
+POP_FROM_AUTH_ZONE
+    Proof("proof1");
+CALL_METHOD
+    Address("${book}")
+    "i_was_here"
+    Proof("proof1")
+    "Witness me!";

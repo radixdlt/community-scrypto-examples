@@ -10,12 +10,12 @@ The following step are needed:
 
 The use-case solution was a lot easier than expected.</br> It can actually be done in a single line in case of external Service Level Authentication.
 
-        let result = self.service_vault.authorize(||component.call::<i8>("awesome_service", args![]));
+        let result = self.service_vault.authorize(||component.call::<i8>("awesome_service", scrypto_args![]));
 
 It requires two lines of code in case of external Application Level Authentication.
 
         let my_proof: Proof = self.service_vault.create_proof_by_amount(dec!("1"));
-        let result = component.call::<i8>("second_service", args![my_proof]);
+        let result = component.call::<i8>("second_service", scrypto_args![my_proof]);
 
 
 ## Getting Started

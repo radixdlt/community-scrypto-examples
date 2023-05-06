@@ -20,13 +20,13 @@ Buy a RaDiCeX Ticket and play against the House. The game controlled Ticket (NFT
         %-> source sourceme
 -   put some XRD in the prizepool so winning tickets can be redeemed.
        
-        %-> resim call-method $component deposit 100 101,$radix
+        %-> resim call-method $component deposit 100 $radix:101
 -   Buy a Ticket,
 
-        %-> resim call-method $component buy_ticket 2,$radix
+        %-> resim call-method $component buy_ticket $radix:2
 -   Obtain the resource of the ticket as $ticket and start playing by repeating this command multiple times.
 
-        %-> resim call-method $component play_round 1,$ticket
+        %-> resim call-method $component play_round $ticket:1
 Note: If your account contains multiple playable tickets you can specify the ticket to use for gameplay
 
         %-> resim call-method $component play_round $ticket:#NFT_ID#
@@ -37,17 +37,17 @@ Note: If your account contains multiple playable tickets you can specify the tic
 
 -   If the ticket level=0 renew your Ticket with a discount
 
-        %-> resim call-method $component reinit_ticket 1,$ticket 10,$radix
+        %-> resim call-method $component reinit_ticket $ticket:1 $radix:10
 
 -   If the ticket level=25 redeem your prize
 
-        %-> resim call-method $component redeem_prize 1,$ticket
+        %-> resim call-method $component redeem_prize $ticket:1
 
 
 -   As Admin, get yourself a free ticket.
 
-        %-> resim call-method $component admin_ticket --proof 1,$proof
+        %-> resim call-method $component admin_ticket --proofs $proof:1
 
 -   As Admin, get all the cash out of the prizepool.
 
-        %-> resim call-method $component withdrawal_all --proof 1,$proof
+        %-> resim call-method $component withdrawal_all --proofs $proof:1

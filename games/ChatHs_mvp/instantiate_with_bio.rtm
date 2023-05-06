@@ -1,0 +1,13 @@
+CALL_METHOD
+    Address("component_sim1q0kryz5scup945usk39qjc2yjh6l5zsyuh8t7v5pk0tshjs68x")
+    "lock_fee"
+    Decimal("100");
+CALL_FUNCTION
+    Address("package_sim1qz6ygj4wmdy90md44735lqekztc2ev4zhg7c7q2ml4lsvktvhj")
+    "ChatHs"
+    "instantiate_with_bio"
+    "testbio";
+CALL_METHOD
+    Address("account_sim1qsapjx6qxpufrmw2pgaf8np56he2cap3kle3mpafs85s6fsk2q")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
