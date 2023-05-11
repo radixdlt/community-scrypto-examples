@@ -1,0 +1,18 @@
+# Create proof of the admin badge
+CALL_METHOD
+    Address("${account_address}")
+    "create_proof_by_amount"
+    Address("${admin_badge_resource_address}")
+    Decimal("1");
+
+# Lock the fees for the transaction
+CALL_METHOD Address("${account_address}") "lock_fee" Decimal("${fee_amount}");
+
+# Call the claim_xrd method
+CALL_METHOD Address("${component_address}") "claim_xrd";
+
+# Deposit the xrd into the user's account
+CALL_METHOD
+  Address("${account_address}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP");

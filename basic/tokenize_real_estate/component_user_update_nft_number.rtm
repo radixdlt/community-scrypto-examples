@@ -1,0 +1,30 @@
+# Lock the fees for the transaction
+CALL_METHOD Address("${account_address}") "lock_fee" Decimal("${fee_amount}");
+
+# Withdraw some xrd for the transaction
+CALL_METHOD Address("${account_address}") "withdraw" Address("${xrd_resource_address}") Decimal("${xrd_update_price}");
+
+# Take the xrd from the worktop and place it into a bucket
+TAKE_FROM_WORKTOP Address("${xrd_resource_address}") Bucket("xrd");
+
+# Withdraw the nft from the user's account
+CALL_METHOD Address("${account_address}") "withdraw" Address("${nft_resource_address}") Decimal("1");
+
+# Take the nft from the worktop and place it into a bucket
+TAKE_FROM_WORKTOP Address("${nft_resource_address}") Bucket("${nft_name}");
+
+# Call the update_nft_number_data method
+CALL_METHOD Address("${component_address}") "update_nft_number_data" Bucket("${nft_name}") Bucket("xrd") "field_name" Decimal("field_value");
+
+# Deposit the xrd and nft back into the user's account
+CALL_METHOD
+  Address("${account_address}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP");
+
+# Note: 
+# field_name can be any of the following:
+# area_per_floor
+# number_of_floors
+# annual_rent
+# property_value

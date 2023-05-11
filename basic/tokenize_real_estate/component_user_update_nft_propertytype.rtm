@@ -1,0 +1,30 @@
+# Lock the fees for the transaction
+CALL_METHOD Address("${account_address}") "lock_fee" Decimal("${fee_amount}");
+
+# Withdraw some xrd for the transaction
+CALL_METHOD Address("${account_address}") "withdraw" Address("${xrd_resource_address}") Decimal("${xrd_update_price}");
+
+# Take the xrd from the worktop and place it into a bucket
+TAKE_FROM_WORKTOP Address(" ${xrd_resource_address}") Bucket("xrd");
+
+# Withdraw the nft from the user's account
+CALL_METHOD Address("${account_address}") "withdraw" Address("${nft_resource_address}") Decimal("1");
+
+# Take the nft from the worktop and place it into a bucket
+TAKE_FROM_WORKTOP Address("${nft_resource_address}") Bucket("${nft_name}");
+
+# Call the update_nft_property_type_data method
+CALL_METHOD Address("${component_address}") "update_nft_property_type_data" Bucket("${nft_name}") Bucket("xrd")  Enum("property_type");
+
+# Deposit the xrd and nft back into the user's account
+CALL_METHOD
+  Address("${account_address}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP");
+
+# Note:
+# The Enum index must be passed in to specify the property type
+# 0u8 = SingleFamily
+# 1u8 = MultiFamily
+# 2u8 = Office
+# 3u8 = Industrial

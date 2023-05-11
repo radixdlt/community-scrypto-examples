@@ -1,0 +1,20 @@
+# Create proof of the nft
+CALL_METHOD
+    Address("${account_address}")
+    "create_proof"
+    Address("${nft_resource_address}");
+
+# Get a named proof from the last proof to have been inserted in the authzone
+POP_FROM_AUTH_ZONE Proof("nft_proof");
+    
+# Lock the fees for the transaction
+CALL_METHOD Address("${account_address}") "lock_fee" Decimal("${fee_amount}");
+
+# Call the view_nft_data method 
+CALL_METHOD Address("${component_address}") "view_nft_data" Proof("nft_proof");
+
+# Deposit the xrd and nft back into the user's account
+CALL_METHOD
+  Address("${account_address}")
+  "deposit_batch"
+  Expression("ENTIRE_WORKTOP");
