@@ -1,0 +1,27 @@
+CALL_METHOD Address("${account}") "lock_fee" Decimal("10");
+
+CALL_METHOD Address("${account}") "withdraw" Address("${owner}") Decimal("1");
+
+TAKE_FROM_WORKTOP Address("${owner}") Bucket("owner_badge");
+
+CALL_METHOD
+    Address("${manager}")
+    "set_pass_rule"
+    # rule
+    Enum(
+        "AccessRule::Protected",
+        Enum(
+            "AccessRuleNode::ProofRule",
+            Enum(
+                "ProofRule::Require",
+                Enum(
+                    "SoftResourceOrNonFungible::StaticResource",
+                    Address("${beta}")
+                )
+            )
+        )
+    )
+    # owner
+    Bucket("owner_badge");
+
+CALL_METHOD Address("${account}") "deposit_batch" Expression("ENTIRE_WORKTOP");

@@ -1,0 +1,32 @@
+CALL_METHOD Address("${account}") "lock_fee" Decimal("10");
+
+CALL_FUNCTION
+    Address("${package}")
+    "AccessPassManager"
+    "new"
+    # rule
+    Enum(
+        "AccessRule::Protected",
+        Enum(
+            "AccessRuleNode::ProofRule",
+            Enum(
+                "ProofRule::Require",
+                Enum(
+                    "SoftResourceOrNonFungible::StaticResource",
+                    Address("${alpha}")
+                )
+            )
+        )
+    )
+    # locked
+    false
+    # pass_royalty
+    0u32
+    # dapp_def
+    None
+    # name
+    None
+    # description
+    None;
+
+CALL_METHOD Address("${account}") "deposit_batch" Expression("ENTIRE_WORKTOP");

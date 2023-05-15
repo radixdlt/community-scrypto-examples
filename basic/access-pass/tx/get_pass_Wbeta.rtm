@@ -1,0 +1,5 @@
+CALL_METHOD Address("${account}") "lock_fee" Decimal("10");
+
+CALL_METHOD Address("${account}") "create_proof" Address("${beta}");
+
+CALL_METHOD Address("${manager}") "get_pass";

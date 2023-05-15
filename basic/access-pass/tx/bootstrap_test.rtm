@@ -1,0 +1,36 @@
+# Lock fee
+CALL_METHOD Address("${account}") "lock_fee" Decimal("10");
+
+# Create test resource Alpha
+CREATE_FUNGIBLE_RESOURCE_WITH_INITIAL_SUPPLY
+    0u8
+    Map<String, String>(
+        "name", "Alpha"
+    )
+    Map<Enum, Tuple>(
+      Enum("ResourceMethodAuthKey::Withdraw"),
+      Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+
+      Enum("ResourceMethodAuthKey::Deposit"),
+      Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+    )
+    Decimal("1");
+
+# Create test resource Beta
+CREATE_FUNGIBLE_RESOURCE_WITH_INITIAL_SUPPLY
+    0u8
+    Map<String, String>(
+        "name", "Beta"
+    )
+    Map<Enum, Tuple>(
+      Enum("ResourceMethodAuthKey::Withdraw"),
+      Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+
+      Enum("ResourceMethodAuthKey::Deposit"),
+      Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+    )
+    Decimal("1");
