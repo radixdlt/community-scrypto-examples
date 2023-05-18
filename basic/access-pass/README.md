@@ -1,6 +1,6 @@
 # Access Pass
 ## Problem
-The prevailing approach to access control in the Radix system demonstrates a lack of composable elegance in comparison to other aspects of the platform. With multiple actions potentially necessitating the implementation of the same complex AccessRule, the repetition of this process can contribute to a decrease in efficiency. As the DeFi propels innovation, the complexity of decentralized applications will inevitably surge, one can imagine the next generation of insurance or lending dApps applying increasingly complex rules thereby exacerbating the challenges associated with access control.
+The prevailing approach to access control in the Radix system demonstrates a lack of composable elegance in comparison to other aspects of the platform. With multiple actions potentially necessitating the implementation of the same complex AccessRule, the repetition of this process can contribute to a decrease in efficiency. As DeFi propels innovation, the complexity of decentralized applications will inevitably surge, one can imagine the next generation of insurance or lending dApps applying increasingly complex rules thereby exacerbating the challenges associated with access control.
 
 Currently, there is an absence of established standards to streamline composable access control across a single dApp or the entire network. Moreover, no standard blueprint exists to facilitate the construction of maintained or dedicated Access Rule components that other projects can readily employ. To the extent that composable access control may be present within the existing paradigm, it is crucial to note that components are neither easily trackable nor indexable, thus further complicating implementation and management.
 ## Solution
@@ -32,3 +32,16 @@ Constructs a new Access Pass.
 Returns a `Proof` which can be used for other components that utilize the pass.
 #### Access Control
 Protected by the custom rule set by the owner.
+
+## "`set_pass_rule`"
+Although the `get_pass` rule can be mutated with the owner badge and a custom method, the Access Pass Manager also implements its own method for this.
+#### Arguments
+- `AccessRule` with the new ruleset.
+- `Bucket` containing the owner badge.
+#### Returns
+- `Bucket` containing the owner badge.
+
+## "`get_pass_rsrc`"
+The pass resource address can be retrieved from the manager.
+#### Returns
+- `ResourceAddress`
