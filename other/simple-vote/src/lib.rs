@@ -51,9 +51,11 @@ mod vote {
             let require_admin = rule!(require(admin_badge.resource_address()));
             let require_component = rule!(require(component_badge.resource_address()));
 
+            let org_name_char = org_name.chars().nth(0).expect("The organization name should not be empty.");
+
             let member_badge: ResourceAddress = ResourceBuilder::new_uuid_non_fungible::<Member>()
                 .metadata("name", format!("{org_name} Voting Member"))
-                .metadata("symbol", "{org_name[0]}VM")
+                .metadata("symbol", format!("{}VM", org_name_char))
                 .mintable(require_admin.clone(), require_admin.clone())
                 .burnable(require_admin.clone(), require_admin.clone())
                 .recallable(require_admin.clone(), require_admin.clone())
@@ -64,7 +66,7 @@ mod vote {
             let vote_badge: ResourceAddress =
                 ResourceBuilder::new_uuid_non_fungible::<CurrentVote>()
                 .metadata("name", format!("{org_name} Vote Result"))
-                .metadata("symbol", "{org_name[0]}VR")
+                .metadata("symbol", format!("{}VR", org_name_char))
                 .mintable(require_component.clone(), require_admin.clone())
                 .create_with_no_initial_supply();
 

@@ -1,47 +1,140 @@
-use scrypto::prelude::*;
-use scrypto_unit::*;
+use crate::test_lib::TestLib;
+use scrypto::{blueprints::clock::TimePrecision, prelude::*};
+use simple_vote::VoteChoice;
 use transaction::builder::ManifestBuilder;
 
+mod test_lib;
+
 #[test]
-fn test_hello() {
-    // Setup the environment
-    let mut test_runner = TestRunner::builder().build();
+fn test_vote_happy_path() {
+    let mut lib = TestLib::new();
 
-    // Create an account
-    let (public_key, _private_key, account_component) = test_runner.new_allocated_account();
+    let (public_key, _private_key, account_component) = lib.test_runner.new_allocated_account();
 
-    // Publish package
-    let package_address = test_runner.compile_and_publish(this_package!());
+    let package_address = lib.test_runner.compile_and_publish(this_package!());
 
-    // Test the `instantiate_hello` function.
+    // INSTANTIATE
     let manifest = ManifestBuilder::new()
         .call_function(
             package_address,
-            "Hello",
-            "instantiate_hello",
-            manifest_args!(),
+            "Vote",
+            "instantiate_vote",
+            manifest_args!("Test"),
         )
-        .build();
-    let receipt = test_runner.execute_manifest_ignoring_fee(
-        manifest,
-        vec![NonFungibleGlobalId::from_public_key(&public_key)],
-    );
-    println!("{:?}\n", receipt);
-    let component = receipt.expect_commit(true).new_component_addresses()[0];
-
-    // Test the `free_token` method.
-    let manifest = ManifestBuilder::new()
-        .call_method(component, "free_token", manifest_args!())
         .call_method(
             account_component,
             "deposit_batch",
             manifest_args!(ManifestExpression::EntireWorktop),
         )
         .build();
-    let receipt = test_runner.execute_manifest_ignoring_fee(
+    let receipt = lib.test_runner.execute_manifest_ignoring_fee(
         manifest,
         vec![NonFungibleGlobalId::from_public_key(&public_key)],
     );
-    println!("{:?}\n", receipt);
+    let result = receipt.expect_commit_success();
+    let vote_component = result.new_component_addresses()[0];
+    let new_resources = result.new_resource_addresses();
+    let expected_resource_names = vec![
+        ("Test Vote Admin", None),
+        ("Test Component", None),
+        ("Test Voting Member", Some("TVM")),
+        ("Test Vote Result", Some("TVR")),
+    ];
+    let mut resources = HashMap::new();
+    for addr in new_resources {
+        let name = lib
+            .expect_string_metadata(addr, "name")
+            .expect("Name metadata key should be present");
+        let symbol = lib.expect_string_metadata(addr, "symbol");
+        resources.insert(name, (addr, symbol));
+    }
+    assert!(
+        expected_resource_names.iter().all(|res| {
+            match resources.get(res.0) {
+                Some(v) => v.1.as_deref() == res.1,
+                _ => false,
+            }
+        }),
+        "Unexpected new resources, expected resources: {:?}\nbut got {:?}",
+        expected_resource_names,
+        resources
+    );
+    let component_badge = resources.get("Test Component").unwrap().0;
+    let admin_badge = resources.get("Test Vote Admin").unwrap().0;
+    let member_badge = resources.get("Test Voting Member").unwrap().0;
+    let vote_results = resources.get("Test Vote Result").unwrap().0;
+
+    let vote_resources = lib.test_runner.get_component_resources(vote_component);
+    assert_eq!(
+        vote_resources.get(component_badge),
+        Some(dec!("1")).as_ref()
+    );
+    assert_eq!(vote_resources.get(vote_results), Some(dec!("0")).as_ref());
+
+    assert_eq!(
+        lib.test_runner
+            .account_balance(account_component, admin_badge.clone()),
+        Some(dec!("1")),
+    );
+
+    // BECOME MEMBER
+    let manifest = ManifestBuilder::new()
+        .call_method(
+            account_component,
+            "create_proof_by_amount",
+            manifest_args!(admin_badge, dec!("1")),
+        )
+        .call_method(vote_component, "become_member", manifest_args!())
+        .call_method(
+            account_component,
+            "deposit_batch",
+            manifest_args!(ManifestExpression::EntireWorktop),
+        )
+        .build();
+    let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+        manifest,
+        vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    );
     receipt.expect_commit_success();
+
+    assert_eq!(
+        lib.test_runner
+            .account_balance(account_component, member_badge.clone()),
+        Some(dec!("1")),
+    );
+
+    // NEW VOTE
+    // let duration = 5;
+    // let manifest = ManifestBuilder::new()
+    //     .call_method(
+    //         account_component,
+    //         "create_proof_by_amount",
+    //         manifest_args!(admin_badge, dec!("1")),
+    //     )
+    //     .call_method(vote_component, "new_vote", manifest_args!("Test Vote", duration))
+    //     .build();
+    // let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+    //     manifest,
+    //     vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    // );
+    // receipt.expect_commit_success();
+
+    // VOTE
+    // let manifest = ManifestBuilder::new()
+    //     .call_method(vote_component, "vote", manifest_args!(VoteChoice::Yes, member_badge))
+    //     .build();
+    // let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+    //     manifest,
+    //     vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    // );
+    // receipt.expect_commit_success();
+
+    // assert_eq!(
+    //     lib.test_runner
+    //         .account_balance(account_component, member_badge.clone()),
+    //     Some(dec!("1")),
+    // );
+    // let now = lib.test_runner.get_current_time(TimePrecision::Minute);
+
+    // TODO: test access rules for methods
 }
