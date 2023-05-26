@@ -15,7 +15,7 @@ struct Member {
     voted_in: HashSet<String>,
 }
 
-#[derive(ScryptoSbor)]
+#[derive(ScryptoSbor, radix_engine_common::ManifestSbor)]
 pub enum VoteChoice {
     Yes,
     No,
@@ -134,7 +134,7 @@ mod vote {
                 borrow_resource_manager!(self.member_badge).update_non_fungible_data(
                     &validated_member.local_id(),
                     "voted_in",
-                    member_data,
+                    member_data.voted_in,
                 );
             });
             match choice {

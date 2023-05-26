@@ -31,6 +31,7 @@ fn test_vote_happy_path() {
         manifest,
         vec![NonFungibleGlobalId::from_public_key(&public_key)],
     );
+    println!("instantiate_vote receipt: {:?}", receipt);
     let result = receipt.expect_commit_success();
     let vote_component = result.new_component_addresses()[0];
     let new_resources = result.new_resource_addresses();
@@ -95,6 +96,7 @@ fn test_vote_happy_path() {
         manifest,
         vec![NonFungibleGlobalId::from_public_key(&public_key)],
     );
+    println!("become_member receipt: {:?}", receipt);
     receipt.expect_commit_success();
 
     assert_eq!(
@@ -104,37 +106,66 @@ fn test_vote_happy_path() {
     );
 
     // NEW VOTE
-    // let duration = 5;
-    // let manifest = ManifestBuilder::new()
-    //     .call_method(
-    //         account_component,
-    //         "create_proof_by_amount",
-    //         manifest_args!(admin_badge, dec!("1")),
-    //     )
-    //     .call_method(vote_component, "new_vote", manifest_args!("Test Vote", duration))
-    //     .build();
-    // let receipt = lib.test_runner.execute_manifest_ignoring_fee(
-    //     manifest,
-    //     vec![NonFungibleGlobalId::from_public_key(&public_key)],
-    // );
-    // receipt.expect_commit_success();
+    let vote_start = lib.test_runner.get_current_time(TimePrecision::Minute);
+    let duration = 5i64;
+    let manifest = ManifestBuilder::new()
+        .call_method(
+            account_component,
+            "create_proof_by_amount",
+            manifest_args!(admin_badge, dec!("1")),
+        )
+        .call_method(
+            vote_component,
+            "new_vote",
+            manifest_args!("Test Vote", duration),
+        )
+        .build();
+    let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+        manifest,
+        vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    );
+    println!("new_vote receipt: {:?}", receipt);
+    receipt.expect_commit_success();
 
     // VOTE
-    // let manifest = ManifestBuilder::new()
-    //     .call_method(vote_component, "vote", manifest_args!(VoteChoice::Yes, member_badge))
-    //     .build();
-    // let receipt = lib.test_runner.execute_manifest_ignoring_fee(
-    //     manifest,
-    //     vec![NonFungibleGlobalId::from_public_key(&public_key)],
-    // );
-    // receipt.expect_commit_success();
+    let manifest = ManifestBuilder::new()
+        .call_method(
+            account_component,
+            "create_proof_by_amount",
+            manifest_args!(member_badge, dec!("1")),
+        )
+        .pop_from_auth_zone(|builder, member_proof| {
+            builder.call_method(
+                vote_component,
+                "vote",
+                manifest_args!(VoteChoice::Yes, member_proof),
+            )
+        })
+        .build();
+    let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+        manifest,
+        vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    );
+    println!("vote receipt: {:?}", receipt);
+    receipt.expect_commit_success();
 
-    // assert_eq!(
-    //     lib.test_runner
-    //         .account_balance(account_component, member_badge.clone()),
-    //     Some(dec!("1")),
-    // );
-    // let now = lib.test_runner.get_current_time(TimePrecision::Minute);
+    // END VOTE
+    lib.test_runner.set_current_time(
+        vote_start
+            .add_minutes(duration)
+            .expect("Could not make new time")
+            .seconds_since_unix_epoch
+            * 1000, // Needs milliseconds
+    );
+    let manifest = ManifestBuilder::new()
+        .call_method(vote_component, "end_vote", manifest_args!())
+        .build();
+    let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+        manifest,
+        vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    );
+    println!("end_vote receipt: {:?}", receipt);
+    receipt.expect_commit_success();
 
     // TODO: test access rules for methods
 }
