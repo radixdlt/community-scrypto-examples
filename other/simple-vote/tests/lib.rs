@@ -1,7 +1,6 @@
 use crate::test_lib::TestLib;
-use radix_engine::transaction::{CommitResult, TransactionResult};
 use scrypto::{blueprints::clock::TimePrecision, prelude::*};
-use simple_vote::VoteChoice;
+use simple_vote::{vote::Vote, CurrentVote, VoteChoice};
 use transaction::builder::ManifestBuilder;
 
 mod test_lib;
@@ -170,7 +169,7 @@ fn test_vote_happy_path() {
         vec![NonFungibleGlobalId::from_public_key(&public_key)],
     );
     println!("vote again receipt: {:?}", receipt);
-    lib.expect_error_log(&receipt, "Member has already voted");
+    TestLib::expect_error_log(&receipt, "Member has already voted");
     receipt.expect_commit_failure();
 
     // END VOTE
@@ -190,6 +189,18 @@ fn test_vote_happy_path() {
     );
     println!("end_vote receipt: {:?}", receipt);
     receipt.expect_commit_success();
+
+    let vote_state = lib.get_component_state::<Vote>(vote_component);
+    let vote_result_ids = lib
+        .test_runner
+        .inspect_non_fungible_vault(vote_state.vote_results.0)
+        .expect("Vote results vault could not be accessed");
+    assert_eq!(vote_result_ids.len(), 1);
+    let vote_result_id = vote_result_ids.first().unwrap();
+    let vote_result = lib.get_non_fungible_data::<CurrentVote>(vote_results, vote_result_id);
+    assert_eq!(vote_result.yes_votes, 1);
+    assert_eq!(vote_result.no_votes, 0);
+    assert_eq!(vote_result.name, "Test Vote");
 
     // TODO: test access rules for methods
 }

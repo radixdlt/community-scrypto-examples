@@ -2,11 +2,11 @@ use scrypto::blueprints::clock::TimePrecision;
 use scrypto::prelude::*;
 
 #[derive(ScryptoSbor, NonFungibleData, Clone)]
-struct CurrentVote {
-    yes_votes: u64,
-    no_votes: u64,
-    name: String,
-    end: Instant,
+pub struct CurrentVote {
+    pub yes_votes: u64,
+    pub no_votes: u64,
+    pub name: String,
+    pub end: Instant,
 }
 
 #[derive(ScryptoSbor, NonFungibleData)]
@@ -23,7 +23,7 @@ pub enum VoteChoice {
 
 #[blueprint]
 mod vote {
-    struct Vote {
+    pub struct Vote {
         /// Name of the organization for which this component will be
         /// organizing votes.
         org_name: String,
@@ -31,7 +31,7 @@ mod vote {
         member_badge: ResourceAddress,
         admin_badge: ResourceAddress,
         component_badge: Vault,
-        vote_results: Vault,
+        pub vote_results: Vault,
     }
 
     impl Vote {
