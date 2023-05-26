@@ -1,4 +1,5 @@
 use crate::test_lib::TestLib;
+use radix_engine::transaction::{CommitResult, TransactionResult};
 use scrypto::{blueprints::clock::TimePrecision, prelude::*};
 use simple_vote::VoteChoice;
 use transaction::builder::ManifestBuilder;
@@ -148,6 +149,29 @@ fn test_vote_happy_path() {
     );
     println!("vote receipt: {:?}", receipt);
     receipt.expect_commit_success();
+
+    // DOUBLE VOTE ATTEMPT
+    let manifest = ManifestBuilder::new()
+        .call_method(
+            account_component,
+            "create_proof_by_amount",
+            manifest_args!(member_badge, dec!("1")),
+        )
+        .pop_from_auth_zone(|builder, member_proof| {
+            builder.call_method(
+                vote_component,
+                "vote",
+                manifest_args!(VoteChoice::Yes, member_proof),
+            )
+        })
+        .build();
+    let receipt = lib.test_runner.execute_manifest_ignoring_fee(
+        manifest,
+        vec![NonFungibleGlobalId::from_public_key(&public_key)],
+    );
+    println!("vote again receipt: {:?}", receipt);
+    lib.expect_error_log(&receipt, "Member has already voted");
+    receipt.expect_commit_failure();
 
     // END VOTE
     lib.test_runner.set_current_time(
