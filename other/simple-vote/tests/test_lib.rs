@@ -50,13 +50,13 @@ impl TestLib {
     /// Based off https://discord.com/channels/417762285172555786/1046881787906887680/1092013443755810838
     pub fn get_component_state<T: ScryptoDecode>(
         &mut self,
-        component_address: ComponentAddress,
+        component_address: &ComponentAddress,
     ) -> T {
         let component_state: ComponentStateSubstate = self
             .test_runner
             .substate_store()
             .get_substate(&SubstateId(
-                RENodeId::GlobalObject(Address::Component(component_address)),
+                RENodeId::GlobalObject(Address::Component(*component_address)),
                 NodeModuleId::SELF,
                 SubstateOffset::Component(ComponentOffset::State0),
             ))
