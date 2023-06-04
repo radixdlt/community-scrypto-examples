@@ -1,63 +1,12 @@
 
 # UBI Token Example
 
-A UBI token implementation. Tokenomics are 1 token allocated per epoch and a 20% burn for transactions.
+UBI is minted at a rate of 1000 UBI every 30 days. If there are multiple identity providers, each provider mints its own fraction of the total UBI for a person.
 
-## Usage
+A UBI token implementation. The token is designed to dynamically allow changing between multiple identity providers. Initially a low sybil resistance provider (e.g. Google) could be used and as the value of the token increases, a higher sybil resistance provider (e.g. BrightID or Instapass) could be used. Perhaps a Radix native identity provider could be used in the future if a native self sovereign proof of person protocol is ever built on the network.
 
-1. Publish the package from a clean slate.
+## Design considerations
 
-```
-resim reset
-resim new-account
-resim publish <path_to_ubi>
-```
-
-2. Note the `<package_address>` of the published package and the `<admin_account_address>` of the new account.
-
-```
-resim call-function <package_address> UBI new
-```
-
-3. Note the `<ubi_token_address>`, `<admin_badge_address>`, `<person_badge_address>` and `<ubi_component>`. Register the admin account as a person.
-
-```
-resim call-method <ubi_component> register <admin_account_address> 1,<admin_badge_address>
-```
-
-4. Advance the epoch and collect some UBI.
-
-```
-resim set-current-epoch 10
-resim call-method <ubi_component> available_tokens <person_badge_non_fungible_key>
-resim call-method <ubi_component> collect_ubi 1,<person_badge_address>
-resim call-method <ubi_component> available_tokens 1,<person_badge_address>
-resim show <admin_account_address>
-```
-
-5. Create another account.
-
-```
-resim new-account
-```
-
-6. Note the `<account_address>` and `<account_privkey>`. Send tokens to the new account (with burn).
-
-```
-resim call-method <ubi_component> send_tokens <account_address> 10,<ubi_token_address>
-resim show <account_address>
-resim show <admin_account_address>
-```
-
-7. Freely register other accounts and collect UBI with them!
-
-```
-resim call-method <ubi_component> register <account_address> 1,<admin_badge_address>
-resim set-default-account <account_address> <account_privkey>
-resim set-current-epoch 20
-resim call-method <ubi_component> collect_ubi 1,<person_badge_address>
-```
-
-## Notes
-
-Once `RECALLABLE` is implemented, the ubi token can be made `RESTRICTED_TRANSFER` forcing the 20% burn in (a modified version of) `send_tokens`.
+* Need to explore the api for `collect_ubi` which modifies the badge to record when UBI was last collected. (Should/could a proof be passed instead of the badge itself?)
+* If someone's badge is compromised, the `register` function could recall the person's badge, but would it be worth it since the vault id is needed to find the badge? Alternately, after a badge is expired, a new badge could be issued so the badge wouldn't be recallable but then if a badge is lost it would remain compromised till it expires.
+* Would like to implement a demmurage to encourage people to spend their UBI, but couldn't find a good way to do that with the current Radix security model.
