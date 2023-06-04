@@ -2,64 +2,141 @@ use scrypto::prelude::*;
 
 #[derive(ScryptoSbor, NonFungibleData, Debug)]
 struct FriendData {
+    beneficiary: ComponentAddress,
     #[mutable]
     savings: Decimal,
 }
 
-///
 #[blueprint]
 mod save_with_friends {
 
     struct SaveWithFriends {
+        internal_badge: Vault,
         savings: Vault,
-        friends_nft: ResourceAddress,
+        friend_nft_address: ResourceAddress,
         desired_amount: Option<Decimal>,
+        goal_achieved: bool,
     }
 
     impl SaveWithFriends {
+        /// Only while instantiating the component we can add
+        /// friends to the list of participants.
         pub fn new_amount_bound(
             desired_amount: Decimal,
             accounts: Vec<ComponentAddress>,
         ) -> ComponentAddress {
             // TODO: require all participants' signatures and
             // TODO: split the fees
+            // maybe via transaction manifest? e.g.: by returning the bucket of nfts
+            // from this method instead of depositing them to addresses
 
-            // restrict minting with this one-time badge
-            let minting_badge = ResourceBuilder::new_fungible()
-                .metadata("name", "Save With Friends Minting Badge")
-                .burnable(rule!(allow_all), LOCKED)
+            // a badge that will be stored in the component itself
+            let internal_badge = ResourceBuilder::new_fungible()
+                .metadata("name", "Save With Friends Component Badge")
                 .mint_initial_supply(1);
 
             // create the NFT resource
-            let friends_nft = ResourceBuilder::new_uuid_non_fungible::<FriendData>()
+            let friend_nft_address = ResourceBuilder::new_uuid_non_fungible::<FriendData>()
                 .metadata("name", "Save With Friends NFT")
                 .metadata("symbol", "SWF")
-                .mintable(rule!(require(minting_badge.resource_address())), LOCKED)
+                .updateable_non_fungible_data(
+                    rule!(require(internal_badge.resource_address())),
+                    LOCKED,
+                )
+                .mintable(rule!(require(internal_badge.resource_address())), LOCKED)
+                .burnable(rule!(require(internal_badge.resource_address())), LOCKED)
                 .create_with_no_initial_supply();
 
             // grant an nft to each friend
-            minting_badge.authorize(|| {
-                let resource_manager = borrow_resource_manager!(friends_nft);
+            internal_badge.authorize(|| {
+                let resource_manager = borrow_resource_manager!(friend_nft_address);
                 for account in accounts {
-                    let bucket =
-                        resource_manager.mint_uuid_non_fungible(FriendData { savings: 0.into() });
+                    let bucket = resource_manager.mint_uuid_non_fungible(FriendData {
+                        beneficiary: account,
+                        savings: 0.into(),
+                    });
                     borrow_component!(account).call::<()>("deposit", scrypto_args![bucket]);
                 }
             });
 
-            // burn the minting badge to prevent any further minting
-            minting_badge.burn();
-
             // init the SaveWithFriends component
             let component_address = Self {
+                internal_badge: Vault::with_bucket(internal_badge),
                 savings: Vault::new(RADIX_TOKEN),
-                friends_nft,
+                friend_nft_address,
                 desired_amount: Some(desired_amount),
+                goal_achieved: false,
             }
             .instantiate()
             .globalize();
 
             component_address
+        }
+
+        pub fn deposit(&mut self, xrd: Bucket, nft: Bucket) {
+            assert!(
+                !self.goal_achieved,
+                "Goal has been achieved, no more deposits are allowed"
+            );
+            let amount = xrd.amount();
+            self.savings.put(xrd);
+            self.internal_badge.authorize(|| {
+                let id = nft.non_fungible_local_id();
+                borrow_resource_manager!(self.friend_nft_address)
+                    .update_non_fungible_data(&id, "savings", amount);
+            });
+
+            // allow withdrawals if the goal has been achieved
+            if let Some(desired_amount) = self.desired_amount {
+                if self.savings.amount() >= desired_amount {
+                    self.goal_achieved = true;
+                    info!(
+                        "Your goal of saving {desired_amount} has been achieved! Congratulations!"
+                    )
+                }
+            }
+        }
+
+        pub fn withdraw(&mut self, nft: Bucket) -> Bucket {
+            assert!(
+                self.goal_achieved,
+                "Goal has not been achieved, no withdrawals are allowed"
+            );
+            let id = nft.non_fungible_local_id();
+            let friend_savings = borrow_resource_manager!(self.friend_nft_address)
+                .get_non_fungible_data::<FriendData>(&id)
+                .savings;
+            self.internal_badge
+                .authorize(|| borrow_resource_manager!(self.friend_nft_address).burn(nft));
+            let xrd = self.savings.take(friend_savings);
+            xrd
+        }
+
+        pub fn close_early(&mut self, nfts: Bucket) {
+            assert!(
+                !self.goal_achieved,
+                "Goal has been achieved, you can withdraw your savings the normal way"
+            );
+            let nft_res_manager = borrow_resource_manager!(self.friend_nft_address);
+            assert!(
+                nfts.amount() == nft_res_manager.total_supply(),
+                "All friends must agree to withdraw early"
+            );
+
+            // give the savings to the beneficiaries
+            for nft in nfts.non_fungibles::<FriendData>() {
+                let beneficiary = nft.data().beneficiary;
+                let friend_savings = nft.data().savings;
+                let xrd = self.savings.take(friend_savings);
+                borrow_component!(beneficiary).call::<()>("deposit", scrypto_args![xrd]);
+            }
+
+            // burn all badges
+            self.internal_badge.authorize(|| {
+                nft_res_manager.burn(nfts);
+            });
+
+            // TODO: destroy component when it's not needed anymore
         }
     }
 }
@@ -87,35 +164,94 @@ mod tests {
         }
     }
 
+    struct TestSetup {
+        component_address: ComponentAddress,
+        nft_address: ResourceAddress,
+        accounts: Vec<TestAccount>,
+        test_runner: TestRunner,
+    }
+
+    impl TestSetup {
+        fn new() -> Self {
+            let mut test_runner = TestRunner::builder().build();
+            let accounts = vec![
+                TestAccount::new(&mut test_runner),
+                TestAccount::new(&mut test_runner),
+                TestAccount::new(&mut test_runner),
+            ];
+            let package_address = test_runner.compile_and_publish(this_package!());
+
+            let manifest = ManifestBuilder::new()
+                .call_function(
+                    package_address,
+                    "SaveWithFriends",
+                    "new_amount_bound",
+                    manifest_args!(
+                        dec!(1000),
+                        accounts
+                            .iter()
+                            .map(|a| a.component_address)
+                            .collect::<Vec<ComponentAddress>>()
+                    ),
+                )
+                .build();
+            let receipt = test_runner.execute_manifest_ignoring_fee(
+                manifest,
+                vec![NonFungibleGlobalId::from_public_key(
+                    &accounts[0].public_key,
+                )],
+            );
+
+            println!("{:?}\n", receipt);
+            let component_address = receipt.expect_commit_success().new_component_addresses()[0];
+            let nft_address = receipt.expect_commit_success().new_resource_addresses()[0];
+
+            Self {
+                component_address,
+                accounts,
+                test_runner,
+                nft_address,
+            }
+        }
+    }
+
     #[test]
-    fn test_new_amount_bound() {
-        // Setup the environment
-        let mut test_runner = TestRunner::builder().build();
+    fn test_close_early() {
+        let mut setup = TestSetup::new();
+        let mut manifest_builder = ManifestBuilder::new();
 
-        // Create an account
-        let alice = TestAccount::new(&mut test_runner);
-        let bob = TestAccount::new(&mut test_runner);
+        // all friends put their nft in to be able to withdraw early
+        for account in &setup.accounts {
+            let resources = setup
+                .test_runner
+                .get_component_resources(account.component_address);
+            let nft_resource = resources
+                .iter()
+                .find(|r| r.0 == &setup.nft_address)
+                .unwrap();
+            manifest_builder.call_method(
+                account.component_address,
+                "withdraw_non_fungibles",
+                // FIXME: this is not working
+                manifest_args!(setup.nft_address, nft_resource),
+            );
+        }
 
-        // Publish package
-        let package_address = test_runner.compile_and_publish(this_package!());
-
-        // Test the `test_new_amount_bound` function.
-        let manifest = ManifestBuilder::new()
-            .call_function(
-                package_address,
-                "SaveWithFriends",
-                "new_amount_bound",
-                manifest_args!(
-                    dec!(1000),
-                    vec![alice.component_address, bob.component_address]
-                ),
+        let manifest = manifest_builder
+            .call_method(setup.component_address, "close_early", manifest_args!())
+            // dump all leftovers after the transaction to the first account
+            .call_method(
+                setup.accounts[0].component_address,
+                "deposit_batch",
+                manifest_args!(ManifestExpression::EntireWorktop),
             )
             .build();
-        let receipt = test_runner.execute_manifest_ignoring_fee(
+        let receipt = setup.test_runner.execute_manifest_ignoring_fee(
             manifest,
-            vec![NonFungibleGlobalId::from_public_key(&alice.public_key)],
+            vec![NonFungibleGlobalId::from_public_key(
+                &setup.accounts[0].public_key,
+            )],
         );
         println!("{:?}\n", receipt);
-        receipt.expect_commit_success();
     }
 }

@@ -6,8 +6,8 @@ look no further! Save With Friends is here to help you save money with your frie
 
 ## Features
 
-- [ ] Savings account for multiple users
-- [ ] Withdrawal of funds after all users have agreed
-- [ ] Auto-withdrawal of funds after a certain date
-- [ ] Auto-withdrawal of funds after a certain amount has been reached
+- [x] Savings account for multiple users
+- [x] Early withdrawal if all users have agreed
+- [ ] (maybe) Withdrawal of funds after a certain date
+- [x] Withdrawal of funds after a certain amount has been reached
 - [ ] (maybe) Subscription to a savings account
