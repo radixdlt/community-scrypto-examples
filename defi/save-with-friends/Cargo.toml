@@ -11,6 +11,9 @@ scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0"
 transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
 radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
 scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
+assert_cmd = "2.0.11"
+predicates = "3.0.3"
+regex = "1.8.3"
 
 [profile.release]
 opt-level = 's'        # Optimize for size.
