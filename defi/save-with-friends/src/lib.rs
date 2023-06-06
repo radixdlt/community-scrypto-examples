@@ -222,18 +222,21 @@ mod tests {
 
         // all friends put their nft in to be able to withdraw early
         for account in &setup.accounts {
-            let resources = setup
+            // TODO: find out if there is a simpler way to get ids
+            let vaults = setup
                 .test_runner
-                .get_component_resources(account.component_address);
-            let nft_resource = resources
-                .iter()
-                .find(|r| r.0 == &setup.nft_address)
+                .get_component_vaults(account.component_address, setup.nft_address);
+            let ids = setup
+                .test_runner
+                // FIXME: vaults[0] is out of bounds
+                //  for some reason a test account didn't get a nft
+                .inspect_non_fungible_vault(vaults[0])
                 .unwrap();
-            manifest_builder.call_method(
+
+            manifest_builder.withdraw_non_fungibles_from_account(
                 account.component_address,
-                "withdraw_non_fungibles",
-                // FIXME: this is not working
-                manifest_args!(setup.nft_address, nft_resource),
+                setup.nft_address,
+                &ids,
             );
         }
 
@@ -252,6 +255,7 @@ mod tests {
                 &setup.accounts[0].public_key,
             )],
         );
+
         println!("{:?}\n", receipt);
     }
 }
