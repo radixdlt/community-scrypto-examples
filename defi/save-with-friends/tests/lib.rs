@@ -1,7 +1,6 @@
 use assert_cmd::prelude::*;
 use assert_cmd::Command;
 use predicates::prelude::*;
-use radix_engine::blueprints::account;
 use regex::Regex;
 use std::collections::BTreeMap;
 use std::error::Error;
@@ -21,19 +20,26 @@ fn test_close_early() -> Result<(), Box<dyn Error>> {
     println!("setup: {:?}", setup);
 
     // instantiate the blueprint
+    let mut env_vars = setup.get_env_vars();
+    println!("env_vars: {:?}", env_vars);
 
-    let cmd = format!(
-        "resim call-function {} new_amount_bound  --manifests/amount_bound_close_early.rtm",
-        setup.package_address
+    let cmd = format!("resim run manifests/amount_bound_instantiate.rtm");
+    let ouput = run(&cmd, Some(&env_vars));
+
+    // record nft address and component address
+    env_vars.insert(
+        "component_address".into(),
+        parse(&ouput, r"Component: ([a-zA-Z0-9_]+)"),
     );
-    let mut env_vars = BTreeMap::new();
-    env_vars.insert("account_1", setup.accounts[0].component_address.clone());
-    env_vars.insert("account_2", setup.accounts[1].component_address.clone());
-    env_vars.insert("account_3", setup.accounts[2].component_address.clone());
-    env_vars.insert("package_address", setup.package_address.clone());
-    // TODO:
-    // env_vars.insert("nft_address", setup.nft_address.clone());
-    run(&cmd, env_vars);
+    let resource_addresses = parse_multiple(&ouput, r"Resource: ([a-zA-Z0-9_]+)");
+    let nft_address = resource_addresses.iter().last().unwrap();
+    env_vars.insert("nft_address".into(), nft_address.clone());
+    println!("env_vars: {:?}", env_vars);
+
+    let cmd = format!("resim run manifests/amount_bound_close_early.rtm");
+
+    // close early
+    run(&cmd, Some(&env_vars));
 
     Ok(())
 }
@@ -87,9 +93,26 @@ impl Setup {
         }
     }
 
-    fn get_default_account_address() -> String {
+    fn get_env_vars(&self) -> BTreeMap<String, String> {
+        let mut env_vars = BTreeMap::new();
+        env_vars.insert(
+            "account_1".into(),
+            self.accounts[0].component_address.clone(),
+        );
+        env_vars.insert(
+            "account_2".into(),
+            self.accounts[1].component_address.clone(),
+        );
+        env_vars.insert(
+            "account_3".into(),
+            self.accounts[2].component_address.clone(),
+        );
+        env_vars.insert("package_address".into(), self.package_address.clone());
         let output = run("resim show-configs", None);
-        parse(&output, r"Account Address: (account_[a-zA-Z0-9_]+)")
+
+        let payer = parse(&output, r"Account Address: (account_[a-zA-Z0-9_]+)");
+        env_vars.insert("payer_account".into(), payer);
+        env_vars
     }
 }
 
@@ -123,7 +146,7 @@ impl TestAccount {
     }
 }
 
-fn run(cmd: &str, env: Option<BTreeMap<String, String>>) -> String {
+fn run(cmd: &str, env: Option<&BTreeMap<String, String>>) -> String {
     println!("command: {}", cmd);
     let mut input = cmd.split(" ").into_iter();
     let cmd = input.next().unwrap();

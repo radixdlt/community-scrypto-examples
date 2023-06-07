@@ -1,49 +1,33 @@
 CALL_METHOD
-	Address("${account_1}")
+	Address("${payer_account}")
 	"lock_fee"
 	Decimal("100");
-
-
-CALL_FUNCTION
-	Address("${package_address}")
-	"SaveWithFriends"
-	"new_amount_bound"
-    Decimal("1000")
-	Array<Address>(
-        Address("${account_1}"), 
-        Address("${account_2}"), 
-        Address("${account_3}")
-    );
-
-# TODO: retrieve the component address from the instantiated blueprint
 
 # to close early all friends must give off their NFTs
 CALL_METHOD
 	Address("${account_1}")
 	"withdraw"
-	Address("${nft_address}")
+	Address("${nft_address}");
 CALL_METHOD
 	Address("${account_2}")
 	"withdraw"
-	Address("${nft_address}")
+	Address("${nft_address}");
 CALL_METHOD
 	Address("${account_3}")
 	"withdraw"
-	Address("${nft_address}")
+	Address("${nft_address}");
 
 # take all the NFTs from the worktop and use them as a bucket
 TAKE_FROM_WORKTOP
 	Address("${nft_address}")
-	Bucket("friends_nfts");
+	Bucket("nfts");
 CALL_METHOD
-	"close_early"
 	Address("${component_address}")
-	Bucket("friends_nfts");
+	"close_early"
+	Bucket("nfts");
 
 
 CALL_METHOD
-	Address("${account_1}")
+	Address("${payer_account}")
 	"deposit_batch"
 	Expression("ENTIRE_WORKTOP");
-
-
