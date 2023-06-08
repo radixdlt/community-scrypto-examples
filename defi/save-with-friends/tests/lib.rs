@@ -21,6 +21,13 @@ fn test_close_early() -> Result<(), Box<dyn Error>> {
 
     // instantiate the blueprint
     let mut env_vars = setup.get_env_vars();
+    env_vars.insert(
+        "account_1".into(),
+        setup.default_account.component_address.clone(),
+    );
+    let friends = vec![TestAccount::resim_new(), TestAccount::resim_new()];
+    env_vars.insert("account_2".into(), friends[0].component_address.clone());
+    env_vars.insert("account_3".into(), friends[1].component_address.clone());
     println!("env_vars: {:?}", env_vars);
 
     let cmd = format!("resim run manifests/amount_bound_instantiate.rtm");
@@ -36,7 +43,10 @@ fn test_close_early() -> Result<(), Box<dyn Error>> {
     env_vars.insert("nft_address".into(), nft_address.clone());
     println!("env_vars: {:?}", env_vars);
 
-    let cmd = format!("resim run manifests/amount_bound_close_early.rtm");
+    let cmd = format!(
+        "resim run manifests/amount_bound_close_early.rtm -s {},{},{}",
+        setup.default_account.private_key, friends[0].private_key, friends[1].private_key,
+    );
 
     // close early
     run(&cmd, Some(&env_vars));
@@ -46,7 +56,7 @@ fn test_close_early() -> Result<(), Box<dyn Error>> {
 
 #[derive(Debug)]
 struct Setup {
-    accounts: Vec<TestAccount>,
+    default_account: TestAccount,
     package_address: String,
 }
 
@@ -54,33 +64,27 @@ impl Setup {
     fn new() -> Self {
         run("resim reset", None);
 
-        let accounts = vec![
-            TestAccount::resim_new(),
-            TestAccount::resim_new(),
-            TestAccount::resim_new(),
-        ];
+        let default_account = TestAccount::resim_new();
 
         let ouput = run("resim publish .", None);
         let package_address = parse(&ouput, r"Success! New Package: ([a-zA-Z0-9_]+)");
         println!("package address: {}", package_address);
 
         Self {
-            accounts,
+            default_account,
             package_address,
         }
     }
 
     fn existing() -> Self {
+        let output = run("resim show-configs", None);
+
+        let account_address = parse(&output, r"Account Address: (account_[a-zA-Z0-9_]+)");
+        let private_key = parse(&output, r"Account Private Key: ([a-zA-Z0-9_]+)");
+
+        let default_account = TestAccount::new("unknown".into(), private_key, account_address);
+
         let output = run("resim show-ledger", None);
-
-        let accounts = parse_multiple(&output, r"(account_[a-zA-Z0-9_]+)");
-        println!("accounts: {:?}", accounts);
-
-        let accounts = accounts
-            .iter()
-            .map(|a| TestAccount::new("unknown".into(), "unknown".into(), a.into()))
-            .collect();
-
         let package_address = parse_multiple(&output, r"(package_[a-zA-Z0-9_]+)")
             .iter()
             .last()
@@ -88,30 +92,20 @@ impl Setup {
             .into();
 
         Self {
-            accounts,
+            default_account,
             package_address,
         }
     }
 
     fn get_env_vars(&self) -> BTreeMap<String, String> {
         let mut env_vars = BTreeMap::new();
-        env_vars.insert(
-            "account_1".into(),
-            self.accounts[0].component_address.clone(),
-        );
-        env_vars.insert(
-            "account_2".into(),
-            self.accounts[1].component_address.clone(),
-        );
-        env_vars.insert(
-            "account_3".into(),
-            self.accounts[2].component_address.clone(),
-        );
-        env_vars.insert("package_address".into(), self.package_address.clone());
-        let output = run("resim show-configs", None);
 
-        let payer = parse(&output, r"Account Address: (account_[a-zA-Z0-9_]+)");
-        env_vars.insert("payer_account".into(), payer);
+        env_vars.insert("package_address".into(), self.package_address.clone());
+
+        env_vars.insert(
+            "payer_account".into(),
+            self.default_account.component_address.clone(),
+        );
         env_vars
     }
 }
@@ -165,7 +159,7 @@ fn run(cmd: &str, env: Option<&BTreeMap<String, String>>) -> String {
     let assert = cmd.assert().success();
 
     let output = &assert.get_output();
-    println!("output: {:?}", output);
+    // println!("output: {:?}", output);
     let output = &output.stdout;
     let output = String::from_utf8(output.to_vec()).unwrap();
 

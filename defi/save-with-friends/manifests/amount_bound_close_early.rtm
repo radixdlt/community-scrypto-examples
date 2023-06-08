@@ -7,15 +7,18 @@ CALL_METHOD
 CALL_METHOD
 	Address("${account_1}")
 	"withdraw"
-	Address("${nft_address}");
+	Address("${nft_address}")
+	Decimal("1");
 CALL_METHOD
 	Address("${account_2}")
 	"withdraw"
-	Address("${nft_address}");
+	Address("${nft_address}")
+	Decimal("1");
 CALL_METHOD
 	Address("${account_3}")
 	"withdraw"
-	Address("${nft_address}");
+	Address("${nft_address}")
+	Decimal("1");
 
 # take all the NFTs from the worktop and use them as a bucket
 TAKE_FROM_WORKTOP
