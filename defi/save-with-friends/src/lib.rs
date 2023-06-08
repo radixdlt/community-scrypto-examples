@@ -73,10 +73,14 @@ mod save_with_friends {
             component_address
         }
 
-        pub fn deposit(&mut self, xrd: Bucket, nft: Bucket) {
+        pub fn deposit(&mut self, xrd: Bucket, nft: Bucket) -> Bucket {
             assert!(
                 !self.goal_achieved,
-                "Goal has been achieved, no more deposits are allowed"
+                "Goal has been achieved, no more deposits are allowed!"
+            );
+            assert!(
+                nft.resource_address() == self.friend_nft_address,
+                "This is not a valid Save With Friends NFT!"
             );
             let amount = xrd.amount();
             self.savings.put(xrd);
@@ -95,6 +99,8 @@ mod save_with_friends {
                     )
                 }
             }
+
+            nft
         }
 
         pub fn withdraw(&mut self, nft: Bucket) -> Bucket {

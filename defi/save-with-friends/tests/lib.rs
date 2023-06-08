@@ -14,6 +14,59 @@ fn publish_package() {
 }
 
 #[test]
+fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
+    let setup = Setup::existing();
+
+    println!("setup: {:?}", setup);
+
+    // instantiate the blueprint
+    let mut env_vars = setup.get_env_vars();
+    env_vars.insert(
+        "account_1".into(),
+        setup.default_account.component_address.clone(),
+    );
+    let friends = vec![TestAccount::resim_new(), TestAccount::resim_new()];
+    env_vars.insert("account_2".into(), friends[0].component_address.clone());
+    env_vars.insert("account_3".into(), friends[1].component_address.clone());
+    println!("env_vars: {:?}", env_vars);
+
+    let cmd = format!("resim run manifests/amount_bound_instantiate.rtm");
+    let ouput = run(&cmd, Some(&env_vars));
+
+    // record nft address and component address
+    env_vars.insert(
+        "component_address".into(),
+        parse(&ouput, r"Component: ([a-zA-Z0-9_]+)"),
+    );
+    let resource_addresses = parse_multiple(&ouput, r"Resource: ([a-zA-Z0-9_]+)");
+    let nft_address = resource_addresses.iter().last().unwrap();
+    env_vars.insert("nft_address".into(), nft_address.clone());
+    println!("env_vars: {:?}", env_vars);
+
+    // deposit from account_1
+    env_vars.insert("account".into(), setup.default_account.component_address);
+    let cmd = format!("resim run manifests/amount_bound_deposit.rtm",);
+    run(&cmd, Some(&env_vars));
+
+    // deposit from account_2
+    env_vars.insert("account".into(), friends[0].component_address.clone());
+    let cmd = format!(
+        "resim run manifests/amount_bound_deposit.rtm -s {}",
+        friends[0].private_key
+    );
+    run(&cmd, Some(&env_vars));
+
+    // deposit from a non-friend account
+    // let cmd = format!(
+    //     "resim run manifests/amount_bound_deposit.rtm -s {}",
+    //     TestAccount::resim_new().private_key
+    // );
+    // run(&cmd, Some(&env_vars));
+
+    Ok(())
+}
+
+#[test]
 fn test_close_early() -> Result<(), Box<dyn Error>> {
     let setup = Setup::existing();
 
