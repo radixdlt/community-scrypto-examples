@@ -7,7 +7,7 @@ CALL_METHOD
 CALL_FUNCTION
 	Address("${package_address}")
 	"SaveWithFriends"
-	"new_amount_bound"
+	"instantiate"
     Decimal("1000")
 	Array<Address>(
         Address("${account_1}"), 

@@ -7,6 +7,7 @@ use std::error::Error;
 
 // These tests will use the `resim` binary to run the tests and
 // will change the state of the local resim state.
+// The tests are not suitable for running in parallel.
 
 #[test]
 fn publish_package() {
@@ -30,7 +31,7 @@ fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
     env_vars.insert("account_3".into(), friends[1].component_address.clone());
     println!("env_vars: {:?}", env_vars);
 
-    let cmd = format!("resim run manifests/amount_bound_instantiate.rtm");
+    let cmd = format!("resim run manifests/instantiate.rtm");
     let ouput = run(&cmd, Some(&env_vars));
 
     // record nft address and component address
@@ -45,13 +46,13 @@ fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
 
     // deposit from account_1
     env_vars.insert("account".into(), setup.default_account.component_address);
-    let cmd = format!("resim run manifests/amount_bound_deposit.rtm",);
+    let cmd = format!("resim run manifests/deposit.rtm",);
     run(&cmd, Some(&env_vars));
 
     // deposit from account_2
     env_vars.insert("account".into(), friends[0].component_address.clone());
     let cmd = format!(
-        "resim run manifests/amount_bound_deposit.rtm -s {}",
+        "resim run manifests/deposit.rtm -s {}",
         friends[0].private_key
     );
     run(&cmd, Some(&env_vars));
@@ -59,7 +60,7 @@ fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
     // deposit from a non-friend account
     let non_friend = TestAccount::resim_new();
     let cmd = format!(
-        "resim run manifests/amount_bound_deposit.rtm -s {}",
+        "resim run manifests/deposit.rtm -s {}",
         non_friend.private_key
     );
 
@@ -89,7 +90,7 @@ fn test_close_early() -> Result<(), Box<dyn Error>> {
     env_vars.insert("account_3".into(), friends[1].component_address.clone());
     println!("env_vars: {:?}", env_vars);
 
-    let cmd = format!("resim run manifests/amount_bound_instantiate.rtm");
+    let cmd = format!("resim run manifests/instantiate.rtm");
     let ouput = run(&cmd, Some(&env_vars));
 
     // record nft address and component address
@@ -103,7 +104,7 @@ fn test_close_early() -> Result<(), Box<dyn Error>> {
     println!("env_vars: {:?}", env_vars);
 
     let cmd = format!(
-        "resim run manifests/amount_bound_close_early.rtm -s {},{},{}",
+        "resim run manifests/close_early.rtm -s {},{},{}",
         setup.default_account.private_key, friends[0].private_key, friends[1].private_key,
     );
 

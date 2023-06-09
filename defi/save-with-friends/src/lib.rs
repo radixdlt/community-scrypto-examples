@@ -21,7 +21,7 @@ mod save_with_friends {
     impl SaveWithFriends {
         /// Only while instantiating the component we can add
         /// friends to the list of participants.
-        pub fn new_amount_bound(
+        pub fn instantiate(
             desired_amount: Decimal,
             accounts: Vec<ComponentAddress>,
         ) -> ComponentAddress {
