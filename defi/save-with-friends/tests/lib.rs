@@ -2,70 +2,49 @@ use assert_cmd::prelude::*;
 use assert_cmd::Command;
 use predicates::prelude::*;
 use regex::Regex;
+use serde::{Deserialize, Serialize};
+use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use std::error::Error;
+use std::fs;
 
 // These tests will use the `resim` binary to run the tests and
 // will change the state of the local resim state.
 // The tests are not suitable for running in parallel.
+// Run fresh_setup before running other tests.
 
 #[test]
-fn publish_package() {
-    Setup::new();
+fn fresh_setup() {
+    let setup = Setup::new();
+    to_file(&json!(setup));
 }
 
 #[test]
 fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
     let setup = Setup::existing();
 
-    println!("setup: {:?}", setup);
+    let mut env_vars = setup.env_vars.clone();
 
-    // instantiate the blueprint
-    let mut env_vars = setup.get_env_vars();
-    env_vars.insert(
-        "account_1".into(),
-        setup.default_account.component_address.clone(),
-    );
-    let friends = vec![TestAccount::resim_new(), TestAccount::resim_new()];
-    env_vars.insert("account_2".into(), friends[0].component_address.clone());
-    env_vars.insert("account_3".into(), friends[1].component_address.clone());
-    println!("env_vars: {:?}", env_vars);
-
-    let cmd = format!("resim run manifests/instantiate.rtm");
-    let ouput = run(&cmd, Some(&env_vars));
-
-    // record nft address and component address
-    env_vars.insert(
-        "component_address".into(),
-        parse(&ouput, r"Component: ([a-zA-Z0-9_]+)"),
-    );
-    let resource_addresses = parse_multiple(&ouput, r"Resource: ([a-zA-Z0-9_]+)");
-    let nft_address = resource_addresses.iter().last().unwrap();
-    env_vars.insert("nft_address".into(), nft_address.clone());
-    println!("env_vars: {:?}", env_vars);
-
-    // deposit from account_1
-    env_vars.insert("account".into(), setup.default_account.component_address);
+    // deposit from account_0
+    env_vars.insert("account".into(), setup.friends[0].component_address.clone());
     let cmd = format!("resim run manifests/deposit.rtm",);
     run(&cmd, Some(&env_vars));
 
-    // deposit from account_2
-    env_vars.insert("account".into(), friends[0].component_address.clone());
+    // deposit from account_1
+    env_vars.insert("account".into(), setup.friends[1].component_address.clone());
     let cmd = format!(
         "resim run manifests/deposit.rtm -s {}",
-        friends[0].private_key
+        setup.friends[1].private_key
     );
     run(&cmd, Some(&env_vars));
 
     // deposit from a non-friend account
-    let non_friend = TestAccount::resim_new();
     let cmd = format!(
         "resim run manifests/deposit.rtm -s {}",
-        non_friend.private_key
+        setup.non_friends[0].private_key
     );
 
     let mut cmd = compose_command(&cmd, Some(&env_vars));
-
     cmd.assert()
         .failure()
         .stderr(predicate::str::contains("Unauthorized"));
@@ -77,100 +56,86 @@ fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
 fn test_close_early() -> Result<(), Box<dyn Error>> {
     let setup = Setup::existing();
 
-    println!("setup: {:?}", setup);
-
-    // instantiate the blueprint
-    let mut env_vars = setup.get_env_vars();
-    env_vars.insert(
-        "account_1".into(),
-        setup.default_account.component_address.clone(),
-    );
-    let friends = vec![TestAccount::resim_new(), TestAccount::resim_new()];
-    env_vars.insert("account_2".into(), friends[0].component_address.clone());
-    env_vars.insert("account_3".into(), friends[1].component_address.clone());
-    println!("env_vars: {:?}", env_vars);
-
-    let cmd = format!("resim run manifests/instantiate.rtm");
-    let ouput = run(&cmd, Some(&env_vars));
-
-    // record nft address and component address
-    env_vars.insert(
-        "component_address".into(),
-        parse(&ouput, r"Component: ([a-zA-Z0-9_]+)"),
-    );
-    let resource_addresses = parse_multiple(&ouput, r"Resource: ([a-zA-Z0-9_]+)");
-    let nft_address = resource_addresses.iter().last().unwrap();
-    env_vars.insert("nft_address".into(), nft_address.clone());
-    println!("env_vars: {:?}", env_vars);
+    let keys: Vec<String> = setup
+        .friends
+        .iter()
+        .map(|acc| acc.private_key.clone())
+        .collect();
 
     let cmd = format!(
         "resim run manifests/close_early.rtm -s {},{},{}",
-        setup.default_account.private_key, friends[0].private_key, friends[1].private_key,
+        keys[0], keys[1], keys[2]
     );
 
     // close early
-    run(&cmd, Some(&env_vars));
+    run(&cmd, Some(&setup.env_vars));
 
     Ok(())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct Setup {
-    default_account: TestAccount,
-    package_address: String,
+    env_vars: BTreeMap<String, String>,
+    friends: Vec<TestAccount>,
+    non_friends: Vec<TestAccount>,
 }
 
 impl Setup {
     fn new() -> Self {
         run("resim reset", None);
 
-        let default_account = TestAccount::resim_new();
+        let friends = vec![
+            TestAccount::resim_new(),
+            TestAccount::resim_new(),
+            TestAccount::resim_new(),
+        ];
 
         let ouput = run("resim publish .", None);
         let package_address = parse(&ouput, r"Success! New Package: ([a-zA-Z0-9_]+)");
         println!("package address: {}", package_address);
 
+        let mut env_vars = BTreeMap::new();
+
+        env_vars.insert("package_address".into(), package_address.clone());
+        env_vars.insert("payer_account".into(), friends[0].component_address.clone());
+        env_vars.insert("account_0".into(), friends[0].component_address.clone());
+
+        env_vars.insert("account_1".into(), friends[1].component_address.clone());
+        env_vars.insert("account_2".into(), friends[2].component_address.clone());
+        println!("env_vars: {:?}", env_vars);
+
+        // component_address
+        let cmd = format!("resim run manifests/instantiate.rtm");
+        let ouput = run(&cmd, Some(&env_vars));
+        env_vars.insert(
+            "component_address".into(),
+            parse(&ouput, r"Component: ([a-zA-Z0-9_]+)"),
+        );
+
+        // nft_address
+        let resource_addresses = parse_multiple(&ouput, r"Resource: ([a-zA-Z0-9_]+)");
+        let nft_address = resource_addresses.iter().last().unwrap();
+        env_vars.insert("nft_address".into(), nft_address.clone());
+
         Self {
-            default_account,
-            package_address,
+            env_vars,
+            friends,
+            non_friends: vec![TestAccount::resim_new()],
         }
     }
 
     fn existing() -> Self {
-        let output = run("resim show-configs", None);
-
-        let account_address = parse(&output, r"Account Address: (account_[a-zA-Z0-9_]+)");
-        let private_key = parse(&output, r"Account Private Key: ([a-zA-Z0-9_]+)");
-
-        let default_account = TestAccount::new("unknown".into(), private_key, account_address);
-
-        let output = run("resim show-ledger", None);
-        let package_address = parse_multiple(&output, r"(package_[a-zA-Z0-9_]+)")
-            .iter()
-            .last()
-            .unwrap()
-            .into();
-
-        Self {
-            default_account,
-            package_address,
-        }
-    }
-
-    fn get_env_vars(&self) -> BTreeMap<String, String> {
-        let mut env_vars = BTreeMap::new();
-
-        env_vars.insert("package_address".into(), self.package_address.clone());
-
-        env_vars.insert(
-            "payer_account".into(),
-            self.default_account.component_address.clone(),
-        );
-        env_vars
+        // publishing a package takes a few seconds
+        // use existing setup.json to save time
+        // read from file
+        let mut file = fs::File::open("tests/tmp/setup.json").unwrap();
+        // deserialize it
+        let setup: Setup = serde_json::from_reader(file).unwrap();
+        setup
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 struct TestAccount {
     public_key: String,
     private_key: String,
@@ -247,4 +212,10 @@ fn parse_multiple(output: &str, regex: &str) -> Vec<String> {
         result.push(capture.get(1).unwrap().as_str().to_string());
     }
     result
+}
+
+fn to_file(value: &Value) {
+    fs::create_dir_all("tests/tmp").unwrap();
+    let mut file = fs::File::create("tests/tmp/setup.json").unwrap();
+    serde_json::to_writer_pretty(&mut file, value).unwrap();
 }

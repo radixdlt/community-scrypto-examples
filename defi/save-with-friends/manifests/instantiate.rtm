@@ -10,9 +10,9 @@ CALL_FUNCTION
 	"instantiate"
     Decimal("1000")
 	Array<Address>(
+        Address("${account_0}"), 
         Address("${account_1}"), 
-        Address("${account_2}"), 
-        Address("${account_3}")
+        Address("${account_2}")
     );
 
 CALL_METHOD

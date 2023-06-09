@@ -5,17 +5,17 @@ CALL_METHOD
 
 # to close early all friends must give off their NFTs
 CALL_METHOD
+	Address("${account_0}")
+	"withdraw"
+	Address("${nft_address}")
+	Decimal("1");
+CALL_METHOD
 	Address("${account_1}")
 	"withdraw"
 	Address("${nft_address}")
 	Decimal("1");
 CALL_METHOD
 	Address("${account_2}")
-	"withdraw"
-	Address("${nft_address}")
-	Decimal("1");
-CALL_METHOD
-	Address("${account_3}")
 	"withdraw"
 	Address("${nft_address}")
 	Decimal("1");
