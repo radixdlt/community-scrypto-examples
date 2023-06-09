@@ -57,11 +57,17 @@ fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
     run(&cmd, Some(&env_vars));
 
     // deposit from a non-friend account
-    // let cmd = format!(
-    //     "resim run manifests/amount_bound_deposit.rtm -s {}",
-    //     TestAccount::resim_new().private_key
-    // );
-    // run(&cmd, Some(&env_vars));
+    let non_friend = TestAccount::resim_new();
+    let cmd = format!(
+        "resim run manifests/amount_bound_deposit.rtm -s {}",
+        non_friend.private_key
+    );
+
+    let mut cmd = compose_command(&cmd, Some(&env_vars));
+
+    cmd.assert()
+        .failure()
+        .stderr(predicate::str::contains("Unauthorized"));
 
     Ok(())
 }
@@ -193,8 +199,7 @@ impl TestAccount {
     }
 }
 
-fn run(cmd: &str, env: Option<&BTreeMap<String, String>>) -> String {
-    println!("command: {}", cmd);
+fn compose_command(cmd: &str, env: Option<&BTreeMap<String, String>>) -> Command {
     let mut input = cmd.split(" ").into_iter();
     let cmd = input.next().unwrap();
     let mut cmd = Command::new(cmd);
@@ -208,6 +213,13 @@ fn run(cmd: &str, env: Option<&BTreeMap<String, String>>) -> String {
     for arg in input {
         cmd.arg(arg);
     }
+
+    cmd
+}
+
+fn run(cmd: &str, env: Option<&BTreeMap<String, String>>) -> String {
+    println!("command: {}", cmd);
+    let mut cmd = compose_command(cmd, env);
 
     let assert = cmd.assert().success();
 
