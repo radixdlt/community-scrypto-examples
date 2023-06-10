@@ -9,4 +9,4 @@ look no further! Save With Friends is here to help you save money with your frie
 - [x] Savings account for multiple friends
 - [x] Early withdrawal if all friends have agreed
 - [x] Allowing withdrawal of funds after a certain amount has been reached
-- [ ] Showing the status of the account to friends
+- [x] Showing the status of the account to friends

@@ -19,6 +19,30 @@ fn fresh_setup() {
     to_file(&json!(setup));
 }
 
+#[test]
+fn show_info() {
+    let setup = Setup::existing();
+
+    // default account being a friend can see the info
+    let cmd = format!(
+        "resim call-method {} show_info -p {}:1",
+        setup.env_vars.get("component_address").unwrap(),
+        setup.env_vars.get("nft_address").unwrap()
+    );
+    run(&cmd, None);
+
+    // non-friend account can't see the info
+    let cmd = format!(
+        "resim call-method {} show_info -s {}",
+        setup.env_vars.get("component_address").unwrap(),
+        setup.non_friends[0].private_key
+    );
+    compose_command(&cmd, None)
+        .assert()
+        .failure()
+        .stderr(predicate::str::contains("Unauthorized"));
+}
+
 // this test deprecates the current setup
 // rerun fresh_setup to get a new setup
 #[test]
@@ -148,7 +172,7 @@ impl Setup {
         // publishing a package takes a few seconds
         // use existing setup.json to save time
         // read from file
-        let mut file = fs::File::open("tests/tmp/setup.json").unwrap();
+        let file = fs::File::open("tests/tmp/setup.json").unwrap();
         // deserialize it
         let setup: Setup = serde_json::from_reader(file).unwrap();
         setup
@@ -169,14 +193,6 @@ impl TestAccount {
         let private_key = parse(&resim_output, r"Private key: ([a-zA-Z0-9]+)");
         let component_address = parse(&resim_output, r"Account component address: ([a-zA-Z0-9_]+)");
 
-        Self {
-            public_key,
-            private_key,
-            component_address,
-        }
-    }
-
-    fn new(public_key: String, private_key: String, component_address: String) -> Self {
         Self {
             public_key,
             private_key,

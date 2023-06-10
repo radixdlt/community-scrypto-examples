@@ -59,6 +59,10 @@ mod save_with_friends {
                 }
             });
 
+            // set a rule that only nft owners can call methods
+            let access_rules_config =
+                AccessRulesConfig::new().default(rule!(require(friend_nft_address)), LOCKED);
+
             // init the SaveWithFriends component
             let component_address = Self {
                 internal_badge: Vault::with_bucket(internal_badge),
@@ -68,9 +72,13 @@ mod save_with_friends {
                 goal_achieved: false,
             }
             .instantiate()
-            .globalize();
+            .globalize_with_access_rules(access_rules_config);
 
             component_address
+        }
+
+        pub fn show_info(&self) {
+            info!("Current savings: {}", self.savings.amount());
         }
 
         pub fn deposit(&mut self, xrd: Bucket, nft: Bucket) -> Bucket {
