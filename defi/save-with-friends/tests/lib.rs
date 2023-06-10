@@ -19,6 +19,26 @@ fn fresh_setup() {
     to_file(&json!(setup));
 }
 
+// this test deprecates the current setup
+// rerun fresh_setup to get a new setup
+#[test]
+fn test_withdraw() {
+    let setup = Setup::existing();
+    let mut env_vars = setup.env_vars.clone();
+    env_vars.insert("account".into(), setup.friends[0].component_address.clone());
+
+    // when goal is not achieved withdraw fails
+    let mut cmd = compose_command("resim run manifests/withdraw.rtm", Some(&env_vars));
+    cmd.assert()
+        .failure()
+        .stdout(predicate::str::contains("Goal has not been achieved"));
+
+    // when goal is achieved withdraw succeeds
+    env_vars.insert("amount".into(), "1000".into());
+    run("resim run manifests/deposit.rtm", Some(&env_vars));
+    run("resim run manifests/withdraw.rtm", Some(&env_vars));
+}
+
 #[test]
 fn test_only_friends_can_deposit() -> Result<(), Box<dyn Error>> {
     let setup = Setup::existing();
@@ -102,7 +122,7 @@ impl Setup {
 
         env_vars.insert("account_1".into(), friends[1].component_address.clone());
         env_vars.insert("account_2".into(), friends[2].component_address.clone());
-        println!("env_vars: {:?}", env_vars);
+        env_vars.insert("amount".into(), "100".into());
 
         // component_address
         let cmd = format!("resim run manifests/instantiate.rtm");

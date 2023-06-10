@@ -8,9 +8,9 @@ CALL_METHOD
     Address("${account}")
     "withdraw"
     Address("resource_sim1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqs6d89k")
-    Decimal("100");
+    Decimal("${amount}");
 TAKE_FROM_WORKTOP_BY_AMOUNT
-    Decimal("100")
+    Decimal("${amount}")
     Address("resource_sim1qyqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqs6d89k")
     Bucket("xrd");
 

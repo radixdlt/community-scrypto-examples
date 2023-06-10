@@ -1,0 +1,23 @@
+CALL_METHOD
+	Address("${account}")
+	"lock_fee"
+	Decimal("100");
+
+CALL_METHOD
+    Address("${account}")
+    "withdraw"
+    Address("${nft_address}")
+    Decimal("1");
+TAKE_FROM_WORKTOP
+    Address("${nft_address}")
+    Bucket("nft");
+
+CALL_METHOD
+    Address("${component_address}")
+    "withdraw"
+    Bucket("nft");
+
+CALL_METHOD
+	Address("${account}")
+	"deposit_batch"
+	Expression("ENTIRE_WORKTOP");
