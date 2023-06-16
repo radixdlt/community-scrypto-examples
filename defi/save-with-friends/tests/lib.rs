@@ -15,8 +15,7 @@ use std::fs;
 
 #[test]
 fn fresh_setup() {
-    let setup = Setup::new();
-    to_file(&json!(setup));
+    Setup::new();
 }
 
 #[test]
@@ -161,11 +160,13 @@ impl Setup {
         let nft_address = resource_addresses.iter().last().unwrap();
         env_vars.insert("nft_address".into(), nft_address.clone());
 
-        Self {
+        let setup = Self {
             env_vars,
             friends,
             non_friends: vec![TestAccount::resim_new()],
-        }
+        };
+        to_file(&json!(setup));
+        setup
     }
 
     fn existing() -> Self {

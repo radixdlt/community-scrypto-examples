@@ -3,32 +3,25 @@ CALL_METHOD
 	"lock_fee"
 	Decimal("100");
 
-# to close early all friends must give off their NFTs
 CALL_METHOD
 	Address("${account_0}")
-	"withdraw"
-	Address("${nft_address}")
-	Decimal("1");
+	"create_proof"
+	Address("${nft_address}");
 CALL_METHOD
 	Address("${account_1}")
-	"withdraw"
-	Address("${nft_address}")
-	Decimal("1");
+	"create_proof"
+	Address("${nft_address}");
 CALL_METHOD
 	Address("${account_2}")
-	"withdraw"
-	Address("${nft_address}")
-	Decimal("1");
-
-# take all the NFTs from the worktop and use them as a bucket
-TAKE_FROM_WORKTOP
-	Address("${nft_address}")
-	Bucket("nfts");
+	"create_proof"
+	Address("${nft_address}");
+CREATE_PROOF_FROM_AUTH_ZONE 
+	Address("${nft_address}") 
+	Proof("nfts_proof");
 CALL_METHOD
 	Address("${component_address}")
 	"close_early"
-	Bucket("nfts");
-
+	Proof("nfts_proof");
 
 CALL_METHOD
 	Address("${payer_account}")

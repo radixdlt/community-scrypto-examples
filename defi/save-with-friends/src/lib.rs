@@ -1,8 +1,7 @@
 use scrypto::prelude::*;
 
-#[derive(ScryptoSbor, NonFungibleData, Debug)]
+#[derive(ScryptoSbor, NonFungibleData, Debug, Clone)]
 struct FriendData {
-    beneficiary: ComponentAddress,
     #[mutable]
     savings: Decimal,
 }
@@ -51,17 +50,16 @@ mod save_with_friends {
             internal_badge.authorize(|| {
                 let resource_manager = borrow_resource_manager!(friend_nft_address);
                 for account in accounts {
-                    let bucket = resource_manager.mint_uuid_non_fungible(FriendData {
-                        beneficiary: account,
-                        savings: 0.into(),
-                    });
+                    let bucket =
+                        resource_manager.mint_uuid_non_fungible(FriendData { savings: 0.into() });
                     borrow_component!(account).call::<()>("deposit", scrypto_args![bucket]);
                 }
             });
 
-            // set a rule that only nft owners can call methods
-            let access_rules_config =
-                AccessRulesConfig::new().default(rule!(require(friend_nft_address)), LOCKED);
+            // set a rule that only nft owners can view the savings status
+            let access_rules_config = AccessRulesConfig::new()
+                .method("show_info", rule!(require(friend_nft_address)), LOCKED)
+                .default(rule!(allow_all), LOCKED);
 
             // init the SaveWithFriends component
             let component_address = Self {
@@ -123,34 +121,25 @@ mod save_with_friends {
             self.internal_badge
                 .authorize(|| borrow_resource_manager!(self.friend_nft_address).burn(nft));
             let xrd = self.savings.take(friend_savings);
+            // TODO: delete component if no more friends are left
             xrd
         }
 
-        pub fn close_early(&mut self, nfts: Bucket) {
+        pub fn close_early(&mut self, proof: Proof) {
             assert!(
                 !self.goal_achieved,
-                "Goal has been achieved, you can withdraw your savings the normal way"
-            );
-            let nft_res_manager = borrow_resource_manager!(self.friend_nft_address);
-            assert!(
-                nfts.amount() == nft_res_manager.total_supply(),
-                "All friends must agree to withdraw early"
+                "Goal has been achieved, you can already withdraw your savings"
             );
 
-            // give the savings to the beneficiaries
-            for nft in nfts.non_fungibles::<FriendData>() {
-                let beneficiary = nft.data().beneficiary;
-                let friend_savings = nft.data().savings;
-                let xrd = self.savings.take(friend_savings);
-                borrow_component!(beneficiary).call::<()>("deposit", scrypto_args![xrd]);
-            }
+            proof
+                .validate_resource_address(self.friend_nft_address)
+                .expect("Invalid proof");
+            let total_supply = borrow_resource_manager!(self.friend_nft_address).total_supply();
+            proof
+                .validate_contains_amount(total_supply)
+                .expect("All friends must agree to withdraw early");
 
-            // burn all badges
-            self.internal_badge.authorize(|| {
-                nft_res_manager.burn(nfts);
-            });
-
-            // TODO: destroy component when it's not needed anymore
+            self.goal_achieved = true;
         }
     }
 }
