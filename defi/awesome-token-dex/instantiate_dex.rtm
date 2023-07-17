@@ -1,0 +1,43 @@
+# Lock fees
+CALL_METHOD
+    Address("${account_address}")
+    "lock_fee"
+    Decimal("10");
+
+# Withdraw 1000 units of token_a from account and put it in bucket 
+CALL_METHOD
+    Address("${account_address}")
+    "withdraw"
+    Address("${token_a}")
+    Decimal("1000");
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("1000")
+    Address("${token_a}")
+    Bucket("bucket1");
+
+# Withdraw 50 units of token_b from account and put it in bucket 
+CALL_METHOD
+    Address("${account_address}")
+    "withdraw"
+    Address("${token_b}")
+    Decimal("50");
+
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("50")
+    Address("${token_b}")
+    Bucket("bucket2");
+
+# Invoke Instantiate with 1000 token_a and 50 token_b as start
+CALL_FUNCTION
+    Address("${package_address}")
+    "AwesomeDex"
+    "instantiate_awesome"
+    Bucket("bucket1")
+    Bucket("bucket2")
+    Decimal("0.001");
+
+# Return 100 LP Tokens to account
+CALL_METHOD
+    Address("${account_address}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");

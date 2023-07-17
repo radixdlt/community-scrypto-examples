@@ -1,0 +1,28 @@
+
+CALL_METHOD
+    Address("${account_address}")
+    "lock_fee"
+    Decimal("10");
+
+# Withdraw 10 units of lp_token and put it in bucket
+CALL_METHOD
+    Address("${account_address}")
+    "withdraw"
+    Address("${lp_token}")
+    Decimal("10");
+TAKE_FROM_WORKTOP_BY_AMOUNT
+    Decimal("10")
+    Address("${lp_token}")
+    Bucket("bucket1");
+
+# Invoke remove_liquidity
+CALL_METHOD
+    Address("${component_address}")
+    "remove_liquidity"
+    Bucket("bucket1");
+
+# Return output token_a and token_b 
+CALL_METHOD
+    Address("${account_address}")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP");
