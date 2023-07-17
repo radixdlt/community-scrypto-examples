@@ -1,0 +1,37 @@
+CALL_METHOD ComponentAddress("${account}") "lock_fee" Decimal("10");
+
+# Get a free stamp because default fee is set at 0.
+CALL_METHOD ComponentAddress("${bobs_mailbox}") "get_stamp" None None;
+
+# Put newly minted stamp in bucket.
+TAKE_FROM_WORKTOP ResourceAddress("${bobs_mailbox_stamp}") Bucket("Stamp");
+
+# Create proof of alices_mailbox owner badge.
+CALL_METHOD ComponentAddress("${account}") "create_proof" ResourceAddress("${alices_mailbox_owner_badge}");
+
+CREATE_PROOF_FROM_BUCKET Bucket("Stamp") Proof("StampProof");
+
+# Mint MailNft.
+CALL_METHOD ComponentAddress("${alices_mailbox}") "compose"
+    # Recipient
+    ComponentAddress("${bobs_mailbox}")
+    # Subject
+    "Hello Mail!"
+    # Body
+    "Hello world! This is an XRDmail, the latest in Email technology."
+    # Attachments
+    Map<String, String>(
+        "1", "https://www.radixdlt.com/"
+        )
+    # Metadata
+    Map<String, String>(
+        "category", "Hello"
+        )
+    # Stamp for mailbox B
+    Proof("StampProof");
+
+# Put newly minted MailNft in bucket.
+TAKE_FROM_WORKTOP ResourceAddress("${alices_mailbox_mail}") Bucket("Mail");
+
+# Post mail to recipients mailbox.
+CALL_METHOD ComponentAddress("${bobs_mailbox}") "post" Bucket("Mail") Bucket("Stamp") ComponentAddress("${alices_mailbox}");
