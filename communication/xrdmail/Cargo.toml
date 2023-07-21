@@ -1,16 +1,16 @@
 [package]
-name = "ubi"
-version = "0.2.0"
+name = "xrdmail"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
-scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
+sbor = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.8.0" }
+scrypto = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.8.0" }
 
 [dev-dependencies]
-transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
-radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
-scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.9.0" }
+transaction = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.8.0" }
+radix-engine = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.8.0" }
+scrypto-unit = { git = "https://github.com/radixdlt/radixdlt-scrypto", tag = "v0.8.0" }
 
 [profile.release]
 opt-level = 's'        # Optimize for size.
@@ -22,7 +22,6 @@ overflow-checks = true # Panic in the case of an overflow.
 
 [lib]
 crate-type = ["cdylib", "lib"]
-doctest = false
 
 [workspace]
 # Set the package crate as its own empty workspace, to hide it from any potential ancestor workspace

@@ -1,0 +1,29 @@
+CALL_METHOD
+	Address("${payer_account}")
+	"lock_fee"
+	Decimal("100");
+
+CALL_METHOD
+	Address("${account_0}")
+	"create_proof"
+	Address("${nft_address}");
+CALL_METHOD
+	Address("${account_1}")
+	"create_proof"
+	Address("${nft_address}");
+CALL_METHOD
+	Address("${account_2}")
+	"create_proof"
+	Address("${nft_address}");
+CREATE_PROOF_FROM_AUTH_ZONE 
+	Address("${nft_address}") 
+	Proof("nfts_proof");
+CALL_METHOD
+	Address("${component_address}")
+	"close_early"
+	Proof("nfts_proof");
+
+CALL_METHOD
+	Address("${payer_account}")
+	"deposit_batch"
+	Expression("ENTIRE_WORKTOP");

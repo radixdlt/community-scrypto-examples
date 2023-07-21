@@ -1,6 +1,6 @@
 [package]
-name = "ubi"
-version = "0.2.0"
+name = "awesome_dex"
+version = "0.1.0"
 edition = "2021"
 
 [dependencies]
@@ -22,7 +22,6 @@ overflow-checks = true # Panic in the case of an overflow.
 
 [lib]
 crate-type = ["cdylib", "lib"]
-doctest = false
 
 [workspace]
 # Set the package crate as its own empty workspace, to hide it from any potential ancestor workspace

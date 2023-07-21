@@ -1,0 +1,13 @@
+/target
+replace_variables.sh
+xrdmail.code-workspace
+/transactions/add_tier1_tmpl.rtm
+/transactions/add_tier2_tmpl.rtm
+/transactions/collect_fee_tmpl.rtm
+/transactions/get_stamp_default_tmpl.rtm
+/transactions/get_stamp_free_accs_cntrl_tmpl.rtm
+/transactions/get_stamp_free_tmpl.rtm
+/transactions/get_stamp_tier1_tmpl.rtm
+/transactions/get_stamp_tier2_tmpl.rtm
+/transactions/inst_req_rsrc_tmpl.rtm
+/transactions/set_default_price_tmpl.rtm

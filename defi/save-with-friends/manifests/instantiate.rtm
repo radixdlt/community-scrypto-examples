@@ -1,0 +1,21 @@
+CALL_METHOD
+	Address("${payer_account}")
+	"lock_fee"
+	Decimal("100");
+
+
+CALL_FUNCTION
+	Address("${package_address}")
+	"SaveWithFriends"
+	"instantiate"
+    Decimal("1000")
+	Array<Address>(
+        Address("${account_0}"), 
+        Address("${account_1}"), 
+        Address("${account_2}")
+    );
+
+CALL_METHOD
+	Address("${payer_account}")
+	"deposit_batch"
+	Expression("ENTIRE_WORKTOP");

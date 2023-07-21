@@ -1,0 +1,4 @@
+CALL_METHOD Address("account_sim1qnwef8xuffkg9mym80k20pmtjmgy6g58tmcpzr3m2n8qf9ay78") "lock_fee" Decimal("10");
+CALL_METHOD Address("account_sim1qnwef8xuffkg9mym80k20pmtjmgy6g58tmcpzr3m2n8qf9ay78") "create_proof_by_ids" Address("resource_sim1qfg3g8cs0hf7ghzqluym39e9lejxgjxtqvnj7l0j9wwqwu8mtn") Array<NonFungibleLocalId>(NonFungibleLocalId("#1#"));
+CREATE_PROOF_FROM_AUTH_ZONE_BY_IDS Array<NonFungibleLocalId>(NonFungibleLocalId("#1#")) Address("resource_sim1qfg3g8cs0hf7ghzqluym39e9lejxgjxtqvnj7l0j9wwqwu8mtn") Proof("balance_nft");
+CALL_METHOD Address("component_sim1q0ruy6exmhqwpdwfhvacd2zfl6nse5hv5ztnvk4gm0vqtkv72h") "transfert" Proof("balance_nft") NonFungibleLocalId("#2#") Decimal("200");

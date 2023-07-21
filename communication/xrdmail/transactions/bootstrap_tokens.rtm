@@ -1,0 +1,74 @@
+# Creates 4 badges (Hotel, Quebec, Whiskey, Yankee) to play with when getting stamps. 
+
+CALL_METHOD ComponentAddress("${account}") "lock_fee" Decimal("100");
+
+# Create some badges to play with.
+CREATE_FUNGIBLE_RESOURCE
+1u8
+Map<String, String>(
+    "name", "Hotel",
+    "symbol", "HTL",
+)
+Map<Enum, Tuple>(
+    Enum("ResourceMethodAuthKey::Withdraw"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+
+    Enum("ResourceMethodAuthKey::Deposit"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+)
+Some(Decimal("1"));
+
+CREATE_FUNGIBLE_RESOURCE
+1u8
+Map<String, String>(
+    "name", "Quebec",
+    "symbol", "QBC",
+)
+Map<Enum, Tuple>(
+    Enum("ResourceMethodAuthKey::Withdraw"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+
+    Enum("ResourceMethodAuthKey::Deposit"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+)
+Some(Decimal("1"));
+
+CREATE_FUNGIBLE_RESOURCE
+1u8
+Map<String, String>(
+    "name", "Whiskey",
+    "symbol", "WSKE",
+)
+Map<Enum, Tuple>(
+    Enum("ResourceMethodAuthKey::Withdraw"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+
+    Enum("ResourceMethodAuthKey::Deposit"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+)
+Some(Decimal("1"));
+
+CREATE_FUNGIBLE_RESOURCE
+1u8
+Map<String, String>(
+    "name", "Yankee",
+    "symbol", "YNKE",
+)
+Map<Enum, Tuple>(
+    Enum("ResourceMethodAuthKey::Withdraw"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+
+    Enum("ResourceMethodAuthKey::Deposit"),
+    Tuple(Enum("AccessRule::AllowAll"),
+            Enum("AccessRule::DenyAll")),
+)
+Some(Decimal("1"));
+
+CALL_METHOD ComponentAddress("${account}") "deposit_batch" Expression("ENTIRE_WORKTOP");
