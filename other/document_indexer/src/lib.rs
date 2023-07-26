@@ -381,33 +381,16 @@
 //! roles (owner, admin, user) as well as the PUBLIC role. This
 //! provides overall security for the blueprint.
 //!
-//! Notice however that in addition we also do intent based access
-//! control in the [register_document_edition] method. In other words,
-//! to call that method you first need to have a suitable proof in
-//! your auth zone and *additionally* you need to pass a suitable
-//! proof as an argument to the method. (Ideally these two proofs
-//! would be proofs of the same badge although technically they don't
-//! have to be.) The reason is that in this method we need to log the
-//! identity of the user performing the registration and so we need
-//! the badge to be passed in. (Notice in the test suite, the manifest
-//! built by `build_register_document_edition_manifest()` builds the
-//! same proof twice: one is for the auth zone and the other is to
-//! pass by intent.)
+//! Notice that in the [register_document_edition] method we accept a
+//! non-fungible local id in as argument and take this to be the user
+//! that called us. We verify that this is legitimate by checking
+//! against the Auth Zone that the user specified is actually
+//! there. This gives us confidence that the `registering_user` that
+//! we store is correct.
 //!
-//! While you might argue that this method could be *only* doing
-//! intent based access control (and so we could remove it from
-//! system-level access control) it has been kept in both, mostly
-//! because using system-level access control gives us fantastic
-//! in-code documentation at the start of the component as to how its
-//! access control works. (If we were to write there
-//! e.g. `register_document_edition => PUBLIC` and then *actually* use
-//! intent based access control that effectively equates to
-//! `restrict-to: [user]` anyway, the system-level statement of PUBLIC
-//! would seem a bit deceptive in the author's opinion.)
-//!
-//! Note that doing it the way we have, we now have the `user`
-//! resource address stored both in component state as `users`, and
-//! also in the access rule for the `user` role like this: `user =>
+//! As a consequence of doing this, we now have the `user` resource
+//! address stored both in component state as `users`, and also in the
+//! access rule for the `user` role like this: `user =>
 //! rule!(require(users))`. This redundancy is a bit unfortunate as we
 //! would prefer for security sensitive information such as this to be
 //! stored in a single place only, to avoid confusion. As a practical
@@ -654,6 +637,10 @@ struct Document {
         /// Adds knowledge of a new edition of a document to the
         /// indexer.
         ///
+        /// `user` must be the local-id of one of our users that is
+        /// currently in the Auth Zone. The registry addition will be
+        /// attributed to this user.
+        ///
         /// The `document_name` must already exist within this
         /// component instance and if it does not the method will
         /// panic.
@@ -667,24 +654,22 @@ struct Document {
         ///
         /// If there are sufficient funds available then this method
         /// call will receive transaction fee subsidy.
-        pub fn register_document_edition(&mut self, user: Proof,
+        pub fn register_document_edition(&mut self,
+                                         user: NonFungibleLocalId,
                                          document_name: String,
                                          document_hash: String,
                                          attributes: HashMap<String, String>)
         {
-            // Note that we subsidize before we check the user proof,
-            // since system-level access control already guarantees
-            // the caller is one of our users.
+            // Note that we subsidize before we do the auth zone
+            // checking, since system-level access control already
+            // guarantees the caller is one of our users.
             self.subsidize();
-            let user = user.check(self.users);
+
+            let registering_user = NonFungibleGlobalId::new(self.users, user);
+            Runtime::assert_access_rule(rule!(require(registering_user.clone())));
 
             let mut doc = self.documents.get_mut(&document_name).expect(
                 "This document does not exist");
-
-            let registering_user = NonFungibleGlobalId::new(
-                user.resource_address(),
-                user.as_non_fungible().non_fungible_local_id());
-
             doc.editions.insert(doc.next_ndx,
                                 IndexEntry {
                                     registering_user,

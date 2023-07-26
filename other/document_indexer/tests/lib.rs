@@ -205,7 +205,8 @@ fn call_add_document_with_fee(test_runner: &mut TestRunner,
 fn build_register_document_edition_manifest(
     docindexer: ComponentAddress,
     signer: &User,
-    user: &NonFungibleGlobalId,
+    user_in_auth_zone: &NonFungibleGlobalId,
+    user_passed_as_arg: &NonFungibleGlobalId,
     document_name: &str,
     document_hash: &str,
     attributes: &HashMap<String, String>)
@@ -215,21 +216,16 @@ fn build_register_document_edition_manifest(
         .lock_fee(signer.account, dec!(1))
         .create_proof_from_account_of_non_fungibles(
             signer.account,
-            user.resource_address(),
-            &BTreeSet::from([user.local_id().clone()]))
-        .create_proof_from_account_of_non_fungibles(
-            signer.account,
-            user.resource_address(),
-            &BTreeSet::from([user.local_id().clone()]))
-        .pop_from_auth_zone("user_proof")
-        .call_method_with_name_lookup(
+            user_in_auth_zone.resource_address(),
+            &BTreeSet::from([user_in_auth_zone.local_id().clone()]))
+        .call_method(
             docindexer,
             "register_document_edition",
-            |lookup| (manifest_args!(
-                lookup.proof("user_proof"),
+            manifest_args!(
+                user_passed_as_arg.local_id(),
                 document_name,
                 document_hash,
-                attributes))
+                attributes)
         )
         .build()
 }
@@ -237,11 +233,16 @@ fn build_register_document_edition_manifest(
 /// Builds a transaction manifest for
 /// `DocumentIndexer::register_document_edition` and runs it. Expects
 /// success if `succeed` is true, otherwise expects failure.
+///
+/// Note that under normal circumstances you will pass the same user
+/// as `user_in_auth_zone` and `user_passed_as_arg`. These are
+/// different only when you're testing abberant behaviour.
 fn call_register_document_edition(
     test_runner: &mut TestRunner,
     docindexer: ComponentAddress,
     signer: &User,
-    user: &NonFungibleGlobalId,
+    user_in_auth_zone: &NonFungibleGlobalId,
+    user_passed_as_arg: &NonFungibleGlobalId,
     document_name: &str,
     document_hash: &str,
     attributes: &HashMap<String, String>,
@@ -249,8 +250,60 @@ fn call_register_document_edition(
     -> CommitResult {
 
     let manifest = build_register_document_edition_manifest(
-        docindexer, signer, user,
+        docindexer, signer, user_in_auth_zone, user_passed_as_arg,
         document_name, document_hash, attributes);
+
+    let receipt = test_runner.execute_manifest_ignoring_fee(
+        manifest,
+        vec![NonFungibleGlobalId::from_public_key(&signer.pubkey)],
+    );
+
+    let result = if succeed { receipt.expect_commit_success() }
+    else { receipt.expect_commit_failure() };
+
+    result.clone()
+}
+
+/// Builds a transaction manifest for
+/// `DocumentIndexer::register_document_edition` which can seem
+/// confused about which user to use: it puts both in the auth zone
+/// and passes one of them as argument to the method. This should only
+/// work if the one passed as argument has the same local-id as a
+/// legitimate user that is in the auth zone.
+///
+/// Expects success if `succeed` is true, otherwise expects failure.
+fn call_register_document_edition_confused(
+    test_runner: &mut TestRunner,
+    docindexer: ComponentAddress,
+    signer: &User,
+    user_in_auth_zone: &NonFungibleGlobalId,
+    user_passed_as_arg: &NonFungibleGlobalId,
+    document_name: &str,
+    document_hash: &str,
+    attributes: &HashMap<String, String>,
+    succeed: bool)
+    -> CommitResult {
+
+    let manifest = ManifestBuilder::new()
+        .lock_fee(signer.account, dec!(1))
+        .create_proof_from_account_of_non_fungibles(
+            signer.account,
+            user_in_auth_zone.resource_address(),
+            &BTreeSet::from([user_in_auth_zone.local_id().clone()]))
+        .create_proof_from_account_of_non_fungibles(
+            signer.account,
+            user_passed_as_arg.resource_address(),
+            &BTreeSet::from([user_passed_as_arg.local_id().clone()]))
+        .call_method(
+            docindexer,
+            "register_document_edition",
+            manifest_args!(
+                user_passed_as_arg.local_id(),
+                document_name,
+                document_hash,
+                attributes)
+        )
+        .build();
 
     let receipt = test_runner.execute_manifest_ignoring_fee(
         manifest,
@@ -279,7 +332,7 @@ fn call_register_document_edition_with_fee(
     -> Option<CommitResult> {
 
     let manifest = build_register_document_edition_manifest(
-        docindexer, signer, user,
+        docindexer, signer, user, user,
         document_name, document_hash, attributes);
 
     let receipt = test_runner.execute_manifest(
@@ -544,7 +597,8 @@ fn test_register_document_edition() {
 
     let nonusers_resaddr =
         test_runner.create_non_fungible_resource(alice.account);
-    let nonuser_nfgid = NonFungibleGlobalId::new(nonusers_resaddr, 1.into());
+    let nonuser1_nfgid = NonFungibleGlobalId::new(nonusers_resaddr, 1.into());
+    let nonuser2_nfgid = NonFungibleGlobalId::new(nonusers_resaddr, 2.into());
 
     let admins: BTreeSet<NonFungibleGlobalId> =
         std::iter::once(alice_nfgid.clone()).collect();
@@ -586,6 +640,7 @@ fn test_register_document_edition() {
                                    docindexer,
                                    &alice,
                                    &user1_nfgid,
+                                   &user1_nfgid,
                                    "Test Document",
                                    "hashtesthash",
                                    &HashMap::new(),
@@ -600,9 +655,38 @@ fn test_register_document_edition() {
                    true).0.unwrap(),
                "There should now be 1 edition");
 
+    // We now try to pass a non-user with local-id 2 to the method
+    // (and this one is in auth zone) while we also have an actual
+    // user in auth zone with local-id 1. This shouldn't be accepted.
+    call_register_document_edition_confused(&mut test_runner,
+                                            docindexer,
+                                            &alice,
+                                            &user1_nfgid,
+                                            &nonuser2_nfgid,
+                                            "Test Document",
+                                            "hashtesthash",
+                                            &HashMap::new(),
+                                            false);
+
+    // We try to have a user with local-id 1 in the auth zone but pass
+    // a user with local-id 2 to the method. This shouldn't work when
+    // local-id 2 isn't in auth zone.
     call_register_document_edition(&mut test_runner,
                                    docindexer,
                                    &alice,
+                                   &user1_nfgid,
+                                   &user2_nfgid,
+                                   "Test Document",
+                                   "hashtesthash",
+                                   &HashMap::new(),
+                                   false);
+
+    // We're back to testing things that should work again, adding a
+    // document edition.
+    call_register_document_edition(&mut test_runner,
+                                   docindexer,
+                                   &alice,
+                                   &user1_nfgid,
                                    &user1_nfgid,
                                    "Test Document",
                                    "hashtesthash2",
@@ -651,7 +735,8 @@ fn test_register_document_edition() {
     call_register_document_edition(&mut test_runner,
                                    docindexer,
                                    &alice,
-                                   &nonuser_nfgid,
+                                   &nonuser1_nfgid,
+                                   &nonuser1_nfgid,
                                    "Test Document",
                                    "hashtesthash3",
                                    &HashMap::new(),
@@ -669,6 +754,7 @@ fn test_register_document_edition() {
     call_register_document_edition(&mut test_runner,
                                    docindexer,
                                    &bob,
+                                   &user2_nfgid,
                                    &user2_nfgid,
                                    "Test Document",
                                    "hashtesthash4",
@@ -728,6 +814,7 @@ fn test_editions() {
                                        docindexer,
                                        &alice,
                                        &user1_nfgid,
+                                       &user1_nfgid,
                                        "Test Document 1",
                                        &format!("doc1hashtesthash{}", count),
                                        &HashMap::from(
@@ -751,6 +838,7 @@ fn test_editions() {
         call_register_document_edition(&mut test_runner,
                                        docindexer,
                                        &alice,
+                                       &user1_nfgid,
                                        &user1_nfgid,
                                        "Test Document 2",
                                        &format!("doc2hashtesthash{}", count),
