@@ -430,7 +430,7 @@
 //! author expects everything in here to work on other platforms, if
 //! you're having weird problems with it maybe this is the reason.
 //!
-//! This project has been developed for Scrypto v0.10.0 and was
+//! This project has been developed for Scrypto v0.11.0 and was
 //! submitted to the Scrypto developer incentive program which at time
 //! of writing is available
 //! [here.](https://www.radixdlt.com/blog/scrypto-developer-program-incentives)
