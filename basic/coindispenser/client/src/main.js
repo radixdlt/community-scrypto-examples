@@ -55,10 +55,8 @@ refreshButtonElement.addEventListener("click", async () => {
     clientAddress = temp.accounts[0].address; 
   } else{
 
-    const result = await radixDappToolkit.walletApi.sendOneTimeRequest
-    (
-      OneTimeDataRequestBuilder.accounts().exactly(1),
-    ); 
+    const result = await radixDappToolkit.walletApi.sendRequest()
+
     if (result.isErr()) return alert(JSON.stringify(result.error, null, 2));
 
     clientAddress = result.value.accounts[0].address;
