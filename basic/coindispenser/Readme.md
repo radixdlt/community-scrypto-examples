@@ -12,14 +12,13 @@ This project contains both a dApp and a webclient.</br>
 ## Getting started: Webclient
 Nodejs/NPM needs to be installed</br>
 - <b>note</b>: verify the install version is ok for use with the radix-dapp-toolkit.</br>
-        %-> npm install
 
 In the `/client/src` folder edit the main.js file:</br>
 - update the variables as directed
 
 Enter the `client` folder.</br>
 - start the website</br>
-	
+        %-> npm install	
         %-> npm run dev
 
 ## Getting started: dApp

@@ -2,6 +2,7 @@ use scrypto::prelude::*;
 
 #[blueprint]
 mod coindispenser {
+    // setup of roles and list of the mehtods and their access restrictions.
     enable_method_auth! { 
         roles { 
             admin => updatable_by: [OWNER]; 
@@ -16,13 +17,13 @@ mod coindispenser {
     }
 	
     struct CoinDispenser {
-        // vaults containing any kind of swappable coins
+        // vaults containing any kind of incomming coins
         primairyvaults: KeyValueStore<ResourceAddress, Vault>,
-        // redemption vault
+        // redemption vault contains any kind of outgoing coins
         secondairyvaults: KeyValueStore<ResourceAddress, Vault>,
         // the swap ratio of the active coins
         ratio: Decimal,
-        // active incomming coin
+        // active incomming coin // set to None to disable swap
         incomming: Option<ResourceAddress>,
         // active outgoing coin
         outgoing: Option<ResourceAddress>,
@@ -41,26 +42,23 @@ mod coindispenser {
 //						metadata_setter => OWNER;
 //						metadata_setter_updater => rule!(deny_all);
 //                      metadata_locker => rule!(deny_all);
-//                        metadata_locker_updater => rule!(deny_all);
+//                      metadata_locker_updater => rule!(deny_all);
 //					},	
 					init {
-						"name" => "DelayPay Admin Badge", locked;
-						"description" => "Badge for DelayPay Component", locked;
-                        "symbol" => "DAB", locked;
+						"name" => "CoinDispenser Admin Badge", locked;
+						"description" => "Badge for CoinDispenser Component", locked;
+                        "symbol" => "CDAB", locked;
 					}
                 })
                 .mint_initial_supply(2);
 
             // put one admin badge and put in in the admin vault
+            // just in case future actions require this badge to be part of the dApp.
             let local_admin_badge: Bucket = my_admin_badge.take(1);
 
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
-//            let access_rules: AccessRulesConfig = AccessRulesConfig::new()
-//                .method("withdrawall",admin_rule.clone(), rule!(deny_all))
-//                .default(rule!(allow_all), LOCKED);
-
-             // Instantiate a Hello component, populating its vault with our supply of 1000 HelloToken
+             // Instantiate a CoinDispenser component, 
             let component: Global<CoinDispenser> = Self {
                 adminvault: Vault::with_bucket(local_admin_badge),
                 ratio: dec!("0.99"),
@@ -70,11 +68,9 @@ mod coindispenser {
                 secondairyvaults: KeyValueStore::new(),
             }
             .instantiate()
-//            component.add_access_check(access_rules);
             .prepare_to_globalize(OwnerRole::None)
 			.roles( 
                 roles!(
- //                   super_admin => rule!(require(super_admin_badge.resource_address())); 
                     admin => admin_rule;
                 )
             )
@@ -83,6 +79,8 @@ mod coindispenser {
         }
 
         // this is an admin function to move resources between keyvaluestores.
+        // the secondairy vaults are the hot-vaults for the coin dispensor
+        // more to primairy vaults for admin retreival.
         pub fn keystore_swap(&mut self, targetaddress: ResourceAddress) {
             assert!(!self.secondairyvaults.get(&targetaddress).is_none(),
                 "The specified coin does not exist in the redemption vault");
@@ -101,7 +99,7 @@ mod coindispenser {
             }
         }
 
-        // this is an admin function to withdrawal a specific resource.
+        // this is an admin function to withdrawal a specific resource from the primairy vaults
         pub fn withdrawal(&mut self, targetaddress: ResourceAddress) -> Bucket{
             assert!(!self.primairyvaults.get(&targetaddress).is_none(),
                 "The specified coin does not exist in this component");
@@ -110,7 +108,7 @@ mod coindispenser {
             v.take_all()
         }
 
-        // Deposit any resource in the redemption vaults.
+        // Deposit any resource in the secondairy vaults.
         pub fn deposit(&mut self, bucket: Bucket) {
             let resource_address = bucket.resource_address();
             if self.secondairyvaults.get(&resource_address).is_none() {
@@ -124,6 +122,9 @@ mod coindispenser {
         }
 
         // admin function to define the redeem/receive combination and ratio
+        // the first resourceaddress is the incomming coin; going to the primairy vault
+        // the second resourceaddress is the outgoing coin; going out of the secondairy vault
+        // The ratio is a reference of the amount of secondairy coins vs 1 primairy coin. 
         pub fn set_redeem_pair(&mut self, to_redeem: ResourceAddress,
                                           to_receive: ResourceAddress,
                                           ratio: Decimal){
@@ -135,6 +136,7 @@ mod coindispenser {
         }
 
         // public function to redeem one coin for another.
+        // the actual public swap is done using this method.
         pub fn redeem_coin(&mut self, redeem: Bucket) -> Bucket {
             assert!((self.incomming == Some(redeem.resource_address())),
                 "Coin does not match the selected redeem coin");
