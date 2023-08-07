@@ -1,0 +1,41 @@
+#!/bin/bash
+
+resim reset
+temp_account=`resim new-account`
+export account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
+export priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
+export badge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
+export radix=`resim show $account | grep -A 2 Fungible | grep -o "resource_.\S*" | sed -e "s/://"`
+export coin=`resim new-token-fixed --name "Extra coin" --symbol EXT 100000 | grep -A 6 "New Entities" |grep -o "resource_.*"`
+
+
+#export account=`resim new-account | grep -i component | grep -o "account_.*"`
+#export badge=`resim new-simple-badge | grep "NFA" | sed "s/NFAddress:\ //g"`
+#export package=`resim publish . --owner-badge $badge | sed "s/Success! New Package: //"`
+export package=`resim publish . | sed "s/Success! New Package: //"`
+tempcomponent=`resim call-function $package CoinDispenser instantiate`
+export component=`echo "$tempcomponent" |grep -A 4 "New" |grep -o "component_.*"`
+export proof=`echo "$tempcomponent" |grep -A 4 "New" |grep -o "resource_.*"`
+#export proof=`resim show $account | grep "Admin Badge for RaDiceX" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
+#export radix=`resim show $account | grep "Radix" | grep -w -o "resource_.\S*" | sed -e "s/,//"`
+
+resim call-method $component withdrawal $radix --proofs $proof:1
+resim call-method $component deposit $radix:1000
+resim call-method $component withdrawal $radix --proofs $proof:1
+resim call-method $component keystore_swap $radix --proofs $proof:1
+resim call-method $component withdrawal $radix --proofs $proof:1
+resim call-method $component deposit $radix:1000
+resim call-method $component deposit $coin:1
+resim call-method $component set_redeem_pair $coin $radix 1.24 --proofs $proof:1
+resim call-method $component redeem_coin $coin:10
+
+#export ticket=`resim show $account | grep "Ticket for RaDiceX" | grep -w -o "resource_.\S*" | sed -e "s/,//"` 
+
+echo "account: $account"
+echo "badge: $badge"
+echo "package: $package"
+echo "component: $component" 
+echo "proof: $proof"
+echo "radix: $radix"
+echo "coin: $coin"
+
