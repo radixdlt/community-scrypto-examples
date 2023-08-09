@@ -1,0 +1,10 @@
+CALL_FUNCTION
+    Address("package_sim1pkv87klswwg29hqznsfjtlfc69r2glfjj3dpj0ascm0pjw5e0g75h5")
+    "CoinDispenser"
+    "instantiate"
+;
+CALL_METHOD
+    Address("account_sim1cyfhfs4a94n7kp7k47s55yx685lgwvp2kc6k6tm9kev8qpnlgjea7f")
+    "deposit_batch"
+    Expression("ENTIRE_WORKTOP")
+;
