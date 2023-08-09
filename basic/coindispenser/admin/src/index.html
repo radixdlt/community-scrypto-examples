@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css">
+  <title>Coin Dispenser Admin Example</title>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <script type="module" src="/main.js"></script>
+
+  <div class="connectBtn">
+    <radix-connect-button />
+  </div>
+
+  <h1>Refresh when connected!</h1>
+  <p><b>Please select a single wallet; The one with the Component's admin badge!</b></p>
+  <button id="refreshwallet">Refresh</button>
+  <div class="container">
+    <p>Selected Wallet : <span id="walletAddress"></span></br>
+    Component Name : <span id="componentname"></span></p>
+  </div>
+
+  <div class="divider"></div>
+
+  <h2>Deposit coins</h2>
+  <p>Depost any coin to the dApp environment, this coin can later be selected as outgoing coin</br>
+  This is not an Admin function.</p>
+  <p>Coin resource address</br><input id="depositresource" type="text" ></p>
+  <p>Amount</br><input id="depositamount" type="text" ></p>
+  <button id="deposit">Deposit</button>
+  <div class="divider"></div>
+
+  <h2>Keystore Swap</h2>
+  <p>Swap coin from outgoing (hot) keystore to the incomming keystore.</br>
+  This is an Admin function, requiring proof.</p>
+  <p>Coin resource address</br><input id="keystoreswapresource" type="text" ></p>
+  <p>Proof</br><input id="keystoreproofresource" type="text" ></p>
+  <button id="keystoreswap">KeyStore Swap</button>
+  <div class="divider"></div>
+
+  <h2>Withdrawal</h2>
+  <p>Collect all coins from the incommming keystore.</br>
+  This is an Admin function, requiring proof.</p>
+  <p>Coin resource address</br><input id="withdrawalresource" type="text" ></p>
+  <p>Proof</br><input id="withdrawalproofresource" type="text" ></p>
+  <button id="withdrawal">Withdrawal</button>
+  <div class="divider"></div>
+
+  <h2>Set dispenser coin pair</h2>
+  <p>Set the incomming/outgoin and ratio of the coins.</br>
+  This is an Admin function, requiring proof.</p>
+  <p>Incomming resource address</br><input id="incommingsetresource" type="text" ></p>
+  <p>Incomming resource address</br><input id="outgoingsetresource" type="text" ></p>
+  <p>Outgoing vs Incomming ratio</br><input id="outvsinratio" type="text" ></p>
+  <p>Proof</br><input id="outvsinproofresource" type="text" ></p>
+  <button id="setdispenser">Set Dispenser</button>
+  <div class="divider"></div>
+
+  <h2>Reset dispenser coin pair</h2>
+  <p>Disable the dispensor by setting the in/out coin resource to XRD with a ratio of 1.</br>
+  This is an Admin function, requiring proof.</p>
+  <p>Proof</br><input id="disableproofresource" type="text" ></p>
+  <button id="disabledispenser">Disable Dispenser</button>
+  <div class="divider"></div>
+
+</body>
+
+</html>

@@ -1,7 +1,6 @@
 import {
   RadixDappToolkit,
   DataRequestBuilder,
-  OneTimeDataRequestBuilder
 } from '@radixdlt/radix-dapp-toolkit'
 
 const mynetworkId = 13;

@@ -54,7 +54,6 @@ input {
   display: flex;
   flex-direction: row-reverse;
 }
-
 .divider {
   width: 100%;
   height: 1px;
