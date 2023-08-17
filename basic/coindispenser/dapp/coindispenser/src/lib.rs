@@ -13,6 +13,7 @@ mod coindispenser {
             keystore_swap => restrict_to: [admin];
             withdrawal => restrict_to: [admin];
             set_redeem_pair => restrict_to: [admin];
+            reset_dispenser => restrict_to: [admin];
         }
     }
 	
@@ -135,7 +136,14 @@ mod coindispenser {
             self.ratio = ratio;
         }
 
-        // public function to redeem one coin for another.
+        // admin function to reset the dispenser
+        pub fn reset_dispenser(&mut self){
+            self.incomming = None;
+            self.outgoing =  None;
+            self.ratio = dec!("0.99");
+        }
+
+// public function to redeem one coin for another.
         // the actual public swap is done using this method.
         pub fn redeem_coin(&mut self, redeem: Bucket) -> Bucket {
             assert!((self.incomming == Some(redeem.resource_address())),

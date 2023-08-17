@@ -22,6 +22,8 @@ resim call-method $component deposit $radix:1000
 resim call-method $component deposit $coin:1
 resim call-method $component set_redeem_pair $coin $radix 1.24 --proofs $proof:1
 resim call-method $component redeem_coin $coin:10
+resim call-method $component reset_dispenser --proofs $proof:1
+resim call-method $component redeem_coin $coin:10
 
 echo "account: $account"
 echo "badge: $badge"
