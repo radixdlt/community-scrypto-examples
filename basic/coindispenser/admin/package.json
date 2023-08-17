@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "^1.0.0-rc.2.4",
-    "@radixdlt/radix-dapp-toolkit": "^0.3.0-rcnet-v2.21",
-    "@radixdlt/connect-button": "0.13.0-alpha.1"
+    "@radixdlt/radix-dapp-toolkit": "^0.5.1",
+    "@radixdlt/connect-button": "^0.13.3"
   }
 }
