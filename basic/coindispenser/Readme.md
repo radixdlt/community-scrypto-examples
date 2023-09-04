@@ -13,11 +13,11 @@ Nodejs/NPM needs to be installed</br>
 - <b>note</b>: verify the install version is ok for use with the radix-dapp-toolkit.</br>
 
 For the webclients it is assumed the DApp has been published and initiated.</br>
-Publishing can be done at the Radix Dashboard: https://rcnet-v2-dashboard.radixdlt.com/</br>
+Publishing can be done at the Radix Dashboard: https://rcnet-v3-dashboard.radixdlt.com/</br>
 Run an updated <b>inistantiate.rtm</b> file to run as a raw transaction</br>
 Use the obtained component address to update the javascript definitions.
 
-This project is developed for Radix RC2-net using Scrypto 0.11.0.
+This project was updated for Radix RC3-net using Scrypto 0.12.0.
 ## Getting started: Webclients
 
 In the `/client/src` folder edit the main.js file:</br>

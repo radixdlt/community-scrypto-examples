@@ -34,9 +34,9 @@ mod coindispenser {
 
     impl CoinDispenser {
 
-        pub fn instantiate() -> (Global<CoinDispenser>, Bucket) {
+        pub fn instantiate() -> (Global<CoinDispenser>, FungibleBucket) {
             
-            let mut my_admin_badge: Bucket = ResourceBuilder::new_fungible(OwnerRole::None)
+            let mut my_admin_badge: FungibleBucket = ResourceBuilder::new_fungible(OwnerRole::None)
                 .divisibility(DIVISIBILITY_NONE)
 		   	    .metadata (metadata! { 
 //					roles {
@@ -55,13 +55,13 @@ mod coindispenser {
 
             // put one admin badge and put in in the admin vault
             // just in case future actions require this badge to be part of the dApp.
-            let local_admin_badge: Bucket = my_admin_badge.take(1);
+            let local_admin_badge: FungibleBucket = my_admin_badge.take(1);
 
             let admin_rule: AccessRule = rule!(require(my_admin_badge.resource_address()));
 
              // Instantiate a CoinDispenser component, 
             let component: Global<CoinDispenser> = Self {
-                adminvault: Vault::with_bucket(local_admin_badge),
+                adminvault: Vault::with_bucket(local_admin_badge.into()),
                 ratio: dec!("0.99"),
                 incomming: None,
 				outgoing: None,
@@ -150,11 +150,11 @@ mod coindispenser {
                 "Coin does not match the selected redeem coin");
             assert!(!self.secondairyvaults.get(&self.outgoing.unwrap()).is_none(),
                     "No return coin selected!");          
-            let total: Decimal = redeem.amount() * self.ratio;
+            let total: Decimal = redeem.amount().safe_mul(self.ratio).unwrap();
 
             let resource_address = redeem.resource_address();
             if self.primairyvaults.get(&resource_address).is_none() {
-                let v: Vault = Vault::with_bucket(redeem);
+                let v: Vault = Vault::with_bucket(redeem.into());
                 self.primairyvaults.insert(resource_address, v);
             } else { 
                 let mut v: KeyValueEntryRefMut<'_, Vault> = 

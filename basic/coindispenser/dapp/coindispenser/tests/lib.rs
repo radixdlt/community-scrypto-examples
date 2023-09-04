@@ -5,7 +5,7 @@ use transaction::builder::ManifestBuilder;
 #[test]
 fn test_coindispenser() {
     // Setup the environment
-    let mut test_runner = TestRunner::builder().without_trace().build();
+    let mut test_runner = TestRunnerBuilder::new().without_trace().build();
 
     // Create an account
     let (public_key, _private_key, account) = test_runner.new_allocated_account();
@@ -31,8 +31,8 @@ fn test_coindispenser() {
     let buildmanifest = &manifest.build();
 
     dump_manifest_to_file_system(
-        &buildmanifest,
         objectnames,
+        &buildmanifest,
         "./",
         Some("instantiate"),
         &NetworkDefinition::simulator(),
@@ -48,8 +48,8 @@ fn test_coindispenser() {
 
     // Test the `deposit' method.
     let manifest = ManifestBuilder::new()
-        .withdraw_from_account(account, RADIX_TOKEN, 100)
-        .take_from_worktop(RADIX_TOKEN, 99, "bucket")
+        .withdraw_from_account(account, XRD, 100)
+        .take_from_worktop(XRD, 99, "bucket")
         .call_method_with_name_lookup(component, "deposit",
         |lookup|( lookup.bucket("bucket"),))
         .call_method(
@@ -62,8 +62,8 @@ fn test_coindispenser() {
     let buildmanifest = &manifest.build();
     
     dump_manifest_to_file_system(
-        &buildmanifest,
         objectnames,
+        &buildmanifest,
         "./",
         Some("deposit"),
         &NetworkDefinition::simulator(),
@@ -84,15 +84,15 @@ fn test_coindispenser() {
         .create_proof_from_account_of_amount(account, 
             proofbadge, 1)
         .call_method(component, "set_redeem_pair",
-            (RADIX_TOKEN, RADIX_TOKEN, dec!("0.99"),),
+            (XRD, XRD, dec!("0.99"),),
         );
     
     let objectnames = manifest.object_names();
     let buildmanifest = &manifest.build();
     
     dump_manifest_to_file_system(
-        &buildmanifest,
         objectnames,
+        &buildmanifest,
         "./",
         Some("set_redeem_pair"),
         &NetworkDefinition::simulator(),
@@ -107,8 +107,8 @@ fn test_coindispenser() {
 
     // Test the `redeem_coin' method.
     let manifest = ManifestBuilder::new()
-        .withdraw_from_account(account, RADIX_TOKEN, 100)
-        .take_from_worktop(RADIX_TOKEN, 99, "bucket")
+        .withdraw_from_account(account, XRD, 100)
+        .take_from_worktop(XRD, 99, "bucket")
         .call_method_with_name_lookup(component, "redeem_coin",
         |lookup|( lookup.bucket("bucket"),))
         .call_method(
@@ -121,8 +121,8 @@ fn test_coindispenser() {
     let buildmanifest = &manifest.build();
     
     dump_manifest_to_file_system(
-        &buildmanifest,
         objectnames,
+        &buildmanifest,
         "./",
         Some("redeem_coin"),
         &NetworkDefinition::simulator(),
@@ -140,14 +140,14 @@ fn test_coindispenser() {
         .create_proof_from_account_of_amount(account, 
             proofbadge, 1)
         .call_method(component, "keystore_swap",
-            (RADIX_TOKEN,));
+            (XRD,));
 
     let objectnames = manifest.object_names();
     let buildmanifest = &manifest.build();
     
     dump_manifest_to_file_system(
-        &buildmanifest,
         objectnames,
+        &buildmanifest,
         "./",
         Some("keystore_swap"),
         &NetworkDefinition::simulator(),
@@ -166,7 +166,7 @@ fn test_coindispenser() {
     .create_proof_from_account_of_amount(account, 
         proofbadge, 1)
     .call_method(component, "withdrawal",
-        (RADIX_TOKEN,))
+        (XRD,))
     .call_method(
         account,
         "deposit_batch",
@@ -177,8 +177,8 @@ fn test_coindispenser() {
     let buildmanifest = &manifest.build();
     
     dump_manifest_to_file_system(
-        &buildmanifest,
         objectnames,
+        &buildmanifest,
         "./",
         Some("withdrawal"),
         &NetworkDefinition::simulator(),

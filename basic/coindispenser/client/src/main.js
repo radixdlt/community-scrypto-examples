@@ -3,20 +3,21 @@ import {
   DataRequestBuilder,
 } from '@radixdlt/radix-dapp-toolkit'
 
-const mynetworkId = 13;
+
+const mynetworkId = 14;
 
 console.log ("network ID", mynetworkId);
 
 // UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES 
  
 // change and or update the following definition with the value obtained during publish and initiate actions.
-const dAppcomponent = 'component_tdx_d_1cpklydj6e93fpm7hsjssquxw72s2pq7w5fmc5t0wef3kkpgq83f333'
+const dAppcomponent = 'component_tdx_e_1cr2zh4e7fjtn4vl0g2xyzdeh7hwdpgnyn5l83vh00gxhwgcwkqquwh'
 // change and update the folling definition with your own dApp-definitions wallet.
-const dAppId = 'account_tdx_d_12ywy2f9ejefqag2flnuygltn3l4v46l9jyzph29dhcs2grssxfpewl'
+const dAppId = 'account_tdx_e_128eg0u8hrcdgdvy33qa8dex83sc496dvkvnjx9jcwnl8l2ltzr9nzn'
 // change and update the following definition with your own redeemable coin
-const delayAddress = 'resource_tdx_d_1t4tcy997slh5rcrza9msxhdfxpcxutq7uzj9rkymlwczqe588kvz2s'
+const delayAddress = 'resource_tdx_e_1tkke8qjvfrjvyxpd7crr88460za8l73mptyv8cfjwjl45de39p9p5u'
 // change and update the following definition with the correct radix definition
-const xrdAddress = 'resource_tdx_d_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxepwmma'
+const xrdAddress = 'resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc'
 
 // UPDATES END 
 
@@ -104,7 +105,7 @@ performSwapButtonElement.addEventListener("click", async () => {
 CALL_METHOD Address("${clientAddress}") "withdraw" Address("${xrdAddress}") Decimal("${amount_input.value}");
 TAKE_FROM_WORKTOP Address("${xrdAddress}") Decimal("${amount_input.value}") Bucket("bucket");
 CALL_METHOD Address("${dAppcomponent}") "redeem_coin" Bucket("bucket");
-CALL_METHOD Address("${clientAddress}") "try_deposit_batch_or_abort" Expression("ENTIRE_WORKTOP");
+CALL_METHOD Address("${clientAddress}") "deposit_batch" Expression("ENTIRE_WORKTOP");
 `
 //    console.log (manifest)
 	

@@ -3,18 +3,18 @@ import {
   DataRequestBuilder,
 } from '@radixdlt/radix-dapp-toolkit'
 
-const mynetworkId = 13;
+const mynetworkId = 14;
 
 console.log ("network ID", mynetworkId);
 
 // UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES 
  
 // change and or update the following definition with the value obtained during publish and initiate actions.
-const dAppcomponent = 'component_tdx_d_1cpklydj6e93fpm7hsjssquxw72s2pq7w5fmc5t0wef3kkpgq83f333'
+const dAppcomponent = 'component_tdx_e_1cr2zh4e7fjtn4vl0g2xyzdeh7hwdpgnyn5l83vh00gxhwgcwkqquwh'
 // change and update the folling definition with your own dApp-definitions wallet.
-const dAppId = 'account_tdx_d_12ywy2f9ejefqag2flnuygltn3l4v46l9jyzph29dhcs2grssxfpewl'
+const dAppId = 'account_tdx_e_128eg0u8hrcdgdvy33qa8dex83sc496dvkvnjx9jcwnl8l2ltzr9nzn'
 // change and update the following definition with the correct radix definition
-const xrdAddress = 'resource_tdx_d_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxepwmma'
+const xrdAddress = 'resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc'
 
 // UPDATES END 
 
@@ -180,10 +180,7 @@ disabledispenserButtonElement.addEventListener("click", async () => {
   const proof = document.getElementById('disableproofresource').value
   let manifest = `
 CALL_METHOD Address("${clientAddress}") "create_proof_of_amount" Address("${proof}") Decimal("1");
-CALL_METHOD Address("${dAppcomponent}") "set_redeem_pair" 
-Address("${xrdAddress}")
-Address("${xrdAddress}")
-Decimal("1");
+CALL_METHOD Address("${dAppcomponent}") "reset_dispenser" 
 `
   console.log (manifest)
 
