@@ -150,7 +150,8 @@ mod coindispenser {
                 "Coin does not match the selected redeem coin");
             assert!(!self.secondairyvaults.get(&self.outgoing.unwrap()).is_none(),
                     "No return coin selected!");          
-            let total: Decimal = redeem.amount().safe_mul(self.ratio).unwrap();
+            let total: Decimal = redeem.amount().checked_mul(self.ratio).unwrap();
+//            let total: Decimal = redeem.amount() * self.ratio;
 
             let resource_address = redeem.resource_address();
             if self.primairyvaults.get(&resource_address).is_none() {
