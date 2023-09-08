@@ -10,9 +10,9 @@ console.log ("network ID", mynetworkId);
 // UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES 
  
 // change and or update the following definition with the value obtained during publish and initiate actions.
-const dAppcomponent = 'component_tdx_e_1cr2zh4e7fjtn4vl0g2xyzdeh7hwdpgnyn5l83vh00gxhwgcwkqquwh'
+const dAppcomponent = 'component_tdx_e_1cqzmjd3zv39hrdmvul30c6gkh3yxd8m94zdnxlu3409uzluwywqqkp'
 // change and update the folling definition with your own dApp-definitions wallet.
-const dAppId = 'account_tdx_e_128eg0u8hrcdgdvy33qa8dex83sc496dvkvnjx9jcwnl8l2ltzr9nzn'
+const dAppId = 'account_tdx_e_12ytcn9h5vslmvcq3qlz0um2nsppundrv3lmxhgg7qa6nx5yafuufaa'
 // change and update the following definition with the correct radix definition
 const xrdAddress = 'resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc'
 
