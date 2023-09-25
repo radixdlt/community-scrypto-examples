@@ -3,18 +3,18 @@ import {
   DataRequestBuilder,
 } from '@radixdlt/radix-dapp-toolkit'
 
-const mynetworkId = 14;
+const mynetworkId = 2;
 
 console.log ("network ID", mynetworkId);
 
 // UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES 
  
 // change and or update the following definition with the value obtained during publish and initiate actions.
-const dAppcomponent = 'component_tdx_e_1cqzmjd3zv39hrdmvul30c6gkh3yxd8m94zdnxlu3409uzluwywqqkp'
+const dAppcomponent = 'component_tdx_2_1cr6q7lkf0kqgj70gdawsfwke7lpjzltqazyqnzqaj3dkngxwkn8urh'
 // change and update the folling definition with your own dApp-definitions wallet.
-const dAppId = 'account_tdx_e_12ytcn9h5vslmvcq3qlz0um2nsppundrv3lmxhgg7qa6nx5yafuufaa'
+const dAppId = 'account_tdx_2_12x2khwpajm53klweahy84uztccmpk3h8wvrlgeurzwk9gcejzl7mrl'
 // change and update the following definition with the correct radix definition
-const xrdAddress = 'resource_tdx_e_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxx8rpsmc'
+const xrdAddress = 'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc'
 
 // UPDATES END 
 
