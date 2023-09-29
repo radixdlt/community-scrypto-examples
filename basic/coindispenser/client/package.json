@@ -5,20 +5,23 @@
   "type": "module",
   "scripts": {
     "dev": "vite src",
-    "build": "vite build src",
+    "build": "vite build src --emptyOutDir",
     "preview": "vite preview src"
   },
-    "compilerOptions": {
+  "compilerOptions": {
     "module": "commonjs",
     "target": "es2023"
   },
-  "include": ["node_modules"],
+  "include": [
+    "node_modules"
+  ],
   "devDependencies": {
-    "vite": "^4.4.9"
+    "vite": "^4.4.9",
+    "vite-plugin-static-copy": "^0.17.0"
   },
   "dependencies": {
     "@radixdlt/babylon-gateway-api-sdk": "^1.0.1",
     "@radixdlt/connect-button": "^1.0.0",
     "@radixdlt/radix-dapp-toolkit": "^1.0.0"
-}
+  }
 }

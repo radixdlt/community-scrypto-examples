@@ -4,21 +4,22 @@ import {
 } from '@radixdlt/radix-dapp-toolkit'
 
 
-const mynetworkId = 2;
+const mynetworkId = 1;
 
 console.log ("network ID", mynetworkId);
 
 // UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES UPDATES 
- 
-// change and or update the following definition with the value obtained during publish and initiate actions.
-const dAppcomponent = 'component_tdx_2_1cr6q7lkf0kqgj70gdawsfwke7lpjzltqazyqnzqaj3dkngxwkn8urh'
-// change and update the folling definition with your own dApp-definitions wallet.
-const dAppId = 'account_tdx_2_12x2khwpajm53klweahy84uztccmpk3h8wvrlgeurzwk9gcejzl7mrl'
-// change and update the following definition with your own redeemable coin
-const delayAddress = 'resource_tdx_2_1t5a8884pvfe23m05gserx6avfsrvafwa6u697m9x9ytzcm66v0uc8n'
-// change and update the following definition with the correct radix definition
-const xrdAddress = 'resource_tdx_2_1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxtfd2jc'
 
+// change and or update the following definition with the value obtained during publish and initiate actions.
+const dAppcomponent = 'component_rdx1crj2jm5l38rht0p9waqer3se3t4932gxxv2e7a40s3pf0h96ea66hp'
+// change and update the folling definition with your own dApp-definitions wallet.
+const dAppId = 'account_rdx12y7efa9556xfquf6mtn4rq2zmwt0nxsadl29gtfh822h5ag5tlysg6'
+// change and update the following definition with your own redeemable coin
+const delayAddress = 'resource_rdx1t4cy3r2sdjjnzq8ljdjuv3feypq5mlen4yfvcglswlu30jcqqsswfd'
+// change and update the following definition with the correct radix definition
+const xrdAddress = 'resource_rdx1tknxxxxxxxxxradxrdxxxxxxxxx009923554798xxxxxxxxxradxrd'
+// the swap ratio
+const swapratio = 4.475
 // UPDATES END 
 
 const amount_input = document.querySelector("#amount_input");
@@ -34,9 +35,11 @@ amount_input.addEventListener("input", (event) => {
   if (clientAddress == "<undefined>"){
     performSwapButtonElement.textContent = "Refresh wallet first"
   }else{
-    performSwapButtonElement.textContent = "Swap "+ event.target.value +" XRD for "+ event.target.value * 5.75 + " DELAY"
+    performSwapButtonElement.textContent = "Swap "+ event.target.value +" DELAY for "+ event.target.value * swapratio + " XRD"
   }
 });
+
+document.getElementById('amount_input').max = 9
 
 const radixDappToolkit = RadixDappToolkit({
    dAppDefinitionAddress: dAppId,
@@ -89,6 +92,8 @@ refreshButtonElement.addEventListener("click", async () => {
 	  }
   }
  
+  document.getElementById('amount_input').max = delayBallance
+
   document.getElementById('delayamount').innerText = delayBallance    
   
   const getDappDetails = await radixDappToolkit.gatewayApi.state.getEntityDetailsVaultAggregated(dAppcomponent);
@@ -102,8 +107,8 @@ refreshButtonElement.addEventListener("click", async () => {
 
 performSwapButtonElement.addEventListener("click", async () => {
 		let manifest = `
-CALL_METHOD Address("${clientAddress}") "withdraw" Address("${xrdAddress}") Decimal("${amount_input.value}");
-TAKE_FROM_WORKTOP Address("${xrdAddress}") Decimal("${amount_input.value}") Bucket("bucket");
+CALL_METHOD Address("${clientAddress}") "withdraw" Address("${delayAddress}") Decimal("${amount_input.value}");
+TAKE_FROM_WORKTOP Address("${delayAddress}") Decimal("${amount_input.value}") Bucket("bucket");
 CALL_METHOD Address("${dAppcomponent}") "redeem_coin" Bucket("bucket");
 CALL_METHOD Address("${clientAddress}") "deposit_batch" Expression("ENTIRE_WORKTOP");
 `
