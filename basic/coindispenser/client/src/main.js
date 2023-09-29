@@ -72,8 +72,8 @@ refreshButtonElement.addEventListener("click", async () => {
   var delayVaults
   console.log('Items Count:', fungable_count);
 
-  performSwapButtonElement.textContent = "Swap "+ amount_input.value +" XRD for "+ amount_input.value * 5.75 + " DELAY"
-
+  performSwapButtonElement.textContent = "Swap "+ amount_input.value +" DELAY for "+ amount_input.value * swapratio + " XRD";
+  
   for (let i = 0; i < fungable_count; i++) {
 
      if (getAddressDetails.fungible_resources.items[i].resource_address == delayAddress){
