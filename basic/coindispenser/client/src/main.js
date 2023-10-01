@@ -71,8 +71,6 @@ refreshButtonElement.addEventListener("click", async () => {
   let fungable_count = getAddressDetails.fungible_resources.total_count;
   var delayVaults
   console.log('Items Count:', fungable_count);
-
-  performSwapButtonElement.textContent = "Swap "+ amount_input.value +" DELAY for "+ amount_input.value * swapratio + " XRD";
   
   for (let i = 0; i < fungable_count; i++) {
 
@@ -93,12 +91,14 @@ refreshButtonElement.addEventListener("click", async () => {
   }
  
   document.getElementById('amount_input').max = delayBallance
+  document.getElementById('amount_input').value = delayBallance
+
+  performSwapButtonElement.textContent = "Swap "+ amount_input.value +" DELAY for "+ amount_input.value * swapratio + " XRD";
 
   document.getElementById('delayamount').innerText = delayBallance    
   
   const getDappDetails = await radixDappToolkit.gatewayApi.state.getEntityDetailsVaultAggregated(dAppcomponent);
 
-  document.getElementById('componentname').innerText = getDappDetails.details.blueprint_name    
   document.getElementById('componentname').innerText = getDappDetails.details.blueprint_name    
 
   document.getElementById('walletAddress').innerText = clientAddress  
