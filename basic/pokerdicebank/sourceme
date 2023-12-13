@@ -1,0 +1,62 @@
+#!/bin/bash
+
+resim reset
+temp_account=`resim new-account`
+export account=`echo "$temp_account" | grep -i component | grep -o "account_.*"`
+export priv=`echo "$temp_account" | grep -i Private | sed "s/Private key: //"`
+export badge=`echo "$temp_account" | grep -i Owner | grep -o "resource_.*"`
+export radix=`resim show $account | grep -A 2 Fungible | grep -o "resource_.\S*" | sed -e "s/://"`
+export coin=`resim new-token-fixed --name "Extra coin" --symbol EXT 100000 | grep -A 6 "New Entities" |grep -o "resource_.*"`
+
+export package=`resim publish . | sed "s/Success! New Package: //"`
+tempcomponent=`resim call-function $package PokerDiceBank instantiate`
+export component=`echo "$tempcomponent" |grep -A 1 "New" |grep -o "component_.*"`
+export proof=`echo "$tempcomponent" |grep -A 2 "New" |grep -o "resource_.*"`
+export nft=`echo "$tempcomponent" |grep -A 4 "New" |grep -A 2 "$proof"| tail -n 1 |grep -o "resource_.*"`
+
+
+resim call-method $component admin_deposit_secondairy $coin:1000 --proofs $proof:1
+resim call-method $component admin_deposit_primairy $radix:1000 --proofs $proof:1
+resim call-method $component admin_swap_config $coin 50 --proofs $proof:1
+#this one failes because the swap is still deactive
+resim call-method $component get_tokens $radix:1
+resim call-method $component admin_set_active_token $coin --proofs $proof:1
+resim call-method $component admin_token_swap_activate $coin true --proofs $proof:1
+resim call-method $component admin_global_swap_activate true --proofs $proof:1
+resim call-method $component get_tokens $radix:1
+resim call-method $component redeem_tokens $coin:11
+#this one failes because the bank is still deactive
+resim call-method $component deposit_new $coin:100
+resim call-method $component admin_pokerdicebank_activate true --proofs $proof:1
+
+resim call-method $component admin_set_royalty 0.99 --proofs $proof:1
+
+resim call-method $component deposit_new $coin:100
+resim call-method $component deposit_add $coin:100 $nft:#1#
+resim call-method $component withdrawal $nft:#1#
+resim call-method $component admin_update_keystore \#1\# 299 --proofs $proof:1
+resim call-method $component withdrawal $nft:#1#
+resim call-method $component admin_global_swap_activate false --proofs $proof:1
+resim call-method $component admin_withdrawal_primairy --proofs $proof:1
+resim call-method $component admin_withdrawal_secondairy $coin --proofs $proof:1
+resim call-method $component admin_collect_royalty --proofs $proof:1
+
+#resim call-method $component withdrawal $radix --proofs $proof:1
+#resim call-method $component keystore_swap $radix --proofs $proof:1
+#resim call-method $component withdrawal $radix --proofs $proof:1
+#resim call-method $component deposit $radix:1000
+#resim call-method $component deposit $coin:1
+#resim call-method $component set_redeem_pair $coin $radix 1.24 --proofs $proof:1
+#resim call-method $component redeem_coin $coin:10
+#resim call-method $component reset_dispenser --proofs $proof:1
+#resim call-method $component redeem_coin $coin:10
+
+echo "account: $account"
+echo "badge: $badge"
+echo "package: $package"
+echo "component: $component" 
+echo "proof: $proof"
+echo "nft: $nft"
+echo "radix: $radix"
+echo "coin: $coin"
+
