@@ -6,3 +6,7 @@ Please fork from `main`, work out of a sub-directory of your choosing, and then 
 Feel free to create additional top- or mid-level directories if that feels appropriate.
 
 Don't forget to visit the [main Scrypto repository](https://github.com/radixdlt/radixdlt-scrypto) to get started!
+
+
+# License
+The Community Scrypto Examples code is released under [Radix Modified MIT License](./LICENSE)
