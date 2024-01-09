@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/style.css">
+  <title>Coin Dispenser Example</title>
+</head>
+
+<body>
+  <noscript>You need to enable JavaScript to run this app.</noscript>
+  <script type="module" src="/main.js"></script>
+
+  <div class="connectBtn">
+    <radix-connect-button />
+  </div>
+
+  <h1>Refresh when connected!</h1>
+  <p><b>Please select a single wallet; preferably one that contains DELAY tokens</b></p>
+  <button id="refreshwallet">Refresh</button>
+  <div class="container">
+    <p>Selected Wallet : <span id="walletAddress"></span></br>
+    Your Delay Amount : <span id="delayamount"></span></br>
+    Component Name : <span id="componentname"></span></br></p>
+  </div>
+
+  <div class="divider"></div>
+  <h2>Redeem token</h2>
+  <p>DELAY can be swapped for XRD with a ratio of 1:4.475</p>
+  <p><input id="amount_input" type="range" min="1" max="10" step="1" /> <p>
+  <button id="performswap">Perform Swap</button>
+  <div class="divider"></div>
+
+
+</body>
+
+</html>
