@@ -28,7 +28,7 @@ Add token to the pool without LP Token minting. This method should be call from 
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

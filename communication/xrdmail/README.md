@@ -268,7 +268,7 @@ Want to find out more about how XRDmail works? Go to 'src/lib.rs' to see the sou
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

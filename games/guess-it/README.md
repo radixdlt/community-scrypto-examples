@@ -68,7 +68,7 @@ Two players will enter a game and a dice is rolled. The player with the closest 
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

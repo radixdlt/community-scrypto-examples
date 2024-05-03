@@ -215,7 +215,7 @@ resim show 02e0905317d684478c275540e2ed7170f217e0c557805f7fd2a0d3
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

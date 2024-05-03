@@ -35,7 +35,7 @@ if you do `resim show $account` you should see that the account has now 3 tokens
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 
