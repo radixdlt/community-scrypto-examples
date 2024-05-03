@@ -3,7 +3,7 @@ name = "scrypto-bonding"
 version = "0.3.0"
 edition = "2021"
 authors = ["devmannic <82296715+devmannic@users.noreply.github.com>"]
-license = "MIT OR Apache-2.0"
+license = "MIT"
 readme = "README.md"
 description = """
 A Scrypto package for creating and using bonding curves as an automated market maker on Radix
