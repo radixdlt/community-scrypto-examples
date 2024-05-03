@@ -12,7 +12,7 @@ Don't forget to visit the [main Scrypto repository](https://github.com/radixdlt/
 
 The Community Scrypto Examples code is released under Radix Modified MIT License.
 
-    Copyright 2023 Radix Publishing Ltd
+    Copyright 2024 Radix Publishing Ltd
 
     Permission is hereby granted, free of charge, to any person obtaining a copy of
     this software and associated documentation files (the "Software"), to deal in
