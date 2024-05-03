@@ -5,7 +5,7 @@ This is a basic PoC of a multisig wallet in Scrypto with capabilty to call funct
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

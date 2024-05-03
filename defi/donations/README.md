@@ -42,7 +42,7 @@ CALL_METHOD_WITH_ALL_RESOURCES ComponentAddress("<Account Address>") "deposit_ba
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

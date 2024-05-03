@@ -197,7 +197,7 @@ Scrypto v0.4.0 allows us to implement vesting functionality on Radix with minima
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

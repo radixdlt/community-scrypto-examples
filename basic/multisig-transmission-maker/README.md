@@ -18,7 +18,7 @@ In this example, we want $acc1 and $acc2 to approve a transaction of 1 000 000 X
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

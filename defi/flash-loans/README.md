@@ -30,7 +30,7 @@ Call the same command again, this time, the opportunity bucket contains 0 XRD so
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

@@ -48,7 +48,7 @@ Please report any mistakes I may have made. I did not have the opportunity to th
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 

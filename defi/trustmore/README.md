@@ -25,7 +25,7 @@ The actual code for the workings of the contract is not part of this code-exampl
 
 # License
 
-The Radix Official Examples code is released under Radix Modified MIT License.
+The Radix Community Scrypto Examples code is released under Radix Modified MIT License.
 
     Copyright 2024 Radix Publishing Ltd
 
