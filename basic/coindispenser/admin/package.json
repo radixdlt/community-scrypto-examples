@@ -1,0 +1,24 @@
+{
+  "name": "coindispenseradmin",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite src",
+    "build": "vite build src",
+    "preview": "vite preview src"
+  },
+    "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2023"
+  },
+  "include": ["node_modules"],
+  "devDependencies": {
+    "vite": "^4.4.9"
+  },
+  "dependencies": {
+    "@radixdlt/babylon-gateway-api-sdk": "^1.0.1",
+    "@radixdlt/radix-dapp-toolkit": "^1.0.0",
+    "@radixdlt/connect-button": "^1.0.0"
+    }
+}
